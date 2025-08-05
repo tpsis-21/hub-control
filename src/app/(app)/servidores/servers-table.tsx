@@ -1,7 +1,7 @@
 // @/app/(app)/servidores/servers-table.tsx
 "use client";
 
-import { MoreHorizontal, AlertTriangle, Bell, BookOpen, CreditCard, KeyRound, RefreshCw, Code, EyeOff, RadioTower, Tv } from "lucide-react";
+import { MoreHorizontal, AlertTriangle, Bell, BookOpen, CreditCard, KeyRound, RefreshCw, Code, EyeOff, RadioTower, Tv, ExternalLink } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -35,6 +35,7 @@ import { EditServerForm } from "./edit-server-form";
 import { deleteServerAction } from "./actions";
 import { useTransition, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 import { ServerIntegrationDialog } from "@/components/servers/server-integration-dialog";
 import type { Server } from "@/lib/types";
 
@@ -98,6 +99,7 @@ const AutomationBadge = ({ Icon, text, enabled }: { Icon: React.ElementType, tex
 export function ServersTable({ initialServers }: { initialServers: Server[] }) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
+  const router = useRouter();
 
   const getIntegrationIcon = (type: Server['integrationType']) => {
     switch (type) {
@@ -139,15 +141,19 @@ export function ServersTable({ initialServers }: { initialServers: Server[] }) {
                       return (
                         <TableRow key={server.id}>
                             <TableCell>
-                                <ServerIntegrationDialog server={server}>
-                                  <div className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors">
-                                    <IntegrationIcon className="h-5 w-5 text-muted-foreground"/>
-                                    <div>
-                                      <p className="font-medium">{server.name}</p>
-                                      <p className="text-sm text-muted-foreground">{getIntegrationName(server.integrationType)}</p>
-                                    </div>
+                                <div className="flex items-center gap-3">
+                                  <IntegrationIcon className="h-5 w-5 text-muted-foreground"/>
+                                  <div>
+                                    <button
+                                      onClick={() => router.push(`/servidores/${server.id}`)}
+                                      className="text-left hover:text-hub-blue transition-colors hover:underline flex items-center gap-1 font-medium"
+                                    >
+                                      {server.name}
+                                      <ExternalLink className="h-3 w-3 opacity-50" />
+                                    </button>
+                                    <p className="text-sm text-muted-foreground">{getIntegrationName(server.integrationType)}</p>
                                   </div>
-                                </ServerIntegrationDialog>
+                                </div>
                             </TableCell>
                             <TableCell>
                                 <Badge variant={statusConfig[server.status].variant}>
@@ -158,28 +164,28 @@ export function ServersTable({ initialServers }: { initialServers: Server[] }) {
                             <TableCell>
                                 {server.integrationType === 'natv' ? (
                                   <div className="flex items-center gap-2">
-                                    {server.credits !== null ? (
+                                    {server.credits !== null && server.credits !== undefined ? (
                                       <>
-                                        <span className="font-medium">{server.credits}</span>
+                                        <span className="font-medium text-lg">{server.credits.toLocaleString('pt-BR')}</span>
                                         <Badge 
                                           variant={
-                                            server.credits >= 100 ? 'success' : 
-                                            server.credits >= 50 ? 'warning' : 
-                                            server.credits >= 10 ? 'warning' : 'destructive'
+                                            server.credits >= 100 ? 'default' : 
+                                            server.credits >= 50 ? 'secondary' : 
+                                            server.credits >= 10 ? 'outline' : 'destructive'
                                           }
                                           className="text-xs"
                                         >
-                                          {server.credits >= 100 ? 'Alto' : 
+                                          {server.credits >= 100 ? 'Disponível' : 
                                            server.credits >= 50 ? 'Médio' : 
                                            server.credits >= 10 ? 'Baixo' : 'Crítico'}
                                         </Badge>
                                       </>
                                     ) : (
-                                      <span className="text-sm text-muted-foreground">--</span>
+                                      <span className="text-sm text-muted-foreground">Carregando...</span>
                                     )}
                                   </div>
                                 ) : (
-                                  <span className="text-sm text-muted-foreground">N/A</span>
+                                  <span className="text-sm text-muted-foreground">Manual</span>
                                 )}
                             </TableCell>
                             <TableCell>
@@ -201,6 +207,10 @@ export function ServersTable({ initialServers }: { initialServers: Server[] }) {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => router.push(`/servidores/${server.id}`)}>
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    Ver Detalhes
+                                </DropdownMenuItem>
                                 <EditServerForm server={server}>
                                     <button className="relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full">Editar</button>
                                 </EditServerForm>

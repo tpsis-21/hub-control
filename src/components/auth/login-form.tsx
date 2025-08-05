@@ -178,7 +178,7 @@ export function LoginForm() {
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleLogin}>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -201,7 +201,7 @@ export function LoginForm() {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
+        <CardFooter className="flex flex-col space-y-4 pt-6">
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Entrando..." : "Entrar"}
           </Button>

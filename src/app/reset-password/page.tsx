@@ -103,7 +103,7 @@ function ResetPasswordForm() {
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
             <div className="flex justify-center mb-4">
-              <Logo width={160} height={50} className="text-gray-900 dark:text-white" />
+              <Logo variant="full" size="lg" className="text-gray-900 dark:text-white" />
             </div>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
               Sistema de gerenciamento de IPTV
@@ -134,7 +134,7 @@ function ResetPasswordForm() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="flex justify-center mb-4">
-            <Logo width={160} height={50} className="text-gray-900 dark:text-white" />
+            <Logo variant="full" size="lg" className="text-gray-900 dark:text-white" />
           </div>
           <p className="text-gray-500 dark:text-gray-400 mt-2">
             Sistema de gerenciamento de IPTV

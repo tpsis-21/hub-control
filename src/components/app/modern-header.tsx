@@ -17,12 +17,18 @@ import {
   Settings,
   User,
   LogOut,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getClientUser } from "@/lib/supabase-client";
+import { getClientUser, createClientSupabaseClient } from "@/lib/supabase-client";
 import { InAppNotifications } from "./notifications/in-app-notifications";
+import { useTheme } from "next-themes";
+import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 
 type ModernHeaderProps = {
   title?: string;
@@ -40,15 +46,64 @@ export function ModernHeader({
   className,
 }: ModernHeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { setTheme, theme } = useTheme();
+  const { toast } = useToast();
   const [userId, setUserId] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   
   useEffect(() => {
-    getClientUser().then(user => {
-      if (user) {
-        setUserId(user.id);
+    const loadUserData = async () => {
+      const currentUser = await getClientUser();
+      if (currentUser) {
+        setUserId(currentUser.id);
+        setUser(currentUser);
+        
+        // Buscar dados do perfil do usuário
+        const supabase = createClientSupabaseClient();
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .single();
+        
+        setUserProfile(profile);
       }
-    });
+    };
+    
+    loadUserData();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      const supabase = createClientSupabaseClient();
+      await supabase.auth.signOut();
+      router.push('/login');
+      toast({
+        title: "Logout realizado",
+        description: "Você foi desconectado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao fazer logout",
+        description: "Ocorreu um erro ao tentar desconectar.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getUserDisplayName = () => {
+    if (userProfile?.full_name) return userProfile.full_name;
+    if (user?.user_metadata?.name) return user.user_metadata.name;
+    if (user?.user_metadata?.full_name) return user.user_metadata.full_name;
+    return user?.email?.split('@')[0] || "Usuário";
+  };
+
+  const getUserInitials = () => {
+    const name = getUserDisplayName();
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   // Função para obter o título da página baseado na rota
   const getPageTitle = () => {
@@ -103,6 +158,31 @@ export function ModernHeader({
 
         {/* Quick actions */}
         <div className="flex items-center gap-3">
+          {/* Theme toggle */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-9 w-9 px-0">
+                <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                <span className="sr-only">Alternar tema</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setTheme("light")}>
+                <Sun className="mr-2 h-4 w-4" />
+                <span>Claro</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")}>
+                <Moon className="mr-2 h-4 w-4" />
+                <span>Escuro</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("system")}>
+                <Monitor className="mr-2 h-4 w-4" />
+                <span>Sistema</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Notifications */}
           {userId && <InAppNotifications userId={userId} />}
 
@@ -113,31 +193,35 @@ export function ModernHeader({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src="/avatars/01.png" alt="@admin" />
-                  <AvatarFallback className="bg-muted text-foreground">AD</AvatarFallback>
+                  <AvatarImage src={userProfile?.avatar_url || ""} alt="@user" />
+                  <AvatarFallback className="bg-hub-blue text-white font-semibold">{getUserInitials()}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">Admin</p>
+                  <p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    admin@iptvmanager.com
+                    {user?.email || "email@dominio.com"}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Perfil</span>
+              <DropdownMenuItem asChild>
+                <Link href="/perfil">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Perfil</span>
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Configurações</span>
+              <DropdownMenuItem asChild>
+                <Link href="/configuracoes">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Configurações</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sair</span>
               </DropdownMenuItem>

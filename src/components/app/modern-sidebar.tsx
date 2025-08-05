@@ -18,6 +18,7 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -151,7 +152,14 @@ const navigationData = {
   ],
 };
 
-function SearchForm() {
+function SearchForm({ onSearch }: { onSearch: (term: string) => void }) {
+  const [searchTerm, setSearchTerm] = React.useState("");
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    onSearch(value);
+  };
+
   return (
     <SidebarGroup className="py-0">
       <SidebarGroupContent className="relative">
@@ -162,6 +170,8 @@ function SearchForm() {
           id="search"
           placeholder="Buscar funcionalidades..."
           className="pl-8"
+          value={searchTerm}
+          onChange={(e) => handleSearch(e.target.value)}
         />
         <Search className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 opacity-50 select-none" />
       </SidebarGroupContent>
@@ -369,6 +379,21 @@ function NavSecondary({ items }: { items: typeof navigationData.navSecondary }) 
 }
 
 export function ModernSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [searchTerm, setSearchTerm] = React.useState("");
+
+  // Função para filtrar itens baseado no termo de busca
+  const filterItems = (items: any[]) => {
+    if (!searchTerm) return items;
+    return items.filter(item => 
+      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  };
+
+  const filteredNavPrincipal = filterItems(navigationData.navPrincipal);
+  const filteredNavFinanceiro = filterItems(navigationData.navFinanceiro);
+  const filteredNavSistema = filterItems(navigationData.navSistema);
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="border-b">
@@ -376,24 +401,27 @@ export function ModernSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <Tv className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate heading-2 text-foreground">Hub Control</span>
-                <span className="truncate text-caption">IPTV</span>
+              <div className="flex items-center gap-2">
+                <Logo 
+                  variant="icon" 
+                  size="sm" 
+                  className="group-data-[collapsible=icon]:w-6 group-data-[collapsible=icon]:h-6" 
+                />
+                <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                  <span className="truncate heading-2 text-foreground">Hub Control</span>
+                </div>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SearchForm />
+        <SearchForm onSearch={setSearchTerm} />
       </SidebarHeader>
       <SidebarContent>
-        <NavPrincipal items={navigationData.navPrincipal} />
-        <NavFinanceiro items={navigationData.navFinanceiro} />
-        <NavSistema items={navigationData.navSistema} />
+        <NavPrincipal items={filteredNavPrincipal} />
+        <NavFinanceiro items={filteredNavFinanceiro} />
+        <NavSistema items={filteredNavSistema} />
         <NavSecondary items={navigationData.navSecondary} />
       </SidebarContent>
       <SidebarFooter className="border-t">

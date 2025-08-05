@@ -1,0 +1,225 @@
+/* Hub Control Theme - Paleta de Cores Personalizada */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Hub Control Color Palette */
+  
+  /* Cores Primárias */
+  --hub-blue: 207 90% 54%; /* #2196F3 */
+  --hub-dark: 210 23% 29%; /* #3A4A5C */
+  --hub-green: 122 39% 49%; /* #4CAF50 */
+  
+  /* Cores Secundárias */
+  --hub-light-blue: 207 74% 94%; /* #E3F2FD */
+  --hub-gray-light: 210 25% 97%; /* #F5F7FA */
+  --hub-gray-medium: 206 14% 60%; /* #8A9BA8 */
+  
+  /* Cores de Estado */
+  --hub-success: 122 39% 49%; /* #4CAF50 */
+  --hub-warning: 32 100% 50%; /* #FF9800 */
+  --hub-error: 4 87% 58%; /* #F44336 */
+  --hub-info: 207 90% 54%; /* #2196F3 */
+  
+  /* Aplicação das cores no sistema de design */
+  --primary: var(--hub-blue);
+  --primary-foreground: 0 0% 98%;
+  --secondary: var(--hub-gray-light);
+  --secondary-foreground: var(--hub-dark);
+  --accent: var(--hub-light-blue);
+  --accent-foreground: var(--hub-dark);
+  --destructive: var(--hub-error);
+  --destructive-foreground: 0 0% 98%;
+  --success: var(--hub-success);
+  --success-foreground: 0 0% 98%;
+  --warning: var(--hub-warning);
+  --warning-foreground: 0 0% 98%;
+  --info: var(--hub-info);
+  --info-foreground: 0 0% 98%;
+  
+  /* Background e Foreground */
+  --background: 0 0% 100%;
+  --foreground: var(--hub-dark);
+  --card: 0 0% 100%;
+  --card-foreground: var(--hub-dark);
+  --popover: 0 0% 100%;
+  --popover-foreground: var(--hub-dark);
+  
+  /* Muted */
+  --muted: var(--hub-gray-light);
+  --muted-foreground: var(--hub-gray-medium);
+  
+  /* Borders e Inputs */
+  --border: 210 20% 90%;
+  --input: 210 20% 90%;
+  --ring: var(--hub-blue);
+  --radius: 0.75rem;
+  
+  /* Sidebar */
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: var(--hub-dark);
+  --sidebar-primary: var(--hub-blue);
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: var(--hub-light-blue);
+  --sidebar-accent-foreground: var(--hub-dark);
+  --sidebar-border: 210 20% 90%;
+  --sidebar-ring: var(--hub-blue);
+  
+  /* Charts */
+  --chart-1: var(--hub-blue);
+  --chart-2: var(--hub-green);
+  --chart-3: var(--hub-warning);
+  --chart-4: var(--hub-error);
+  --chart-5: 280 65% 60%;
+  
+  /* Gradientes */
+  --gradient-primary: linear-gradient(135deg, hsl(var(--hub-blue)) 0%, hsl(207 90% 46%) 100%);
+  --gradient-success: linear-gradient(135deg, hsl(var(--hub-green)) 0%, hsl(122 39% 41%) 100%);
+  --gradient-warning: linear-gradient(135deg, hsl(var(--hub-warning)) 0%, hsl(32 100% 42%) 100%);
+  --gradient-error: linear-gradient(135deg, hsl(var(--hub-error)) 0%, hsl(4 87% 50%) 100%);
+  
+  /* Sombras */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.dark {
+  /* Dark Mode - Hub Control */
+  --background: 210 23% 15%;
+  --foreground: 0 0% 98%;
+  --card: 210 23% 25%; /* Ligeiramente mais claro que o background */
+  --card-foreground: 0 0% 98%;
+  --popover: var(--hub-dark);
+  --popover-foreground: 0 0% 98%;
+  
+  /* Primary no modo escuro */
+  --primary: var(--hub-blue);
+  --primary-foreground: 0 0% 98%;
+  
+  /* Secondary no modo escuro */
+  --secondary: 210 23% 20%;
+  --secondary-foreground: 0 0% 98%;
+  
+  /* Muted no modo escuro */
+  --muted: 210 23% 20%;
+  --muted-foreground: 210 15% 70%;
+  
+  /* Accent no modo escuro */
+  --accent: 210 23% 20%;
+  --accent-foreground: 0 0% 98%;
+  
+  /* Borders e Inputs no modo escuro */
+  --border: 210 23% 20%;
+  --input: 210 23% 20%;
+  
+  /* Sidebar no modo escuro */
+  --sidebar-background: 210 23% 15%; /* Mais escuro que o hub-dark */
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: var(--hub-blue);
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 210 23% 18%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-border: 210 23% 18%;
+  --sidebar-ring: var(--hub-blue);
+}
+
+/* Utilitários para as cores Hub */
+.text-hub-blue { color: hsl(var(--hub-blue)); }
+.text-hub-dark { color: hsl(var(--hub-dark)); }
+.text-hub-green { color: hsl(var(--hub-green)); }
+.text-hub-gray-medium { color: hsl(var(--hub-gray-medium)); }
+
+.bg-hub-blue { background-color: hsl(var(--hub-blue)); }
+.bg-hub-dark { background-color: hsl(var(--hub-dark)); }
+.bg-hub-green { background-color: hsl(var(--hub-green)); }
+.bg-hub-light-blue { background-color: hsl(var(--hub-light-blue)); }
+.bg-hub-gray-light { background-color: hsl(var(--hub-gray-light)); }
+
+.border-hub-blue { border-color: hsl(var(--hub-blue)); }
+.border-hub-gray-light { border-color: hsl(var(--hub-gray-light)); }
+
+/* Gradientes Hub */
+.bg-gradient-hub-primary { background: var(--gradient-primary); }
+.bg-gradient-hub-success { background: var(--gradient-success); }
+.bg-gradient-hub-warning { background: var(--gradient-warning); }
+.bg-gradient-hub-error { background: var(--gradient-error); }
+
+/* Animações e transições */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Componentes específicos */
+.hub-card {
+  @apply bg-card border border-border rounded-lg shadow-sm;
+}
+
+.hub-button-primary {
+  @apply bg-hub-blue text-white transition-colors;
+}
+
+.hub-button-primary:hover {
+  background-color: hsl(var(--hub-blue) / 0.9);
+}
+
+.hub-button-success {
+    @apply bg-hub-green text-white transition-colors;
+  }
+  
+  .hub-button-success:hover {
+    background-color: hsl(var(--hub-green) / 0.9);
+  }
+
+/* Melhorias de tipografia */
+.heading-1 {
+  @apply text-2xl font-semibold tracking-tight text-foreground;
+}
+
+.heading-2 {
+  @apply text-xl font-semibold tracking-tight text-foreground;
+}
+
+.heading-3 {
+  @apply text-lg font-medium tracking-tight text-foreground;
+}
+
+.body-text {
+  @apply text-sm text-muted-foreground;
+}
+
+.caption {
+  @apply text-xs text-muted-foreground;
+}
+
+/* Estados de hover e focus melhorados */
+.hub-interactive {
+  @apply transition-all duration-200 ease-in-out;
+}
+
+.hub-interactive:hover {
+  @apply transform scale-[1.02] shadow-md;
+}
+
+.hub-interactive:focus {
+  @apply ring-2 ring-offset-2;
+  --tw-ring-color: hsl(var(--hub-blue));
+}
+
+/* Responsividade melhorada */
+@media (max-width: 768px) {
+  .heading-1 {
+    @apply text-xl;
+  }
+  
+  .heading-2 {
+    @apply text-lg;
+  }
+}

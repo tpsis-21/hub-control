@@ -12,11 +12,11 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="flex justify-center mb-4">
-            <Logo width={160} height={50} className="text-gray-900 dark:text-white" />
+          <div className="flex justify-center mb-6">
+            <Logo variant="full" size="lg" className="text-gray-900 dark:text-white w-64 h-16" />
           </div>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">
-            Sistema de gerenciamento de IPTV
+          <p className="text-gray-600 dark:text-gray-300 mt-3 text-lg font-medium">
+            Seu hub de controle inteligente
           </p>
         </div>
         <LoginForm />
