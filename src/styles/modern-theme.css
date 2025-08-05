@@ -1,0 +1,275 @@
+/* Modern Theme Configuration */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Modern Color Palette */
+  --primary: 220 90% 56%; /* Modern Blue */
+  --primary-foreground: 0 0% 98%;
+  --secondary: 220 14.3% 95.9%;
+  --secondary-foreground: 220.9 39.3% 11%;
+  --accent: 220 14.3% 95.9%;
+  --accent-foreground: 220.9 39.3% 11%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 20% 98%;
+  --muted: 220 14.3% 95.9%;
+  --muted-foreground: 220 8.9% 46.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 220.9 39.3% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220.9 39.3% 11%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 220 90% 56%;
+  --radius: 0.75rem;
+  
+  /* Success Colors */
+  --success: 142 76% 36%;
+  --success-foreground: 355.7 100% 97.3%;
+  
+  /* Warning Colors */
+  --warning: 32 95% 44%;
+  --warning-foreground: 355.7 100% 97.3%;
+  
+  /* Info Colors */
+  --info: 199 89% 48%;
+  --info-foreground: 355.7 100% 97.3%;
+  
+  /* Gradient Colors */
+  --gradient-primary: linear-gradient(135deg, hsl(220 90% 56%) 0%, hsl(220 90% 48%) 100%);
+  --gradient-secondary: linear-gradient(135deg, hsl(220 14.3% 95.9%) 0%, hsl(220 14.3% 90%) 100%);
+  --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 76% 28%) 100%);
+  --gradient-warning: linear-gradient(135deg, hsl(32 95% 44%) 0%, hsl(32 95% 36%) 100%);
+  --gradient-danger: linear-gradient(135deg, hsl(0 84.2% 60.2%) 0%, hsl(0 84.2% 52%) 100%);
+  
+  /* Shadow System */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.dark {
+  --background: 220.9 39.3% 11%;
+  --foreground: 210 20% 98%;
+  --primary: 220 90% 56%;
+  --primary-foreground: 220.9 39.3% 11%;
+  --secondary: 215 27.9% 16.9%;
+  --secondary-foreground: 210 20% 98%;
+  --accent: 215 27.9% 16.9%;
+  --accent-foreground: 210 20% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 20% 98%;
+  --muted: 215 27.9% 16.9%;
+  --muted-foreground: 217.9 10.6% 64.9%;
+  --card: 220.9 39.3% 11%;
+  --card-foreground: 210 20% 98%;
+  --popover: 220.9 39.3% 11%;
+  --popover-foreground: 210 20% 98%;
+  --border: 215 27.9% 16.9%;
+  --input: 215 27.9% 16.9%;
+  --ring: 220 90% 56%;
+}
+
+/* Typography System */
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code, pre {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'Ubuntu Mono', monospace;
+}
+
+/* Modern Card Styles */
+.modern-card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modern-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Gradient Backgrounds */
+.gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.gradient-secondary {
+  background: var(--gradient-secondary);
+}
+
+.gradient-success {
+  background: var(--gradient-success);
+}
+
+.gradient-warning {
+  background: var(--gradient-warning);
+}
+
+.gradient-danger {
+  background: var(--gradient-danger);
+}
+
+/* Modern Button Styles */
+.btn-modern {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-modern:hover::before {
+  left: 100%;
+}
+
+/* Glass Effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Smooth Animations */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Focus Styles */
+.focus-ring {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Status Indicators */
+.status-online {
+  color: hsl(var(--success));
+}
+
+.status-offline {
+  color: hsl(var(--destructive));
+}
+
+.status-warning {
+  color: hsl(var(--warning));
+}
+
+.status-info {
+  color: hsl(var(--info));
+}
+
+/* Modern Input Styles */
+.input-modern {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.input-modern:focus {
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.1);
+  border-color: hsl(var(--ring));
+}
+
+/* Loading States */
+.loading-shimmer {
+  background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted-foreground) / 0.1) 50%, hsl(var(--muted)) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1200px) {
+  html {
+    font-size: 16px;
+  }
+}

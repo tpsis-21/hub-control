@@ -1,0 +1,162 @@
+export type Payment = {
+  id: string;
+  client_id: string;
+  date: string;
+  amount: number;
+  status: 'Pago' | 'Pendente' | 'Atrasado' | 'Aguardando' | 'Confirmado' | 'Recusado' | 'Pendente de ativação manual' | 'Ativado';
+  plan_id: string;
+  transaction_id?: string;
+  payment_method?: string;
+  payment_type?: 'pix' | 'credit_card' | 'bank_transfer' | 'cash' | 'other';
+  server_id?: string;
+  notified?: boolean;
+  created_at: string;
+  updated_at: string;
+  client?: {
+    id: string;
+    name: string;
+    whatsapp?: string;
+  };
+  plan?: {
+    id: string;
+    name: string;
+    price: number;
+  };
+  server?: {
+    id: string;
+    name: string;
+    renewal_automation?: boolean;
+  };
+};
+
+export type InAppNotification = {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  read: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Client = {
+  id: string;
+  name: string;
+  whatsapp?: string;
+  email?: string;
+  plan_id: string;
+  server_id?: string;
+  status: 'Ativo' | 'Inativo' | 'Suspenso' | 'Expirado' | 'Teste';
+  expiration_date?: string;
+  created_at: string;
+  updated_at: string;
+  plan?: Plan;
+  server?: Server;
+  payments?: Payment[];
+};
+
+export type Plan = {
+  id: string;
+  name: string;
+  price: number;
+  duration_days: number;
+  description?: string;
+  features?: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  group_id?: string;
+  group?: PlanGroup;
+};
+
+export type PlanGroup = {
+  id: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  plans?: Plan[];
+};
+
+export type ServerTestConfig = {
+  createUserEndpoint?: string;
+  createUserMethod?: 'POST' | 'GET' | 'PUT' | 'PATCH';
+  createUserHeaders?: Record<string, string>;
+  createUserBodyTemplate?: string;
+  responseUserIdPath?: string;
+  responseExpirationPath?: string;
+};
+
+export type Server = {
+  id: string;
+  name: string;
+  url?: string;
+  apiKey?: string;
+  status: 'Online' | 'Offline' | 'Instável';
+  integrationType: 'generic' | 'pixbot' | 'natv' | 'none';
+  testAutomation: boolean;
+  testConfig?: ServerTestConfig;
+  renewalAutomation: boolean;
+  paymentGateway: boolean;
+  sendExpirationReminder: boolean;
+  sendUsageInstructions: boolean;
+  paymentNotifications?: boolean;
+  credits?: number | null;
+  lastCreditsSync?: string | null;
+  panelServerId?: string; // ID numérico de 2 dígitos (10-99) para APIs e importações
+};
+
+export type KnowledgeBaseArticle = {
+  id: string;
+  title: string;
+  content: string;
+  category: 'FAQ' | 'Tutoriais' | 'Solução de Problemas';
+  isPublic: boolean;
+  serverIds?: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type Settings = {
+  id: string;
+  smtp_host?: string;
+  smtp_port?: number;
+  smtp_user?: string;
+  smtp_password?: string;
+  smtp_from_email?: string;
+  smtp_from_name?: string;
+  whatsapp_api_url?: string;
+  whatsapp_api_key?: string;
+  whatsapp_instance_id?: string;
+  payment_gateway_enabled?: boolean;
+  payment_gateway_api_url?: string;
+  payment_gateway_api_key?: string;
+  auto_renewal_enabled?: boolean;
+  expiration_reminder_days?: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FinancialTransaction = {
+  id: string;
+  type: 'income' | 'expense';
+  description: string;
+  amount: number;
+  category: string;
+  transaction_date: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FinancialSummary = {
+  receitaMes: number;
+  despesasMes: number;
+  lucroLiquido: number;
+  receitaAnual: number;
+  margemLucro: number;
+  crescimentoReceita: number;
+  crescimentoDespesas: number;
+};
