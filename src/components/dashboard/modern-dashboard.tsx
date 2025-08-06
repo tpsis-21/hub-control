@@ -136,21 +136,21 @@ function ModernDashboard({
     },
   ];
 
-  const topClients = (metrics.topClients || []).slice(0, 5).map((client, index) => ({
+  const topClients = (metrics.recentlyAddedClients || []).slice(0, 5).map((client: any, index: number) => ({
     id: client.id,
     name: client.name,
     avatar: `/avatars/0${index + 1}.png`,
-    initials: client.name.split(' ').map(n => n[0]).join('').toUpperCase(),
-    revenue: formatPrice(client.monthlyValue || 0),
-    plan: client.plan || 'Básico',
+    initials: client.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+    revenue: formatPrice(0), // Valor fixo pois não temos monthlyValue
+    plan: client.plan?.name || 'Básico',
   }));
 
   // Dados dos servidores baseados em dados reais
-  const serverStatus = servers.map(server => ({
+  const serverStatus = servers.map((server: any) => ({
     id: server.id,
     name: server.name,
-    status: server.status,
-    location: server.location || 'Brasil',
+    status: server.status.toLowerCase(), // Converter para lowercase para comparação
+    location: 'Brasil', // Propriedade location não existe na interface Server
     uptime: '99.9%',
     load: Math.floor(Math.random() * 100),
   }));
@@ -397,13 +397,13 @@ function ModernDashboard({
                         <div className={cn(
                           "w-3 h-3 rounded-full",
                           server.status === "online" && "bg-green-500",
-                          server.status === "warning" && "bg-yellow-500",
+                          server.status === "instável" && "bg-yellow-500",
                           server.status === "offline" && "bg-red-500"
                         )} />
                         <div>
                           <p className="font-medium">{server.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {server.clients} clientes • {server.uptime} uptime
+                            {server.uptime} uptime
                           </p>
                         </div>
                       </div>

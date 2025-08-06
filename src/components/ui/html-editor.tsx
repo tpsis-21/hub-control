@@ -167,9 +167,7 @@ export function HtmlEditor({ value, onChange, placeholder, className }: HtmlEdit
             onMouseUp={saveSelection}
             onKeyUp={saveSelection}
             data-placeholder={placeholder}
-            style={{
-              emptyContent: placeholder ? `"${placeholder}"` : undefined,
-            }}
+            style={{}}
           />
         )}
       </div>

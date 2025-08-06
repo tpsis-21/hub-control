@@ -35,9 +35,9 @@
   --info-foreground: 355.7 100% 97.3%;
   
   /* Gradient Colors */
-  --gradient-primary: linear-gradient(135deg, hsl(220 90% 56%) 0%, hsl(220 90% 48%) 100%);
-  --gradient-secondary: linear-gradient(135deg, hsl(220 14.3% 95.9%) 0%, hsl(220 14.3% 90%) 100%);
-  --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 76% 28%) 100%);
+  --gradient-primary: linear-gradient(135deg, #2196F3 0%, #3A4A5C 100%);
+  --gradient-secondary: linear-gradient(135deg, #3A4A5C 0%, #2C3E50 100%);
+  --gradient-success: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
   --gradient-warning: linear-gradient(135deg, hsl(32 95% 44%) 0%, hsl(32 95% 36%) 100%);
   --gradient-danger: linear-gradient(135deg, hsl(0 84.2% 60.2%) 0%, hsl(0 84.2% 52%) 100%);
   

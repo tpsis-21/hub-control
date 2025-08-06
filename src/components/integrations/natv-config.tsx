@@ -477,10 +477,11 @@ export function NATVConfig() {
                     onClick={async () => {
                       setOperationLoading(true)
                       try {
-                        const result = await natvService.createUser(
-                          operationData.createUser.username || undefined,
-                          operationData.createUser.minutes
-                        )
+                        const result = await natvService.createUser({
+                          username: operationData.createUser.username || `user_${Date.now()}`,
+                          password: `pass_${Date.now()}`,
+                          duration: operationData.createUser.minutes
+                        })
                         setOperationResult({ type: 'createUser', data: result })
                         if (result.success) {
                           toast.success('Usuário criado com sucesso!')
@@ -560,11 +561,11 @@ export function NATVConfig() {
                     onClick={async () => {
                       setOperationLoading(true)
                       try {
-                        const result = await natvService.activateUser(
-                          operationData.activateUser.username || undefined,
-                          operationData.activateUser.userId ? parseInt(operationData.activateUser.userId) : undefined,
-                          operationData.activateUser.months
-                        )
+                        const result = await natvService.activateUser({
+                          username: operationData.activateUser.username,
+                          plan: 'default',
+                          duration: operationData.activateUser.months * 30
+                        })
                         setOperationResult({ type: 'activateUser', data: result })
                         if (result.success) {
                           toast.success('Usuário ativado/renovado com sucesso!')
@@ -644,11 +645,10 @@ export function NATVConfig() {
                     onClick={async () => {
                       setOperationLoading(true)
                       try {
-                        const result = await natvService.searchUsers(
-                          operationData.searchUsers.username || undefined,
-                          operationData.searchUsers.userId ? parseInt(operationData.searchUsers.userId) : undefined,
-                          operationData.searchUsers.limit
-                        )
+                        const result = await natvService.searchUsers({
+                          username: operationData.searchUsers.username,
+                          ...(operationData.searchUsers.userId && { email: operationData.searchUsers.userId })
+                        })
                         setOperationResult({ type: 'searchUsers', data: result })
                         if (result.success) {
                           toast.success(`Encontrados ${result.data?.length || 0} usuários`)

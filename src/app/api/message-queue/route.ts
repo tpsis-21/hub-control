@@ -1,6 +1,6 @@
 // src/app/api/message-queue/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { messageQueue } from '@/services/message-queue.service';
 import { LoggerService } from '@/services/logger.service';
 

@@ -333,7 +333,7 @@ export function MessageSender({ client, onSuccess, className }: MessageSenderPro
             <Checkbox
               id="scheduled"
               checked={isScheduled}
-              onCheckedChange={setIsScheduled}
+              onCheckedChange={(checked) => setIsScheduled(checked === true)}
             />
             <Label htmlFor="scheduled" className="text-sm">
               Agendar envio

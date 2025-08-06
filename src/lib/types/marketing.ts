@@ -179,8 +179,15 @@ export interface MarketingDashboard {
   totalCampaigns: number;
   activeCampaigns: number;
   totalEmailsSent: number;
+  emailsSent: number;
   averageOpenRate: number;
   averageClickRate: number;
+  openRate: number;
+  clickRate: number;
+  bounceRate: number;
+  deliveryRate: number;
+  spamRate: number;
+  deliverabilityScore: number;
   activeClients: number;
   recentCampaigns: Campaign[];
   topPerformingCampaigns: Campaign[];

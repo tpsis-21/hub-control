@@ -1,4 +1,4 @@
-# **App Name**: IPTV Manager Pro
+# **App Name**: Hub Control
 
 ## Core Features:
 

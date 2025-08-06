@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { pushNotificationService, PushNotificationPayload } from '@/lib/push-notifications.service';
 
 // Verificar se o usuário tem permissão para enviar notificações

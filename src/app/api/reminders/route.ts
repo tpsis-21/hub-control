@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Erro ao obter status dos lembretes:', error);
-    LoggerService.log('error', 'Erro ao obter status dos lembretes', {
+    LoggerService.error('Erro ao obter status dos lembretes', 'RemindersAPI', {
       error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
     
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'start':
         ReminderService.startReminderService();
-        LoggerService.log('system', 'Serviço de lembretes iniciado manualmente', {
+        LoggerService.info('Serviço de lembretes iniciado manualmente', 'RemindersAPI', {
           timestamp: new Date().toISOString()
         });
         return NextResponse.json({
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
       case 'stop':
         ReminderService.stopReminderService();
-        LoggerService.log('system', 'Serviço de lembretes parado manualmente', {
+        LoggerService.info('Serviço de lembretes parado manualmente', 'RemindersAPI', {
           timestamp: new Date().toISOString()
         });
         return NextResponse.json({
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
 
       case 'check':
         await ReminderService.runManualCheck();
-        LoggerService.log('system', 'Verificação manual de lembretes executada', {
+        LoggerService.info('Verificação manual de lembretes executada', 'RemindersAPI', {
           timestamp: new Date().toISOString()
         });
         return NextResponse.json({
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
       case 'check-expired':
         await ReminderService.checkExpiredClients();
-        LoggerService.log('system', 'Verificação manual de clientes vencidos executada', {
+        LoggerService.info('Verificação manual de clientes vencidos executada', 'RemindersAPI', {
           timestamp: new Date().toISOString()
         });
         return NextResponse.json({
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Erro ao controlar serviço de lembretes:', error);
-    LoggerService.log('error', 'Erro ao controlar serviço de lembretes', {
+    LoggerService.error('Erro ao controlar serviço de lembretes', 'RemindersAPI', {
       error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
     
@@ -211,7 +211,7 @@ export async function PUT(request: NextRequest) {
       isUrgent: type === 'urgent' || daysUntilExpiration <= 1
     });
 
-    LoggerService.log('notification', 'Lembrete manual enviado', {
+    LoggerService.info('Lembrete manual enviado', 'RemindersAPI', {
       clientId: clientData.id,
       clientName: clientData.name,
       type,
@@ -231,7 +231,7 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     console.error('Erro ao enviar lembrete manual:', error);
-    LoggerService.log('error', 'Erro ao enviar lembrete manual', {
+    LoggerService.error('Erro ao enviar lembrete manual', 'RemindersAPI', {
       error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
     

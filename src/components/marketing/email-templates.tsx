@@ -53,21 +53,16 @@ import {
   Variable,
   Clock
 } from 'lucide-react'
-import { EmailTemplate } from '@/lib/types/marketing'
+import { EmailTemplate, TemplateVariable } from '@/lib/types/marketing'
 import { MarketingService } from '@/services/marketing.service'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 const TEMPLATE_TYPES = [
-  { value: 'campaign', label: 'Campanha de Marketing' },
-  { value: 'expiration_reminder', label: 'Lembrete de Vencimento' },
-  { value: 'welcome', label: 'Boas-vindas' },
-  { value: 'renewal_confirmation', label: 'Confirmação de Renovação' },
-  { value: 'payment_reminder', label: 'Lembrete de Pagamento' },
-  { value: 'promotion', label: 'Promoção' },
-  { value: 'newsletter', label: 'Newsletter' },
-  { value: 'custom', label: 'Personalizado' }
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'notification', label: 'Notificação' },
+  { value: 'transactional', label: 'Transacional' }
 ]
 
 const AVAILABLE_VARIABLES = [
@@ -94,10 +89,10 @@ export function EmailTemplates() {
   
   const [formData, setFormData] = useState({
     name: '',
-    subject: '',
-    html_content: '',
-    type: 'custom' as EmailTemplate['type'],
-    variables: [] as string[]
+    description: '',
+    htmlContent: '',
+    category: 'marketing' as EmailTemplate['category'],
+    variables: [] as TemplateVariable[]
   })
 
   useEffect(() => {
@@ -116,8 +111,8 @@ export function EmailTemplates() {
         {
           id: '1',
           name: 'Lembrete de Vencimento',
-          subject: 'Seu plano vence em {{dias_restantes}} dias',
-          html_content: `
+          description: 'Template para lembrar clientes sobre vencimento do plano',
+          htmlContent: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Olá {{nome}}!</h2>
               <p>Seu plano <strong>{{plano}}</strong> vence em <strong>{{dias_restantes}} dias</strong>.</p>
@@ -127,19 +122,24 @@ export function EmailTemplates() {
               <p>Atenciosamente,<br>{{empresa}}</p>
             </div>
           `,
-          type: 'expiration_reminder',
-          variables: ['nome', 'plano', 'dias_restantes', 'vencimento', 'link_renovacao', 'empresa'],
-          is_system: true,
-          is_active: true,
+          category: 'notification',
+          variables: [
+            { name: 'nome', description: 'Nome do cliente', type: 'text', required: true },
+            { name: 'plano', description: 'Nome do plano', type: 'text', required: true },
+            { name: 'dias_restantes', description: 'Dias até vencimento', type: 'number', required: true },
+            { name: 'vencimento', description: 'Data de vencimento', type: 'date', required: true },
+            { name: 'link_renovacao', description: 'Link para renovação', type: 'text', required: true },
+            { name: 'empresa', description: 'Nome da empresa', type: 'text', required: true }
+          ],
+          isDefault: true,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          created_by: null
+          updated_at: new Date().toISOString()
         },
         {
           id: '2',
           name: 'Boas-vindas',
-          subject: 'Bem-vindo à {{empresa}}!',
-          html_content: `
+          description: 'Template de boas-vindas para novos clientes',
+          htmlContent: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Bem-vindo, {{nome}}!</h2>
               <p>Obrigado por escolher nossos serviços. Seu plano <strong>{{plano}}</strong> já está ativo!</p>
@@ -149,13 +149,17 @@ export function EmailTemplates() {
               <p>Atenciosamente,<br>{{empresa}}</p>
             </div>
           `,
-          type: 'welcome',
-          variables: ['nome', 'plano', 'servidor', 'link_suporte', 'empresa'],
-          is_system: true,
-          is_active: true,
+          category: 'marketing',
+          variables: [
+            { name: 'nome', description: 'Nome do cliente', type: 'text', required: true },
+            { name: 'plano', description: 'Nome do plano', type: 'text', required: true },
+            { name: 'servidor', description: 'Nome do servidor', type: 'text', required: true },
+            { name: 'link_suporte', description: 'Link para suporte', type: 'text', required: true },
+            { name: 'empresa', description: 'Nome da empresa', type: 'text', required: true }
+          ],
+          isDefault: false,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          created_by: null
+          updated_at: new Date().toISOString()
         }
       ])
     } catch (error) {
@@ -188,9 +192,9 @@ export function EmailTemplates() {
     try {
       const duplicatedTemplate = {
         name: `${template.name} (Cópia)`,
-        subject: template.subject,
-        html_content: template.html_content,
-        type: template.type,
+        description: template.description,
+        htmlContent: template.htmlContent,
+        category: template.category,
         variables: template.variables
       }
       
@@ -222,9 +226,9 @@ export function EmailTemplates() {
     setEditingTemplate(template)
     setFormData({
       name: template.name,
-      subject: template.subject,
-      html_content: template.html_content,
-      type: template.type,
+      description: template.description || '',
+      htmlContent: template.htmlContent,
+      category: template.category,
       variables: template.variables
     })
     setIsCreateDialogOpen(true)
@@ -235,22 +239,22 @@ export function EmailTemplates() {
     setEditingTemplate(null)
     setFormData({
       name: '',
-      subject: '',
-      html_content: '',
-      type: 'custom',
+      description: '',
+      htmlContent: '',
+      category: 'marketing',
       variables: []
     })
   }
 
   const insertVariable = (variable: string) => {
-    const textarea = document.getElementById('html_content') as HTMLTextAreaElement
+    const textarea = document.getElementById('htmlContent') as HTMLTextAreaElement
     if (textarea) {
       const start = textarea.selectionStart
       const end = textarea.selectionEnd
-      const text = formData.html_content
+      const text = formData.htmlContent
       const newText = text.substring(0, start) + `{{${variable}}}` + text.substring(end)
       
-      setFormData(prev => ({ ...prev, html_content: newText }))
+      setFormData(prev => ({ ...prev, htmlContent: newText }))
       
       // Reposicionar cursor
       setTimeout(() => {
@@ -318,8 +322,8 @@ export function EmailTemplates() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="type">Tipo</Label>
-                    <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as EmailTemplate['type'] }))}>
+                    <Label htmlFor="category">Categoria</Label>
+                    <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value as EmailTemplate['category'] }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -335,23 +339,23 @@ export function EmailTemplates() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Assunto</Label>
+                  <Label htmlFor="description">Descrição</Label>
                   <Input
-                    id="subject"
-                    placeholder="Ex: Seu plano vence em {{dias_restantes}} dias"
-                    value={formData.subject}
-                    onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+                    id="description"
+                    placeholder="Ex: Template para lembrete de vencimento"
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="html_content">Conteúdo HTML</Label>
+                  <Label htmlFor="htmlContent">Conteúdo HTML</Label>
                   <Textarea
-                    id="html_content"
+                    id="htmlContent"
                     placeholder="Digite o conteúdo do email em HTML..."
                     className="min-h-[300px] font-mono text-sm"
-                    value={formData.html_content}
-                    onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
+                    value={formData.htmlContent}
+                    onChange={(e) => setFormData(prev => ({ ...prev, htmlContent: e.target.value }))}
                   />
                 </div>
               </TabsContent>
@@ -385,9 +389,9 @@ export function EmailTemplates() {
                 <div className="border rounded-lg p-4 bg-muted/50">
                   <h3 className="text-lg font-semibold mb-2">Visualização</h3>
                   <div className="space-y-2">
-                    <div><strong>Assunto:</strong> {formData.subject}</div>
+                    <div><strong>Descrição:</strong> {formData.description}</div>
                     <div className="border rounded p-4 bg-white">
-                      <div dangerouslySetInnerHTML={{ __html: formData.html_content }} />
+                      <div dangerouslySetInnerHTML={{ __html: formData.htmlContent }} />
                     </div>
                   </div>
                 </div>
@@ -426,14 +430,11 @@ export function EmailTemplates() {
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
                       <CardTitle className="text-lg">{template.name}</CardTitle>
-                      <Badge variant={template.is_system ? 'secondary' : 'default'}>
-                        {template.is_system ? 'Sistema' : getTypeLabel(template.type)}
+                      <Badge variant={template.isDefault ? 'secondary' : 'default'}>
+                        {template.isDefault ? 'Padrão' : getTypeLabel(template.category)}
                       </Badge>
-                      {!template.is_active && (
-                        <Badge variant="outline">Inativo</Badge>
-                      )}
                     </div>
-                    <CardDescription>{template.subject}</CardDescription>
+                    <CardDescription>{template.description}</CardDescription>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -454,7 +455,7 @@ export function EmailTemplates() {
                         <Copy className="mr-2 h-4 w-4" />
                         Duplicar
                       </DropdownMenuItem>
-                      {!template.is_system && (
+                      {!template.isDefault && (
                         <DropdownMenuItem 
                           className="text-destructive"
                           onClick={() => setDeletingTemplate(template)}
@@ -476,8 +477,8 @@ export function EmailTemplates() {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {template.variables.slice(0, 3).map((variable) => (
-                        <Badge key={variable} variant="outline" className="text-xs">
-                          {variable}
+                        <Badge key={variable.name} variant="outline" className="text-xs">
+                          {variable.name}
                         </Badge>
                       ))}
                       {template.variables.length > 3 && (
@@ -494,7 +495,7 @@ export function EmailTemplates() {
                       Tipo
                     </div>
                     <div className="text-sm">
-                      {getTypeLabel(template.type)}
+                      {getTypeLabel(template.category)}
                     </div>
                   </div>
 
@@ -527,21 +528,21 @@ export function EmailTemplates() {
           {previewTemplate && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Assunto</Label>
-                <div className="p-3 bg-muted rounded">{previewTemplate.subject}</div>
+                <Label>Descrição</Label>
+                <div className="p-3 bg-muted rounded">{previewTemplate.description}</div>
               </div>
               
               <div className="space-y-2">
                 <Label>Conteúdo</Label>
                 <div className="border rounded p-4 bg-white max-h-96 overflow-y-auto">
-                  <div dangerouslySetInnerHTML={{ __html: previewTemplate.html_content }} />
+                  <div dangerouslySetInnerHTML={{ __html: previewTemplate.htmlContent }} />
                 </div>
               </div>
               
               <div className="space-y-2">
                 <Label>Código HTML</Label>
                 <Textarea
-                  value={previewTemplate.html_content}
+                  value={previewTemplate.htmlContent}
                   readOnly
                   className="font-mono text-xs max-h-32"
                 />

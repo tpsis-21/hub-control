@@ -43,14 +43,22 @@ export type InAppNotification = {
 export type Client = {
   id: string;
   name: string;
+  iptvUsername?: string;
+  iptvUserId?: string;
+  iptvPassword?: string;
+  managerId?: string;
   whatsapp?: string;
   email?: string;
-  plan_id: string;
-  server_id?: string;
-  status: 'Ativo' | 'Inativo' | 'Suspenso' | 'Expirado' | 'Teste';
-  expiration_date?: string;
-  created_at: string;
-  updated_at: string;
+  startDate: string;
+  expirationDate: string;
+  status: 'Ativo' | 'Inativo' | 'Em teste' | 'Bloqueado';
+  planId: string;
+  serverId?: string;
+  notes?: string;
+  paymentHistory?: any[];
+  uniqueLink?: string;
+  created_at?: string;
+  updated_at?: string;
   plan?: Plan;
   server?: Server;
   payments?: Payment[];
@@ -68,6 +76,7 @@ export type Plan = {
   updated_at: string;
   group_id?: string;
   group?: PlanGroup;
+  panelPlanId?: string;
 };
 
 export type PlanGroup = {
@@ -81,12 +90,21 @@ export type PlanGroup = {
 };
 
 export type ServerTestConfig = {
+  type?: 'api' | 'chatbot' | 'none';
   createUserEndpoint?: string;
   createUserMethod?: 'POST' | 'GET' | 'PUT' | 'PATCH';
   createUserHeaders?: Record<string, string>;
   createUserBodyTemplate?: string;
   responseUserIdPath?: string;
   responseExpirationPath?: string;
+  testDurationMinutes?: number;
+  apiEndpoint?: string;
+  apiHeaders?: string;
+  apiBody?: string;
+  responseUsernamePath?: string;
+  responsePasswordPath?: string;
+  chatbotLink?: string;
+  chatbotMessage?: string;
 };
 
 export type Server = {
@@ -121,12 +139,12 @@ export type KnowledgeBaseArticle = {
 
 export type Settings = {
   id: string;
-  smtp_host?: string;
-  smtp_port?: number;
-  smtp_user?: string;
-  smtp_password?: string;
-  smtp_from_email?: string;
-  smtp_from_name?: string;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPassword?: string;
+  smtpFromEmail?: string;
+  smtpFromName?: string;
   whatsapp_api_url?: string;
   whatsapp_api_key?: string;
   whatsapp_instance_id?: string;

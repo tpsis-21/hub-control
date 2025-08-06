@@ -47,7 +47,7 @@ type Column<T> = {
 type Action<T> = {
   label: string;
   icon?: ReactNode;
-  onClick: (item: T) => void;
+  onClick?: (item: T) => void;
   variant?: 'default' | 'destructive';
   disabled?: (item: T) => boolean;
   component?: (item: T) => ReactNode;
@@ -248,7 +248,7 @@ export function BaseTable<T extends { id: string }>({
                               <DropdownMenuItem
                                 key={index}
                                 disabled={isDisabled}
-                                onSelect={() => action.onClick(item)}
+                                onSelect={() => action.onClick?.(item)}
                               >
                                 {action.icon}
                                 {action.label}

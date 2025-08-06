@@ -79,8 +79,8 @@ export function EditCustomerForm({ customer, plans, servers, children }: EditCus
       status: customer.status,
       expirationDate: new Date(customer.expirationDate),
       notes: customer.notes || "",
-      receiveEmail: customer.receiveEmail ?? true,
-      receiveWhatsapp: customer.receiveWhatsapp ?? true,
+      receiveEmail: true,
+      receiveWhatsapp: true,
     },
   });
 

@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar transporter
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: smtpConfig.host,
       port: smtpConfig.port,
       secure: smtpConfig.secure,
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Enviar email
     const info = await transporter.sendMail({
-      from: smtpConfig.fromEmail,
+      from: smtpConfig.from_email,
       to,
       subject,
       html,

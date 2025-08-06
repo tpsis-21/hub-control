@@ -78,7 +78,7 @@ export function AddTestForm({ plans, servers }: AddTestFormProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+        <Button size="sm" className="bg-gradient-to-r from-[#2196F3] to-[#3A4A5C] hover:from-[#1976D2] hover:to-[#2C3E50]">
           <TestTube className="mr-2 h-4 w-4" />
           Criar Teste
         </Button>

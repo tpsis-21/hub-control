@@ -98,15 +98,98 @@ export class AutomationService {
       let query = supabase.from('automation_rules').select('*');
 
       if (activeOnly) {
-        query = query.eq('isActive', true);
+        query = query.eq('is_active', true);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
 
-      return data || [];
+      return data ? data.map(dbRule => ({
+        id: dbRule.id,
+        name: dbRule.name,
+        description: dbRule.description,
+        trigger: dbRule.trigger as AutomationTrigger,
+        conditions: dbRule.conditions as AutomationCondition[],
+        actions: dbRule.actions as AutomationAction[],
+        isActive: dbRule.is_active,
+        created_at: dbRule.created_at,
+        updated_at: dbRule.updated_at,
+        lastExecuted: dbRule.last_executed,
+        executionCount: dbRule.execution_count
+      })) : [];
     } catch (error) {
       LoggerService.error('Erro ao buscar regras de automação', 'AutomationService', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Atualiza uma regra de automação
+   */
+  static async updateRule(ruleId: string, updateData: Partial<AutomationRule>): Promise<AutomationRule> {
+    try {
+      const supabase = await createApiSupabaseClient();
+      
+      const dbUpdateData = {
+         name: updateData.name,
+         description: updateData.description,
+         is_active: updateData.isActive,
+         trigger: updateData.trigger as any,
+         conditions: updateData.conditions as any,
+         actions: updateData.actions as any,
+         execution_count: updateData.executionCount,
+         last_executed: updateData.lastExecuted,
+         updated_at: new Date().toISOString()
+       };
+      
+      const { data, error } = await supabase
+        .from('automation_rules')
+        .update(dbUpdateData)
+        .eq('id', ruleId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const rule: AutomationRule = {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        trigger: data.trigger as AutomationTrigger,
+        conditions: data.conditions as AutomationCondition[],
+        actions: data.actions as AutomationAction[],
+        isActive: data.is_active,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        lastExecuted: data.last_executed,
+        executionCount: data.execution_count
+      };
+
+      LoggerService.info('Regra de automação atualizada', 'AutomationService', { ruleId });
+      return rule;
+    } catch (error) {
+      LoggerService.error('Erro ao atualizar regra de automação', 'AutomationService', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Exclui uma regra de automação
+   */
+  static async deleteRule(ruleId: string): Promise<void> {
+    try {
+      const supabase = await createApiSupabaseClient();
+      
+      const { error } = await supabase
+        .from('automation_rules')
+        .delete()
+        .eq('id', ruleId);
+
+      if (error) throw error;
+
+      LoggerService.info('Regra de automação excluída', 'AutomationService', { ruleId });
+    } catch (error) {
+      LoggerService.error('Erro ao excluir regra de automação', 'AutomationService', { error });
       throw error;
     }
   }
@@ -185,18 +268,9 @@ export class AutomationService {
     const now = new Date();
     const timeDiff = now.getTime() - lastExecution.getTime();
 
-    switch (rule.trigger.frequency) {
-      case 'immediate':
-        return true;
-      case 'daily':
-        return timeDiff >= 24 * 60 * 60 * 1000; // 24 horas
-      case 'weekly':
-        return timeDiff >= 7 * 24 * 60 * 60 * 1000; // 7 dias
-      case 'monthly':
-        return timeDiff >= 30 * 24 * 60 * 60 * 1000; // 30 dias
-      default:
-        return false;
-    }
+    // Se tem configuração de recurring, verificar se já passou tempo suficiente
+    // Por padrão, executar apenas uma vez por dia
+    return timeDiff >= 24 * 60 * 60 * 1000; // 24 horas
   }
 
   /**
@@ -206,9 +280,9 @@ export class AutomationService {
     const clients = await getClientes();
     const now = new Date();
 
-    switch (trigger.event) {
+    switch (trigger.type) {
       case 'client_expiring':
-        const daysBeforeExpiration = trigger.parameters?.daysBeforeExpiration || 1;
+        const daysBeforeExpiration = trigger.config?.daysBefore || 1;
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + daysBeforeExpiration);
         
@@ -218,7 +292,7 @@ export class AutomationService {
         });
 
       case 'client_expired':
-        const daysAfterExpiration = trigger.parameters?.daysAfterExpiration || 0;
+        const daysAfterExpiration = trigger.config?.daysBefore || 0;
         const expiredDate = new Date();
         expiredDate.setDate(expiredDate.getDate() - daysAfterExpiration);
         
@@ -227,18 +301,13 @@ export class AutomationService {
           return expirationDate <= expiredDate && client.status !== 'Em teste';
         });
 
-      case 'client_renewed':
-        // Para renovações, precisaríamos de um log de atividades
-        // Por enquanto, retornamos array vazio
-        return [];
-
       case 'payment_received':
         // Para pagamentos, precisaríamos de integração com sistema de pagamento
         // Por enquanto, retornamos array vazio
         return [];
 
-      case 'new_client':
-        const hoursAgo = trigger.parameters?.hoursAfterCreation || 24;
+      case 'client_created':
+        const hoursAgo = trigger.config?.daysBefore || 1;
         const creationThreshold = new Date();
         creationThreshold.setHours(creationThreshold.getHours() - hoursAgo);
         
@@ -247,13 +316,13 @@ export class AutomationService {
           return startDate >= creationThreshold;
         });
 
-      case 'test_expiring':
+      case 'test_created':
         return clients.filter(client => {
           if (client.status !== 'Em teste') return false;
-          const expirationDate = new Date(client.expirationDate);
-          const testExpirationThreshold = new Date();
-          testExpirationThreshold.setDate(testExpirationThreshold.getDate() + 1);
-          return expirationDate <= testExpirationThreshold && expirationDate >= now;
+          const startDate = new Date(client.startDate);
+          const testCreationThreshold = new Date();
+          testCreationThreshold.setHours(testCreationThreshold.getHours() - 24);
+          return startDate >= testCreationThreshold;
         });
 
       default:
@@ -335,8 +404,8 @@ export class AutomationService {
           case 'add_tag':
             await this.executeAddTagAction(client, action);
             break;
-          case 'create_task':
-            await this.executeCreateTaskAction(client, action);
+          case 'webhook':
+            await this.executeWebhookAction(client, action);
             break;
         }
       } catch (error) {
@@ -362,8 +431,8 @@ export class AutomationService {
       return;
     }
 
-    const subject = MarketingService.processTemplate(action.parameters.subject, client);
-    const content = MarketingService.processTemplate(action.parameters.content, client);
+    const subject = 'Notificação Automática';
+    const content = MarketingService.processTemplate(action.config.message || '', client);
 
     // Enviar email via API route
     const response = await fetch('/api/messages/send-email', {
@@ -383,16 +452,15 @@ export class AutomationService {
 
     // Registrar log
     await MarketingService.logEmail({
-      campaignId: `automation_${ruleId}`,
-      clientId: client.id,
+      campaign_id: `automation_${ruleId}`,
+      client_id: client.id,
       email: client.email,
       subject,
       status: success ? 'sent' : 'failed',
       sent_at: success ? new Date().toISOString() : undefined,
-      errorMessage: result.error,
+      error_message: result.error,
       metadata: {
-        automationRuleId: ruleId,
-        messageId: result.messageId
+        message_id: result.messageId
       }
     });
   }
@@ -409,7 +477,7 @@ export class AutomationService {
       return;
     }
 
-    const message = MarketingService.processTemplate(action.parameters.message, client);
+    const message = MarketingService.processTemplate(action.config.message || '', client);
 
     // TODO: Implementar envio de WhatsApp
     LoggerService.info('WhatsApp enviado via automação', 'AutomationService', {
@@ -426,7 +494,7 @@ export class AutomationService {
     // TODO: Implementar atualização de status do cliente
     LoggerService.info('Status do cliente atualizado via automação', 'AutomationService', {
       clientId: client.id,
-      newStatus: action.parameters.newStatus
+      newStatus: action.config.status
     });
   }
 
@@ -437,18 +505,18 @@ export class AutomationService {
     // TODO: Implementar sistema de tags
     LoggerService.info('Tag adicionada ao cliente via automação', 'AutomationService', {
       clientId: client.id,
-      tag: action.parameters.tag
+      tag: action.config.tag
     });
   }
 
   /**
-   * Executa ação de criar tarefa
+   * Executa ação de webhook
    */
-  private static async executeCreateTaskAction(client: Client, action: AutomationAction): Promise<void> {
-    // TODO: Implementar sistema de tarefas
-    LoggerService.info('Tarefa criada via automação', 'AutomationService', {
+  private static async executeWebhookAction(client: Client, action: AutomationAction): Promise<void> {
+    // TODO: Implementar chamada de webhook
+    LoggerService.info('Webhook executado via automação', 'AutomationService', {
       clientId: client.id,
-      task: action.parameters.task
+      webhookUrl: action.config.webhookUrl
     });
   }
 
@@ -462,8 +530,8 @@ export class AutomationService {
       await supabase
         .from('automation_rules')
         .update({
-          lastExecuted: new Date().toISOString(),
-          executionCount: executionCount,
+          last_executed: new Date().toISOString(),
+          execution_count: executionCount,
           updated_at: new Date().toISOString()
         })
         .eq('id', ruleId);
@@ -483,7 +551,7 @@ export class AutomationService {
       {
         id: 'expiration_reminder',
         name: 'Lembrete de Vencimento',
-        subject: '⚠️ Seu plano vence em breve - {{nome}}',
+
         htmlContent: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #e74c3c;">⚠️ Atenção: Seu plano vence em breve!</h2>
@@ -503,13 +571,21 @@ export class AutomationService {
           </div>
         `,
         textContent: 'Olá {{nome}}, seu plano vence em {{vencimento}}. Renove o quanto antes para evitar interrupções.',
-        variables: ['nome', 'vencimento', 'usuario', 'status'],
-        category: 'expiration'
+        variables: [
+          { name: 'nome', description: 'Nome do cliente', type: 'text', required: true },
+          { name: 'vencimento', description: 'Data de vencimento', type: 'date', required: true },
+          { name: 'usuario', description: 'Usuário IPTV', type: 'text', required: true },
+          { name: 'status', description: 'Status do cliente', type: 'text', required: true }
+        ],
+        category: 'notification',
+        isDefault: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       },
       {
         id: 'welcome_message',
         name: 'Mensagem de Boas-vindas',
-        subject: '🎉 Bem-vindo(a) ao nosso serviço IPTV - {{nome}}',
+
         htmlContent: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #27ae60;">🎉 Bem-vindo(a) ao nosso serviço!</h2>
@@ -527,13 +603,20 @@ export class AutomationService {
           </div>
         `,
         textContent: 'Bem-vindo {{nome}}! Seu usuário: {{usuario}}, válido até {{vencimento}}.',
-        variables: ['nome', 'usuario', 'vencimento'],
-        category: 'welcome'
+        variables: [
+          { name: 'nome', description: 'Nome do cliente', type: 'text', required: true },
+          { name: 'usuario', description: 'Usuário IPTV', type: 'text', required: true },
+          { name: 'vencimento', description: 'Data de vencimento', type: 'date', required: true }
+        ],
+        category: 'notification',
+        isDefault: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       },
       {
         id: 'renewal_confirmation',
         name: 'Confirmação de Renovação',
-        subject: '✅ Renovação confirmada - {{nome}}',
+
         htmlContent: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #27ae60;">✅ Renovação confirmada!</h2>
@@ -550,8 +633,15 @@ export class AutomationService {
           </div>
         `,
         textContent: 'Renovação confirmada {{nome}}! Nova data de vencimento: {{vencimento}}.',
-        variables: ['nome', 'vencimento', 'status'],
-        category: 'renewal'
+        variables: [
+          { name: 'nome', description: 'Nome do cliente', type: 'text', required: true },
+          { name: 'vencimento', description: 'Data de vencimento', type: 'date', required: true },
+          { name: 'status', description: 'Status do cliente', type: 'text', required: true }
+        ],
+        category: 'notification',
+        isDefault: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
     ];
   }

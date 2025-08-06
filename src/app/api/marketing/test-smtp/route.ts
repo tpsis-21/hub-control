@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const { host, port, security, username, password, fromEmail, testEmail } = await request.json()
     
     // Create transporter
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host,
       port: parseInt(port),
       secure: security === 'ssl',

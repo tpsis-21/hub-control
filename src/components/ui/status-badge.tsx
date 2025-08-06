@@ -19,7 +19,6 @@ const statusConfig = {
   'Inativo': { color: 'bg-gray-500', text: 'text-gray-800' },
   'Bloqueado': { color: 'bg-red-500', text: 'text-red-800' },
   'Em teste': { color: 'bg-yellow-500', text: 'text-yellow-800' },
-  'Expirado': { color: 'bg-gray-500', text: 'text-gray-800' },
 };
 
 type StatusBadgeProps = {

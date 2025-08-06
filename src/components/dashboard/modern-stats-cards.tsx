@@ -76,7 +76,7 @@ export function ModernStatCard({
     },
     info: {
       card: "border-blue-200 hover:border-blue-300 dark:border-blue-800 dark:hover:border-blue-700",
-      gradient: "from-blue-50 to-cyan-50/50 dark:from-blue-950 dark:to-cyan-950/50",
+      gradient: "from-blue-50 to-blue-100/50 dark:from-blue-950 dark:to-blue-900/50",
       icon: "text-blue-600 dark:text-blue-400",
       iconBg: "bg-blue-100 dark:bg-blue-900",
     },

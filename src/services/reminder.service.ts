@@ -126,7 +126,7 @@ export class ReminderService {
    */
   private static async sendNormalReminder(client: Client, daysUntilExpiration: number) {
     try {
-      await MessageQueueService.addExpirationReminder({
+      await MessageQueueService.queueExpirationReminder({
         clientId: client.id,
         clientName: client.name,
         email: client.email,
@@ -147,7 +147,7 @@ export class ReminderService {
    */
   private static async sendUrgentReminder(client: Client, daysUntilExpiration: number) {
     try {
-      await MessageQueueService.addExpirationReminder({
+      await MessageQueueService.queueExpirationReminder({
         clientId: client.id,
         clientName: client.name,
         email: client.email,

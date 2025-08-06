@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getClientUser, createClientSupabaseClient } from "@/lib/supabase-client";
 import { User, Mail, Calendar, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 export default function PerfilPage() {
   const { toast } = useToast();
@@ -21,6 +22,8 @@ export default function PerfilPage() {
     full_name: "",
     phone: "",
     company: "",
+    avatar_url: "",
+    logo_url: "",
   });
 
   useEffect(() => {
@@ -44,6 +47,8 @@ export default function PerfilPage() {
               full_name: profile.full_name || "",
               phone: profile.phone || "",
               company: profile.company || "",
+              avatar_url: profile.avatar_url || "",
+              logo_url: profile.logo_url || "",
             });
           }
         }
@@ -113,7 +118,7 @@ export default function PerfilPage() {
 
   const getUserInitials = () => {
     const name = getUserDisplayName();
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   const formatDate = (dateString: string) => {
@@ -152,12 +157,13 @@ export default function PerfilPage() {
         <Card className="md:col-span-1">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={userProfile?.avatar_url || ""} alt="@user" />
-                <AvatarFallback className="bg-hub-blue text-white text-xl font-semibold">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
+              <ImageUpload
+                value={formData.avatar_url}
+                onChange={(url) => setFormData({ ...formData, avatar_url: url })}
+                onRemove={() => setFormData({ ...formData, avatar_url: "" })}
+                type="avatar"
+                disabled={saving}
+              />
             </div>
             <CardTitle className="text-hub-dark">{getUserDisplayName()}</CardTitle>
             <CardDescription className="flex items-center justify-center gap-2">
@@ -250,6 +256,17 @@ export default function PerfilPage() {
                   placeholder="Nome da empresa"
                 />
               </div>
+            </div>
+
+            {/* Seção de Logomarca */}
+            <div className="border-t pt-6">
+              <ImageUpload
+                value={formData.logo_url}
+                onChange={(url) => setFormData({ ...formData, logo_url: url })}
+                onRemove={() => setFormData({ ...formData, logo_url: "" })}
+                type="logo"
+                disabled={saving}
+              />
             </div>
 
             <div className="flex justify-end pt-4">

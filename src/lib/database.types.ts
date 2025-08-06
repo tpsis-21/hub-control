@@ -373,22 +373,40 @@ export interface Database {
       profiles: {
         Row: {
           id: string // UUID do usuário (igual ao id do auth.users)
+          user_id?: string // Referência ao auth.users
           role: 'admin' | 'user'
           approved: boolean // Novo campo para aprovação do usuário
+          full_name?: string | null
+          phone?: string | null
+          company?: string | null
+          avatar_url?: string | null
+          logo_url?: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id: string
+          user_id?: string
           role?: 'admin' | 'user'
           approved?: boolean
+          full_name?: string | null
+          phone?: string | null
+          company?: string | null
+          avatar_url?: string | null
+          logo_url?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
+          user_id?: string
           role?: 'admin' | 'user'
           approved?: boolean
+          full_name?: string | null
+          phone?: string | null
+          company?: string | null
+          avatar_url?: string | null
+          logo_url?: string | null
           created_at?: string
           updated_at?: string
         }

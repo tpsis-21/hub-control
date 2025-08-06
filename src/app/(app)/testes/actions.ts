@@ -9,7 +9,7 @@ import type { Client, Plan, Server } from "@/lib/types";
 import { addTestSchema, addAutomaticTestSchema, addManualTestSchema } from "@/lib/schemas";
 import { createApiSupabaseClient } from "@/lib/supabase-api";
 import { getServers } from "@/app/(app)/servidores/actions";
-import { mapClientToDatabaseClient } from "@/lib/database-mappers";
+import { mapClientToDatabaseClient, mapDatabaseClientToClient } from "@/lib/database-mappers";
 import { NATVService } from "@/services/natv.service";
 
 
@@ -133,7 +133,7 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
   revalidatePath('/testes');
   revalidatePath('/dashboard');
   if (error || !inserted) return { success: false, error: error?.message || 'Erro ao adicionar teste' };
-  return { success: true, customer: inserted as Client };
+  return { success: true, customer: mapDatabaseClientToClient(inserted) };
 }
 
 /**
@@ -176,7 +176,7 @@ export async function addAutomaticTestAction(data: z.infer<typeof addAutomaticTe
       
       if (natvService.isConfigured()) {
         // Sincronizar créditos após criação do usuário
-        const creditsResponse = await natvService.getCredits();
+        const creditsResponse = await natvService.syncCredits();
         if (creditsResponse.success && creditsResponse.data) {
           credits = creditsResponse.data.credits;
         }
@@ -204,6 +204,7 @@ export async function addAutomaticTestAction(data: z.infer<typeof addAutomaticTe
 
   const newTestCustomerData: Omit<Client, 'id'> = {
     ...apiResponseData,
+    name: apiResponseData.name || data.testName || `Teste ${Date.now()}`,
     status: 'Em teste',
     startDate: new Date().toISOString(),
     expirationDate: addMinutes(new Date(), testDurationMinutes).toISOString(),
@@ -241,7 +242,7 @@ export async function addAutomaticTestAction(data: z.infer<typeof addAutomaticTe
     });
   }
   
-  return { success: true, customer: inserted as Client, credits };
+  return { success: true, customer: mapDatabaseClientToClient(inserted), credits };
 }
 
 /**
@@ -269,7 +270,7 @@ export async function addManualTestAction(data: z.infer<typeof addManualTestSche
   revalidatePath('/dashboard');
   
   if (error || !inserted) return { success: false, error: error?.message || 'Erro ao criar teste manual' };
-  return { success: true, customer: inserted as Client };
+  return { success: true, customer: mapDatabaseClientToClient(inserted) };
 }
 
 /**
@@ -328,7 +329,7 @@ export async function syncServerCredits(serverId: string) {
       await natvService.loadConfig();
       
       if (natvService.isConfigured()) {
-        const creditsResponse = await natvService.getCredits();
+        const creditsResponse = await natvService.syncCredits();
         if (creditsResponse.success && creditsResponse.data) {
           credits = creditsResponse.data.credits;
         }

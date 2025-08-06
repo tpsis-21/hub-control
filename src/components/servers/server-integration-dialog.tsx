@@ -41,8 +41,8 @@ export function ServerIntegrationDialog({ server, children }: ServerIntegrationD
     return { status: 'configured', label: 'Configurado', color: 'success' };
   };
 
-  const getCreditsStatus = (credits: number | null) => {
-    if (credits === null) return { level: 'unknown', color: 'secondary', label: 'Desconhecido' };
+  const getCreditsStatus = (credits: number | null | undefined): { level: string; color: string; label: string } => {
+    if (credits === null || credits === undefined) return { level: 'unknown', color: 'secondary', label: 'Desconhecido' };
     if (credits >= 100) return { level: 'high', color: 'success', label: 'Alto' };
     if (credits >= 50) return { level: 'medium', color: 'warning', label: 'Médio' };
     if (credits >= 10) return { level: 'low', color: 'warning', label: 'Baixo' };

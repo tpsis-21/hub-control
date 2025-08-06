@@ -164,8 +164,8 @@ export function RecentActivity({ activities, className }: RecentActivityProps) {
                         </div>
                       )}
                       <FormattedDate 
-                        date={activity.timestamp} 
-                        className="text-xs text-muted-foreground"
+                        dateString={activity.timestamp.toISOString()} 
+                        format="dd/MM/yyyy HH:mm"
                       />
                     </div>
                   </div>
@@ -243,7 +243,7 @@ export function ExpiringClients({ clients, className }: ExpiringClientsProps) {
                       {client.daysLeft === 0 ? "Hoje" : `${client.daysLeft}d`}
                     </Badge>
                     <p className="text-xs text-muted-foreground">
-                      <FormattedDate date={client.expiresAt} />
+                      <FormattedDate dateString={client.expiresAt.toISOString()} format="dd/MM/yyyy" />
                     </p>
                   </div>
                 </div>

@@ -102,7 +102,7 @@ export function ModernHeader({
 
   const getUserInitials = () => {
     const name = getUserDisplayName();
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   // Função para obter o título da página baseado na rota

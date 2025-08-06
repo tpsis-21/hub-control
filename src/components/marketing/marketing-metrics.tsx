@@ -242,7 +242,7 @@ export function MarketingMetrics({ dashboard }: MarketingMetricsProps) {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="value" fill={(entry) => entry.color} />
+                <Bar dataKey="value" fill="#3b82f6" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

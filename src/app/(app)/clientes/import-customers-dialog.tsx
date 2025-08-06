@@ -224,9 +224,9 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
         }
         
         // Converter dados para o formato esperado
-        const parsedRows = rows
-          .filter(row => row.some(cell => cell !== null && cell !== undefined && cell !== ''))
-          .map(row => {
+        const parsedRows = (rows as any[][])
+          .filter((row: any[]) => row.some((cell: any) => cell !== null && cell !== undefined && cell !== ''))
+          .map((row: any[]) => {
             const obj: any = {};
             headers.forEach((header, index) => {
               obj[header] = row[index] || '';

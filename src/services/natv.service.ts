@@ -87,7 +87,7 @@ class NATVService {
   }
 
   // Carrega configuração do Supabase
-  private async loadConfig(): Promise<void> {
+  async loadConfig(): Promise<void> {
     try {
       const { data, error } = await supabase
         .from('integration_configs')

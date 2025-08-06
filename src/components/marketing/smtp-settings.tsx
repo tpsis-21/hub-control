@@ -67,13 +67,15 @@ export function SMTPSettings() {
     secure: false,
     username: '',
     password: '',
-    from_email: '',
-    from_name: '',
+    fromEmail: '',
+    fromName: '',
     useForNotifications: false,
     useForMarketing: false,
     priority: 1,
     dailyLimit: 1000,
-    currentDailyCount: 0
+    currentDailyCount: 0,
+    isDefault: false,
+    isActive: true
   })
 
   useEffect(() => {
@@ -97,15 +99,15 @@ export function SMTPSettings() {
           secure: false,
           username: 'contato@empresa.com',
           password: '***',
-          from_email: 'contato@empresa.com',
-          from_name: 'Empresa IPTV',
-          is_default: true,
-          is_active: true,
-          last_tested: new Date().toISOString(),
-          test_result: { success: true, message: 'Teste realizado com sucesso' },
+          fromEmail: 'contato@empresa.com',
+    fromName: 'Empresa IPTV',
+          isDefault: true,
+           isActive: true,
+          lastTested: new Date().toISOString(),
+    testResult: { success: true },
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          created_by: null,
+          created_by: undefined,
           useForNotifications: true,
           useForMarketing: false,
           priority: 1,
@@ -120,15 +122,15 @@ export function SMTPSettings() {
           secure: false,
           username: 'marketing@empresa.com',
           password: '***',
-          from_email: 'marketing@empresa.com',
-          from_name: 'Empresa IPTV Marketing',
-          is_default: false,
-          is_active: true,
-          last_tested: new Date().toISOString(),
-          test_result: { success: true, message: 'Teste realizado com sucesso' },
+          fromEmail: 'marketing@empresa.com',
+    fromName: 'Empresa IPTV Marketing',
+          isDefault: false,
+           isActive: true,
+          lastTested: new Date().toISOString(),
+    testResult: { success: true },
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          created_by: null,
+          created_by: undefined,
           useForNotifications: false,
           useForMarketing: true,
           priority: 2,
@@ -170,7 +172,7 @@ export function SMTPSettings() {
       if (result.success) {
         toast.success('Teste de SMTP realizado com sucesso!')
       } else {
-        toast.error(`Erro no teste: ${result.message}`)
+        toast.error(`Erro no teste: ${result.error || 'Erro desconhecido'}`)
       }
       
       loadConfigs()
@@ -217,12 +219,15 @@ export function SMTPSettings() {
       secure: config.secure,
       username: config.username,
       password: '', // Não preenche a senha por segurança
-      from_email: config.from_email,
-      from_name: config.from_name || '',
+      fromEmail: config.fromEmail,
+      fromName: config.fromName || '',
       useForNotifications: config.useForNotifications || false,
       useForMarketing: config.useForMarketing || false,
       priority: config.priority || 1,
-      dailyLimit: config.dailyLimit || 1000
+      dailyLimit: config.dailyLimit || 1000,
+      currentDailyCount: config.currentDailyCount || 0,
+      isDefault: config.isDefault || false,
+       isActive: config.isActive !== undefined ? config.isActive : true
     })
     setIsCreateDialogOpen(true)
   }
@@ -237,25 +242,28 @@ export function SMTPSettings() {
       secure: false,
       username: '',
       password: '',
-      from_email: '',
-      from_name: '',
+      fromEmail: '',
+      fromName: '',
       useForNotifications: false,
       useForMarketing: false,
       priority: 1,
-      dailyLimit: 1000
+      dailyLimit: 1000,
+      currentDailyCount: 0,
+      isDefault: false,
+      isActive: true
     })
   }
 
   const getStatusBadge = (config: SMTPConfig) => {
-    if (!config.is_active) {
+    if (!config.isActive) {
       return <Badge variant="secondary">Inativo</Badge>
     }
     
-    if (config.test_result?.success) {
+    if (config.testResult?.success) {
       return <Badge variant="default" className="bg-green-500">Funcionando</Badge>
     }
     
-    if (config.test_result?.success === false) {
+    if (config.testResult?.success === false) {
       return <Badge variant="destructive">Erro</Badge>
     }
     
@@ -365,22 +373,23 @@ export function SMTPSettings() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="from_email">Email do Remetente</Label>
-                  <Input
-                    id="from_email"
-                    placeholder="contato@empresa.com"
-                    value={formData.from_email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, from_email: e.target.value }))}
-                  />
+                  <Label htmlFor="fromEmail">Email do Remetente</Label>
+                <Input
+                  id="fromEmail"
+                  type="email"
+                  value={formData.fromEmail}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fromEmail: e.target.value }))}
+                  required
+                />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="from_name">Nome do Remetente</Label>
-                  <Input
-                    id="from_name"
-                    placeholder="Empresa IPTV"
-                    value={formData.from_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, from_name: e.target.value }))}
-                  />
+                  <Label htmlFor="fromName">Nome do Remetente</Label>
+                <Input
+                  id="fromName"
+                  type="text"
+                  value={formData.fromName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fromName: e.target.value }))}
+                />
                 </div>
               </div>
               
@@ -476,7 +485,7 @@ export function SMTPSettings() {
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
                       <CardTitle className="text-lg">{config.name}</CardTitle>
-                      {config.is_default && (
+                      {config.isDefault && (
                         <Badge variant="outline" className="bg-yellow-50">
                           <Star className="mr-1 h-3 w-3" />
                           Padrão
@@ -485,7 +494,7 @@ export function SMTPSettings() {
                       {getStatusBadge(config)}
                     </div>
                     <CardDescription>
-                      {config.host}:{config.port} • {config.from_email}
+                      {config.host}:{config.port} • {config.fromEmail}
                     </CardDescription>
                   </div>
                   <DropdownMenu>
@@ -502,7 +511,7 @@ export function SMTPSettings() {
                         <TestTube className="mr-2 h-4 w-4" />
                         {testingConfig === config.id ? 'Testando...' : 'Testar Conexão'}
                       </DropdownMenuItem>
-                      {!config.is_default && (
+                      {!config.isDefault && (
                         <DropdownMenuItem onClick={() => handleSetDefault(config)}>
                           <Star className="mr-2 h-4 w-4" />
                           Definir como Padrão
@@ -544,7 +553,7 @@ export function SMTPSettings() {
                     </div>
                     <div className="text-sm space-y-1">
                       <div>Usuário: {config.username}</div>
-                      <div>Remetente: {config.from_name || config.from_email}</div>
+                      <div>Remetente: {config.fromName || config.fromEmail}</div>
                     </div>
                   </div>
 
@@ -573,19 +582,19 @@ export function SMTPSettings() {
                       Último Teste
                     </div>
                     <div className="text-sm">
-                      {config.last_tested ? (
+                      {config.lastTested ? (
                         <div className="space-y-1">
-                          <div>{formatDistanceToNow(new Date(config.last_tested), { addSuffix: true, locale: ptBR })}</div>
-                          {config.test_result && (
+                          <div>{formatDistanceToNow(new Date(config.lastTested), { addSuffix: true, locale: ptBR })}</div>
+                          {config.testResult && (
                             <div className={`flex items-center space-x-1 ${
-                              config.test_result.success ? 'text-green-600' : 'text-red-600'
+                              config.testResult.success ? 'text-green-600' : 'text-red-600'
                             }`}>
-                              {config.test_result.success ? (
+                              {config.testResult.success ? (
                                 <CheckCircle className="h-3 w-3" />
                               ) : (
                                 <XCircle className="h-3 w-3" />
                               )}
-                              <span className="text-xs">{config.test_result.message}</span>
+                              <span className="text-xs">{config.testResult.success ? 'Sucesso' : 'Falha'}</span>
                             </div>
                           )}
                         </div>

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Create transporter
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: smtpConfig.host,
       port: smtpConfig.port,
       secure: smtpConfig.security === 'ssl',
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         htmlContent = htmlContent.replace(/{{email}}/g, recipient.email || '')
         
         await transporter.sendMail({
-          from: smtpConfig.from_email,
+          from: smtpConfig.fromEmail,
           to: recipient.email,
           subject: campaign.subject,
           html: htmlContent,

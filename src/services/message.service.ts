@@ -57,7 +57,7 @@ export class MessageService {
 
       // Recria o transporter se as configurações mudaram
       if (!this.emailTransporter) {
-        this.emailTransporter = nodemailer.createTransporter({
+        this.emailTransporter = nodemailer.createTransport({
           host: settings.smtpHost,
           port: settings.smtpPort || 587,
           secure: settings.smtpSecure || false,

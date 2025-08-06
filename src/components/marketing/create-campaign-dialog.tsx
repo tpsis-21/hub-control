@@ -63,11 +63,18 @@ export function CreateCampaignDialog({
   const [formData, setFormData] = useState({
     name: '',
     subject: '',
-    html_content: '',
-    text_content: '',
+    htmlContent: '',
+    textContent: '',
     segmentation: {
       type: 'all' as CampaignSegmentation['type'],
       filters: {}
+    },
+    settings: {
+      fromName: 'Hub Control',
+      fromEmail: 'noreply@hubcontrol.com',
+      trackOpens: true,
+      trackClicks: true,
+      unsubscribeLink: true
     },
     send_immediately: true
   })
@@ -91,14 +98,14 @@ export function CreateCampaignDialog({
   const handleTemplateSelect = (template: EmailTemplate) => {
     setFormData(prev => ({
       ...prev,
-      subject: template.subject,
-      html_content: template.html_content,
-      text_content: template.text_content || ''
+      subject: template.name,
+      htmlContent: template.htmlContent,
+      textContent: template.textContent || ''
     }))
   }
 
   const insertVariable = (variable: string) => {
-    const textarea = document.getElementById('html_content') as HTMLTextAreaElement
+    const textarea = document.getElementById('htmlContent') as HTMLTextAreaElement
     if (textarea) {
       const start = textarea.selectionStart
       const end = textarea.selectionEnd
@@ -107,7 +114,7 @@ export function CreateCampaignDialog({
       const after = text.substring(end, text.length)
       const newText = before + `{{${variable}}}` + after
       
-      setFormData(prev => ({ ...prev, html_content: newText }))
+      setFormData(prev => ({ ...prev, htmlContent: newText }))
       
       // Restaura o foco e posição do cursor
       setTimeout(() => {
@@ -127,10 +134,6 @@ export function CreateCampaignDialog({
         return 'Apenas clientes com status inativo'
       case 'expiring':
         return 'Clientes com planos vencendo em até 7 dias'
-      case 'by_plan':
-        return 'Clientes filtrados por plano específico'
-      case 'by_server':
-        return 'Clientes filtrados por servidor específico'
       case 'custom':
         return 'Segmentação personalizada com múltiplos filtros'
       default:
@@ -142,14 +145,16 @@ export function CreateCampaignDialog({
     try {
       setLoading(true)
       
+      const { send_immediately, ...campaignFields } = formData
       const campaignData = {
-        ...formData,
-        scheduled_at: formData.send_immediately ? null : scheduledDate?.toISOString()
+        ...campaignFields,
+        status: send_immediately ? 'sending' as const : 'scheduled' as const,
+        scheduled_at: send_immediately ? undefined : scheduledDate?.toISOString()
       }
       
       const campaign = await MarketingService.createCampaign(campaignData)
       
-      if (formData.send_immediately) {
+      if (send_immediately) {
         await MarketingService.sendCampaign(campaign.id)
         toast.success('Campanha criada e enviada com sucesso!')
       } else {
@@ -171,11 +176,18 @@ export function CreateCampaignDialog({
     setFormData({
       name: '',
       subject: '',
-      html_content: '',
-      text_content: '',
+      htmlContent: '',
+      textContent: '',
       segmentation: {
         type: 'all',
         filters: {}
+      },
+      settings: {
+        fromName: 'Hub Control',
+        fromEmail: 'noreply@hubcontrol.com',
+        trackOpens: true,
+        trackClicks: true,
+        unsubscribeLink: true
       },
       send_immediately: true
     })
@@ -184,8 +196,8 @@ export function CreateCampaignDialog({
   }
 
   const canProceedToStep2 = formData.name && formData.subject
-  const canProceedToStep3 = formData.html_content
-  const canSubmit = formData.name && formData.subject && formData.html_content
+  const canProceedToStep3 = formData.htmlContent
+  const canSubmit = formData.name && formData.subject && formData.htmlContent
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -256,7 +268,7 @@ export function CreateCampaignDialog({
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm">{template.name}</CardTitle>
                         <CardDescription className="text-xs">
-                          {template.subject}
+                          {template.description}
                         </CardDescription>
                       </CardHeader>
                     </Card>
@@ -300,13 +312,13 @@ export function CreateCampaignDialog({
               </div>
 
               <TabsContent value="html" className="space-y-2">
-                <Label htmlFor="html_content">Conteúdo HTML</Label>
+                <Label htmlFor="htmlContent">Conteúdo HTML</Label>
                 <Textarea
-                  id="html_content"
+                  id="htmlContent"
                   placeholder="Digite o conteúdo HTML do seu email..."
                   className="min-h-[300px] font-mono"
-                  value={formData.html_content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
+                  value={formData.htmlContent}
+                  onChange={(e) => setFormData(prev => ({ ...prev, htmlContent: e.target.value }))}
                 />
               </TabsContent>
 
@@ -314,18 +326,18 @@ export function CreateCampaignDialog({
                 <Label>Preview do Email</Label>
                 <div 
                   className="border rounded-md p-4 min-h-[300px] bg-background"
-                  dangerouslySetInnerHTML={{ __html: formData.html_content || '<p>Digite o conteúdo HTML para ver o preview</p>' }}
+                  dangerouslySetInnerHTML={{ __html: formData.htmlContent || '<p>Digite o conteúdo HTML para ver o preview</p>' }}
                 />
               </TabsContent>
             </Tabs>
 
             <div className="space-y-2">
-              <Label htmlFor="text_content">Versão em Texto (Opcional)</Label>
+              <Label htmlFor="textContent">Versão em Texto (Opcional)</Label>
               <Textarea
-                id="text_content"
+                id="textContent"
                 placeholder="Versão em texto simples para clientes que não suportam HTML"
-                value={formData.text_content}
-                onChange={(e) => setFormData(prev => ({ ...prev, text_content: e.target.value }))}
+                value={formData.textContent}
+                onChange={(e) => setFormData(prev => ({ ...prev, textContent: e.target.value }))}
               />
             </div>
           </div>
@@ -351,8 +363,7 @@ export function CreateCampaignDialog({
                   <SelectItem value="active">Clientes ativos</SelectItem>
                   <SelectItem value="inactive">Clientes inativos</SelectItem>
                   <SelectItem value="expiring">Clientes vencendo</SelectItem>
-                  <SelectItem value="by_plan">Por plano específico</SelectItem>
-                  <SelectItem value="by_server">Por servidor específico</SelectItem>
+                  
                   <SelectItem value="custom">Segmentação personalizada</SelectItem>
                 </SelectContent>
               </Select>
