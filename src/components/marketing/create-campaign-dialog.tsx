@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { 
   CalendarIcon, 
   Users, 
@@ -326,7 +327,12 @@ export function CreateCampaignDialog({
                 <Label>Preview do Email</Label>
                 <div 
                   className="border rounded-md p-4 min-h-[300px] bg-background"
-                  dangerouslySetInnerHTML={{ __html: formData.htmlContent || '<p>Digite o conteúdo HTML para ver o preview</p>' }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: sanitizeHtml(
+                      formData.htmlContent || '<p>Digite o conteúdo HTML para ver o preview</p>', 
+                      'template'
+                    ) 
+                  }}
                 />
               </TabsContent>
             </Tabs>

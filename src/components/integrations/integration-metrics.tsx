@@ -3,9 +3,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Activity, Zap, Clock, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Activity, Zap, Clock, AlertTriangle, CreditCard } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { NATVService } from '@/services/natv.service';
+import { BPIXService } from '@/services/bpix.service';
 
 interface IntegrationMetric {
   id: string;
@@ -30,6 +31,7 @@ export function IntegrationMetrics({ className }: IntegrationMetricsProps) {
     
     try {
       const natvService = new NATVService();
+      const bpixService = new BPIXService();
       const newMetrics: IntegrationMetric[] = [];
 
       // Verificar conectividade NATV
@@ -71,6 +73,49 @@ export function IntegrationMetrics({ className }: IntegrationMetricsProps) {
         }
       }
 
+      // Verificar conectividade BPIX
+      if (bpixService.isConfigured()) {
+        try {
+          const testResponse = await bpixService.testConnection();
+          newMetrics.push({
+            id: 'bpix-connectivity',
+            name: 'BPIX API',
+            value: testResponse.success ? 'Online' : 'Offline',
+            status: testResponse.success ? 'success' : 'error',
+            lastUpdate: new Date(),
+            description: 'Status da conectividade com a API BPIX'
+          });
+
+          // Obter estatísticas BPIX
+          if (testResponse.success) {
+            try {
+              const statsResponse = await bpixService.getStats();
+              if (statsResponse.success && statsResponse.data) {
+                newMetrics.push({
+                  id: 'bpix-payments',
+                  name: 'Pagamentos BPIX',
+                  value: statsResponse.data.total_payments || 0,
+                  status: 'info',
+                  lastUpdate: new Date(),
+                  description: 'Total de pagamentos processados'
+                });
+              }
+            } catch (error) {
+              console.error('Erro ao obter estatísticas BPIX:', error);
+            }
+          }
+        } catch (error) {
+          newMetrics.push({
+            id: 'bpix-connectivity',
+            name: 'BPIX API',
+            value: 'Erro',
+            status: 'error',
+            lastUpdate: new Date(),
+            description: 'Erro ao conectar com a API BPIX'
+          });
+        }
+      }
+
       // Adicionar métricas de rate limiting
       const rateLimitInfo = {
         id: 'natv-rate-limit',
@@ -95,7 +140,19 @@ export function IntegrationMetrics({ className }: IntegrationMetricsProps) {
     refreshMetrics();
   }, []);
 
-  const getStatusIcon = (status: IntegrationMetric['status']) => {
+  const getStatusIcon = (status: IntegrationMetric['status'], metricId?: string) => {
+    // Ícones específicos para certas métricas
+    if (metricId?.includes('bpix')) {
+      switch (status) {
+        case 'success':
+          return <CreditCard className="h-4 w-4 text-green-500" />;
+        case 'error':
+          return <CreditCard className="h-4 w-4 text-red-500" />;
+        default:
+          return <CreditCard className="h-4 w-4 text-blue-500" />;
+      }
+    }
+
     switch (status) {
       case 'success':
         return <Activity className="h-4 w-4 text-green-500" />;
@@ -157,7 +214,7 @@ export function IntegrationMetrics({ className }: IntegrationMetricsProps) {
           {metrics.map((metric) => (
             <div key={metric.id} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {getStatusIcon(metric.status)}
+                {getStatusIcon(metric.status, metric.id)}
                 <div>
                   <p className="text-sm font-medium">{metric.name}</p>
                   {metric.description && (

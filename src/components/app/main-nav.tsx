@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { getClientUserRole, createClientSupabaseClient } from "@/lib/supabase-client";
+import { getBrowserUserRole, createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -68,7 +68,7 @@ export function MainNav() {
 
   const checkUserRole = async () => {
     try {
-      const role = await getClientUserRole();
+      const role = await getBrowserUserRole();
       setUserRole(role);
     } catch (error) {
       console.error('Erro ao verificar papel do usuário:', error);
@@ -78,7 +78,7 @@ export function MainNav() {
 
   const handleLogout = async () => {
     try {
-      const supabase = createClientSupabaseClient();
+      const supabase = createBrowserSupabaseClient();
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 

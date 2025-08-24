@@ -7,7 +7,7 @@ import { addMinutes } from "date-fns";
 import type { Client, Plan, Server } from "@/lib/types";
 // Usando fetch nativo do Node.js/Next.js
 import { addTestSchema, addAutomaticTestSchema, addManualTestSchema } from "@/lib/schemas";
-import { createApiSupabaseClient } from "@/lib/supabase-api";
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 import { getServers } from "@/app/(app)/servidores/actions";
 import { mapClientToDatabaseClient, mapDatabaseClientToClient } from "@/lib/database-mappers";
 import { NATVService } from "@/services/natv.service";
@@ -84,7 +84,7 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
                 const bodyString = (testConfig.apiBody || '{}')
                     .replace('{{USUARIO_IPTV}}', data.iptvUsername)
                     .replace('{{SENHA_IPTV}}', data.iptvPassword || '')
-                    .replace('{{ID_PLANO_PAINEL}}', plan.panelPlanId || '');
+                    .replace('{{ID_PLANO_PAINEL}}', plan.panel_plan_id || '');
 
                 const response = await fetch(url, {
                     method: 'POST',

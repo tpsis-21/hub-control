@@ -20,11 +20,12 @@ import { ManualTestForm } from '@/components/tests/manual-test-form';
 interface AddTestFormProps {
   plans: Plan[];
   servers: Server[];
+  children?: React.ReactNode;
 }
 
 type TestType = 'automatic' | 'manual' | null;
 
-export function AddTestForm({ plans, servers }: AddTestFormProps) {
+export function AddTestForm({ plans, servers, children }: AddTestFormProps) {
   const [open, setOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<TestType>(null);
 
@@ -78,10 +79,12 @@ export function AddTestForm({ plans, servers }: AddTestFormProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" className="bg-gradient-to-r from-[#2196F3] to-[#3A4A5C] hover:from-[#1976D2] hover:to-[#2C3E50]">
-          <TestTube className="mr-2 h-4 w-4" />
-          Criar Teste
-        </Button>
+        {children || (
+          <Button size="sm" className="bg-gradient-to-r from-[#2196F3] to-[#3A4A5C] hover:from-[#1976D2] hover:to-[#2C3E50]">
+            <TestTube className="mr-2 h-4 w-4" />
+            Criar Teste
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         {!selectedType && (

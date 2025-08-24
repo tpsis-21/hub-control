@@ -24,25 +24,9 @@ export async function isApiAuthenticated() {
   return !!session;
 }
 
-// Função para criar um cliente Supabase com service role para operações administrativas
-export function createAdminSupabaseClient() {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY não está configurada');
-  }
-  
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  );
-}
+// Função createAdminSupabaseClient removida por segurança
+// Service Role Key agora é usada apenas no backend
+// Use os endpoints /api/admin/* para operações administrativas
 
 // Função para verificar se o usuário atual é admin
 export async function isUserAdmin(): Promise<boolean> {

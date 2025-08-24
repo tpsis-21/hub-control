@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/popover";
 
 
-export function AddCustomerForm({ plans, servers }: { plans: Plan[], servers: Server[] }) {
+export function AddCustomerForm({ plans, servers, children }: { plans: Plan[], servers: Server[], children?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -127,10 +127,12 @@ export function AddCustomerForm({ plans, servers }: { plans: Plan[], servers: Se
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Adicionar Cliente
-        </Button>
+        {children || (
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Adicionar Cliente
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>

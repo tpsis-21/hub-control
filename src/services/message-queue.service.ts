@@ -1,5 +1,5 @@
 // src/services/message-queue.service.ts
-import MessageService, { EmailMessage, WhatsAppMessage, MessageResult } from './message.service';
+import { MessageService, EmailMessage, WhatsAppMessage, MessageResult } from './message.service';
 import { LoggerService } from './logger.service';
 import { CacheService } from './cache.service';
 
@@ -204,7 +204,7 @@ export class MessageQueueService {
   /**
    * Inicia o processamento da fila
    */
-  private startProcessing(): void {
+  startProcessing(): void {
     if (this.processingInterval) {
       clearInterval(this.processingInterval);
     }
@@ -353,7 +353,7 @@ export class MessageQueueService {
    * Obtém estatísticas da fila
    */
   getStats(): QueueStats {
-    const cached = CacheService.get('message_queue_stats');
+    const cached = CacheService.get('message_queue_stats') as QueueStats | null;
     if (cached) {
       return cached;
     }
@@ -376,7 +376,9 @@ export class MessageQueueService {
   getMessages(filters: {
     status?: QueuedMessage['status'];
     type?: QueuedMessage['type'];
+    priority?: QueuedMessage['priority'];
     limit?: number;
+    offset?: number;
   } = {}): QueuedMessage[] {
     let filtered = [...this.queue];
 
@@ -388,11 +390,86 @@ export class MessageQueueService {
       filtered = filtered.filter(msg => msg.type === filters.type);
     }
 
+    if (filters.priority) {
+      filtered = filtered.filter(msg => msg.priority === filters.priority);
+    }
+
+    if (filters.offset) {
+      filtered = filtered.slice(filters.offset);
+    }
+
     if (filters.limit) {
       filtered = filtered.slice(0, filters.limit);
     }
 
     return filtered;
+  }
+
+  /**
+   * Obtém uma mensagem específica pelo ID
+   */
+  getMessage(messageId: string): QueuedMessage | undefined {
+    return this.queue.find(msg => msg.id === messageId);
+  }
+
+  /**
+   * Remove uma mensagem específica da fila
+   */
+  removeMessage(messageId: string): boolean {
+    const index = this.queue.findIndex(msg => msg.id === messageId);
+    
+    if (index === -1) {
+      return false;
+    }
+
+    const message = this.queue[index];
+    
+    // Só permite remover mensagens que não estão sendo processadas
+    if (message.status === 'processing') {
+      return false;
+    }
+
+    this.queue.splice(index, 1);
+    CacheService.delete('message_queue_stats');
+    
+    LoggerService.info('Mensagem removida da fila', 'MessageQueue', {
+      messageId,
+      type: message.type,
+      status: message.status
+    });
+
+    return true;
+  }
+
+  /**
+   * Reprocessa uma mensagem específica
+   */
+  retryMessage(messageId: string): boolean {
+    const message = this.queue.find(msg => msg.id === messageId);
+    
+    if (!message) {
+      return false;
+    }
+
+    // Só permite reprocessar mensagens falhadas ou concluídas
+    if (message.status !== 'failed' && message.status !== 'completed') {
+      return false;
+    }
+
+    message.status = 'pending';
+    message.attempts = 0;
+    message.error = undefined;
+    message.scheduledFor = undefined;
+    
+    this.sortQueue();
+    CacheService.delete('message_queue_stats');
+    
+    LoggerService.info('Mensagem reprocessada', 'MessageQueue', {
+      messageId,
+      type: message.type
+    });
+
+    return true;
   }
 
   /**

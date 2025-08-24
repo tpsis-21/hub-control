@@ -3,13 +3,54 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { isClientUserApproved, createClientSupabaseClient } from '@/lib/supabase-client';
+import { isBrowserUserApproved, createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Shield, Loader2, Eye, EyeOff } from 'lucide-react';
 import Link from "next/link";
+import { supabaseConfig } from "@/lib/supabase/config";
+
+
+// === LOGS DE DEBUG ADICIONADOS ===
+const DEBUG_AUTH = process.env.NODE_ENV === 'development';
+
+function debugLog(message: string, data?: any) {
+  if (DEBUG_AUTH) {
+    console.log(`[LOGIN FORM DEBUG] ${new Date().toISOString()} - ${message}`, data || '');
+  }
+}
+
+function debugError(message: string, error?: any) {
+  if (DEBUG_AUTH) {
+    console.error(`[LOGIN FORM ERROR] ${new Date().toISOString()} - ${message}`, error || '');
+  }
+}
+// === FIM DOS LOGS DE DEBUG ===
+// Utilitário de debug: checa conectividade básica com o endpoint de Auth do Supabase
+async function debugSupabaseConnectivity() {
+  const info = {
+    supabaseUrl: supabaseConfig.url,
+    appOrigin: typeof window !== 'undefined' ? window.location.origin : 'SSR',
+    isHttps: typeof window !== 'undefined' ? window.location.protocol === 'https:' : null,
+    redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : 'SSR'
+  };
+  try {
+    // health/settings é público e útil para detectar CORS/conectividade
+    const url = `${supabaseConfig.url}/auth/v1/settings`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: supabaseConfig.anonKey,
+      },
+      mode: 'cors',
+    });
+    console.debug('[Supabase Debug] settings status:', res.status, info);
+  } catch (err) {
+    console.error('[Supabase Debug] Falha ao acessar /auth/v1/settings', info, err);
+  }
+}
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -17,108 +58,78 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [showResetForm, setShowResetForm] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
   const router = useRouter();
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
+    debugLog('Iniciando processo de login', { 
+      email: email?.substring(0, 3) + '***',
+      hasPassword: !!password,
+      timestamp: new Date().toISOString()
+    });
     e.preventDefault();
     setLoading(true);
 
     try {
-      console.log('🔐 Tentando fazer login com:', email);
-      
-      // Usar a rota de API para login server-side
-      const response = await fetch('/api/auth/login', {
+      debugLog('Enviando requisição para API', {
+      url: '/api/auth/login',
+      method: 'POST',
+      hasBody: true
+    });
+    
+    const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
       });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        console.error('❌ Erro no login:', result.error);
+
+      debugLog('Resposta recebida', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+    
+    const data = await response.json();
+    debugLog('Dados da resposta', { data });
+
+      if (response.ok) {
         toast({
-          title: "Erro ao fazer login",
-          description: result.error || "Verifique suas credenciais e tente novamente.",
-          variant: "destructive",
+          title: "🎉 Bem-vindo!",
+          description: data.message || "Login realizado com sucesso!",
         });
-        return;
-      }
-      
-      if (!result.user) {
-        console.error('❌ Usuário não encontrado após login');
-        toast({
-          title: "Erro ao fazer login",
-          description: "Usuário não encontrado",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Verifica se o usuário está aprovado
-      // Admin principal é sempre aprovado automaticamente
-      if (email === 'topplaytv7@gmail.com') {
-        console.log('✅ Admin principal detectado - acesso liberado');
+        
+        // Aguardar um pouco antes de redirecionar para mostrar o feedback
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        router.push('/dashboard');
       } else {
-        const approved = await isClientUserApproved();
-        if (!approved) {
-          toast({
-            title: "Acesso negado",
-            description: "Seu acesso ainda não foi aprovado pelo administrador.",
-            variant: "destructive",
-          });
-          return;
-        }
+        // Usar mensagem amigável da API se disponível
+        const errorMessage = data.error?.userFriendly || data.error?.message || 'Credenciais inválidas';
+        
+        toast({
+          title: "🚫 Erro no login",
+          description: `🔐 ${errorMessage}`,
+          variant: "destructive",
+        });
       }
-
-      console.log('✅ Login bem-sucedido via API:', result.user.email);
-      
-      toast({
-        title: "Login realizado com sucesso",
-        description: "Redirecionando para o dashboard...",
+    } catch (error) {
+      debugError('Erro capturado no handleLogin', {
+        error: error,
+        message: error?.message,
+        name: error?.name,
+        stack: error?.stack
       });
-
-      // Força um reload completo da página para garantir que os cookies sejam propagados
-      console.log('🔄 Executando redirecionamento para /dashboard com reload');
-      window.location.href = '/dashboard';
-    } catch (error: any) {
-      console.error('❌ Erro durante o login:', error);
-      
-      let errorTitle = "Erro ao fazer login";
-      let errorDescription = "Verifique suas credenciais e tente novamente.";
-      
-      // Tratamento específico para diferentes tipos de erro
-      if (error.message) {
-        if (error.message.includes('Invalid login credentials') || 
-            error.message.includes('invalid_credentials') ||
-            error.message.includes('Email not confirmed') ||
-            error.message.includes('Invalid email or password')) {
-          errorTitle = "Credenciais inválidas";
-          errorDescription = "Email ou senha incorretos. Verifique seus dados e tente novamente.";
-        } else if (error.message.includes('Email not confirmed')) {
-          errorTitle = "Email não confirmado";
-          errorDescription = "Verifique sua caixa de entrada e confirme seu email antes de fazer login.";
-        } else if (error.message.includes('Too many requests')) {
-          errorTitle = "Muitas tentativas";
-          errorDescription = "Aguarde alguns minutos antes de tentar novamente.";
-        } else if (error.message.includes('Network')) {
-          errorTitle = "Erro de conexão";
-          errorDescription = "Verifique sua conexão com a internet e tente novamente.";
-        } else {
-          errorDescription = error.message;
-        }
-      }
-      
+      console.error('Erro na requisição de login:', error);
       toast({
-        title: errorTitle,
-        description: errorDescription,
+        title: "Erro de conexão",
+        description: "🌐 Não foi possível conectar ao servidor. Verifique sua conexão com a internet e tente novamente.",
         variant: "destructive",
       });
-      
-      // Não reinicia a aplicação, apenas limpa o estado de loading
     } finally {
       setLoading(false);
     }
@@ -128,133 +139,228 @@ export function LoginForm() {
     e.preventDefault();
     if (!email) {
       toast({
-        title: "Email obrigatório",
-        description: "Por favor, insira seu email para recuperar a senha.",
-        variant: "destructive",
+         title: 'Email obrigatório',
+         description: '📧 Por favor, insira seu email para que possamos enviar o link de recuperação de senha.',
+         variant: 'destructive'
+       });
+      return;
+    }
+
+    // Pré-checagem de configuração do Supabase
+    if (!supabaseConfig?.url || !supabaseConfig?.anonKey) {
+      console.error('[Reset Password] Configuração do Supabase ausente ou inválida:', {
+        url: supabaseConfig?.url,
+        anonKeySet: Boolean(supabaseConfig?.anonKey)
+      });
+      toast({
+        title: 'Configuração inválida',
+        description: '⚙️ Configurações do Supabase não encontradas. Verifique as variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+        variant: 'destructive'
       });
       return;
     }
 
     setResetLoading(true);
 
+    // Reset de senha
+     const supabase = createBrowserSupabaseClient();
+
     try {
-      const supabase = createClientSupabaseClient();
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+       console.debug('[Reset Password] Iniciando solicitação', {
+         supabaseUrl: supabaseConfig.url,
+         redirectTo: `${window.location.origin}/reset-password`,
+         appOrigin: window.location.origin,
+         isHttps: window.location.protocol === 'https:'
+       });
+       const { error } = await supabase.auth.resetPasswordForEmail(email, {
+         redirectTo: `${window.location.origin}/reset-password`,
+       });
 
-      if (error) {
-        toast({
-          title: "Erro ao enviar email",
-          description: error.message || "Não foi possível enviar o email de recuperação.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Email enviado",
-        description: "Verifique sua caixa de entrada para redefinir sua senha.",
-      });
-
-      setShowResetForm(false);
-    } catch (error: any) {
-      toast({
-        title: "Erro ao enviar email",
-        description: error.message || "Não foi possível enviar o email de recuperação.",
-        variant: "destructive",
-      });
-    } finally {
-      setResetLoading(false);
-    }
+       if (error) {
+         console.error('[Reset Password] Erro retornado pelo Supabase:', error);
+         toast({
+           title: 'Erro ao enviar email',
+           description: `📧 ${error.message || 'Não foi possível enviar o email de recuperação. Verifique se o email está correto e tente novamente.'}`,
+           variant: 'destructive'
+         });
+       } else {
+         toast({
+           title: '✅ Email enviado com sucesso!',
+           description: '📬 Verifique sua caixa de entrada (e spam) para o link de redefinição de senha.'
+         });
+         setShowResetForm(false);
+       }
+     } catch (error: any) {
+       // Trata especialmente falhas de rede/CORS
+       const isNetworkError = error?.name === 'TypeError' || /Failed to fetch/i.test(error?.message || '');
+       console.error('Erro ao enviar email de reset:', error);
+       if (isNetworkError) {
+         // Coleta informações adicionais de conectividade
+         await debugSupabaseConnectivity();
+       }
+       toast({
+         title: 'Erro ao enviar email',
+         description: isNetworkError
+           ? '🌐 Falha de conexão com o serviço de autenticação. Verifique sua internet e as URLs do Supabase (Site URL e Redirect URLs) nas configurações do projeto.'
+           : `🔧 ${error.message || 'Ocorreu um problema ao enviar o email. Tente novamente em alguns minutos.'}`,
+         variant: 'destructive'
+       });
+     } finally {
+       setResetLoading(false);
+     }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Login</CardTitle>
-        <CardDescription>
-          Entre com suas credenciais para acessar o sistema.
-        </CardDescription>
-      </CardHeader>
-      <form onSubmit={handleLogin}>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4 pt-6">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
-          </Button>
-          
-          <div className="flex flex-col space-y-2 text-center">
-            <button
-              type="button"
-              onClick={() => setShowResetForm(!showResetForm)}
-              className="text-sm text-blue-600 hover:text-blue-800 underline"
-            >
-              Esqueci minha senha
-            </button>
-            
-            <Link href="/register" className="text-sm text-gray-600 hover:text-gray-800">
-              Não tem uma conta? Cadastre-se
-            </Link>
-          </div>
-          
-          {showResetForm && (
-            <div className="w-full space-y-3 border-t pt-4">
-              <div className="text-sm text-gray-600 text-center">
-                Digite seu email para receber o link de recuperação:
-              </div>
-              <form onSubmit={handlePasswordReset} className="space-y-3">
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle>Login</CardTitle>
+          <CardDescription>
+            Entre com suas credenciais para acessar o sistema.
+          </CardDescription>
+        </CardHeader>
+        
+        {!showResetForm ? (
+          <form onSubmit={handleLogin}>
+            <CardContent className="space-y-6">
+              {/* Loading simples */}
+              {loading && (
+                <div className="flex items-center justify-center mb-4 p-4 bg-blue-50 rounded-lg">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm text-blue-600">Autenticando...</span>
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
                 <Input
+                  id="email"
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={loading}
+                  className={loading ? 'opacity-50' : ''}
                 />
-                <div className="flex space-x-2">
-                  <Button
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Senha"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="pr-10"
+                  />
+                  <button
                     type="button"
-                    variant="outline"
-                    onClick={() => setShowResetForm(false)}
-                    className="flex-1"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                    disabled={loading}
                   >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={resetLoading}
-                    className="flex-1"
-                  >
-                    {resetLoading ? "Enviando..." : "Enviar"}
-                  </Button>
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
-              </form>
-            </div>
-          )}
-        </CardFooter>
-      </form>
-    </Card>
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4 pt-6">
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  "Entrar"
+                )}
+              </Button>
+              
+              <div className="flex flex-col space-y-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowResetForm(true)}
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  disabled={loading}
+                >
+                  Esqueci minha senha
+                </button>
+                
+                <Link 
+                  href="/register" 
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Não tem uma conta? Cadastre-se
+                </Link>
+              </div>
+            </CardFooter>
+          </form>
+        ) : (
+          <form onSubmit={handlePasswordReset}>
+            <CardContent className="space-y-6">
+              {/* Loading simples */}
+              {resetLoading && (
+                <div className="flex items-center justify-center mb-4 p-4 bg-blue-50 rounded-lg">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm text-blue-600">Enviando email...</span>
+                </div>
+              )}
+              
+              <div className="text-sm text-gray-600 text-center">
+                Digite seu email para receber o link de recuperação:
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={resetLoading}
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowResetForm(false)}
+                className="flex-1"
+                disabled={resetLoading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={resetLoading}
+                className="flex-1"
+              >
+                {resetLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  'Enviar link'
+                )}
+              </Button>
+            </CardFooter>
+          </form>
+        )}
+      </Card>
   );
 }

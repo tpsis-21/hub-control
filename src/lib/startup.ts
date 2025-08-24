@@ -10,7 +10,8 @@ import { LoggerService } from '@/services/logger.service';
 export async function initializeServices() {
   try {
     // Inicializar o serviço de fila de mensagens
-    MessageQueueService.startProcessing();
+    const messageQueueService = MessageQueueService.getInstance();
+    messageQueueService.startProcessing();
     LoggerService.info('MessageQueueService iniciado com sucesso');
 
     // Inicializar o serviço de lembretes
@@ -19,7 +20,9 @@ export async function initializeServices() {
 
     LoggerService.info('Todos os serviços foram inicializados com sucesso');
   } catch (error) {
-    LoggerService.error('Erro ao inicializar serviços:', error);
+    LoggerService.error('Erro ao inicializar serviços', 'Startup', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 
@@ -29,7 +32,8 @@ export async function initializeServices() {
 export async function shutdownServices() {
   try {
     // Parar o serviço de fila de mensagens
-    MessageQueueService.stopProcessing();
+    const messageQueueService = MessageQueueService.getInstance();
+    messageQueueService.stopProcessing();
     LoggerService.info('MessageQueueService parado');
 
     // Parar o serviço de lembretes
@@ -38,6 +42,8 @@ export async function shutdownServices() {
 
     LoggerService.info('Todos os serviços foram parados com sucesso');
   } catch (error) {
-    LoggerService.error('Erro ao parar serviços:', error);
+    LoggerService.error('Erro ao parar serviços', 'Startup', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }

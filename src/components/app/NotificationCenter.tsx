@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { InAppNotifications } from '@/components/app/notifications/in-app-notifications';
 import { PushNotificationSettings } from '@/components/app/PushNotificationSettings';
 import { useToast } from '@/hooks/use-toast';
-import { createClientSupabaseClient } from '@/lib/supabase-client';
+import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 
 interface NotificationPreferences {
   email_notifications: boolean;
@@ -41,7 +41,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const supabase = createClientSupabaseClient();
+  const supabase = createBrowserSupabaseClient();
 
   // Carregar preferências do usuário
   useEffect(() => {

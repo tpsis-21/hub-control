@@ -2,6 +2,35 @@
 # https://firebase.google.com/docs/app-hosting/configure
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
-  maxInstances: 1
+  # Configurações de produção
+  minInstances: 1
+  maxInstances: 10
+  concurrency: 100
+  cpu: 1
+  memoryMiB: 512
+  
+  # Configurações de ambiente
+  env:
+    NODE_ENV: production
+    NEXT_TELEMETRY_DISABLED: 1
+    
+  # Health check
+  healthCheck:
+    path: "/api/health"
+    
+  # Timeout configurations
+  timeoutSeconds: 60
+  
+# Build configuration
+buildConfig:
+  runtime: nodejs20
+  
+  # Build commands
+  buildCommand: |
+    npm ci
+    npm run build:static
+    
+  # Environment variables for build
+  env:
+    NODE_ENV: production
+    NEXT_TELEMETRY_DISABLED: 1

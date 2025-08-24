@@ -27,11 +27,22 @@ import {
 } from 'lucide-react'
 import { natvService, type NATVConfig } from '@/services/natv.service'
 import { toast } from 'sonner'
+import { createClientSupabaseClient } from '@/lib/supabase/clients/browser'
+import { validateIntegrationConfig } from '@/lib/local-validation'
+import { ValidationFeedback, InlineValidation } from '@/components/ui/validation-feedback'
 
 export function NATVConfig() {
-  const [config, setConfig] = useState<NATVConfig>({
+  const [config, setConfig] = useState<{
+    baseUrl: string
+    token: string
+    username: string
+    password: string
+    timeout: number
+  }>({
     baseUrl: 'https://revenda.pixbot.link',
     token: '',
+    username: '',
+    password: '',
     timeout: 30000
   })
   const [isLoading, setIsLoading] = useState(false)
@@ -43,6 +54,7 @@ export function NATVConfig() {
     data?: any
   } | null>(null)
   const [isConfigured, setIsConfigured] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [testData, setTestData] = useState({
     username: '',
     password: '',
@@ -66,44 +78,96 @@ export function NATVConfig() {
   })
   const [operationResult, setOperationResult] = useState<any>(null)
   const [operationLoading, setOperationLoading] = useState(false)
+  const [localValidation, setLocalValidation] = useState(() => 
+    validateIntegrationConfig({
+      apiUrl: config.baseUrl,
+      apiKey: config.token,
+      username: config.username,
+      password: config.password,
+      timeout: config.timeout
+    })
+  )
 
   useEffect(() => {
-    loadConfig()
+    initializeComponent()
   }, [])
 
-  const loadConfig = async () => {
+  // Validação local em tempo real
+  useEffect(() => {
+    const validation = validateIntegrationConfig({
+      apiUrl: config.baseUrl,
+      apiKey: config.token,
+      username: config.username,
+      password: config.password,
+      timeout: config.timeout
+    })
+    setLocalValidation(validation)
+  }, [config])
+
+  const initializeComponent = async () => {
+    try {
+      const supabase = createClientSupabaseClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        setCurrentUser(user)
+        await loadUserConfig(user.id)
+      } else {
+        toast.error('Usuário não autenticado')
+      }
+    } catch (error) {
+      console.error('Erro ao inicializar componente:', error)
+      toast.error('Erro ao carregar dados do usuário')
+    }
+  }
+
+  const loadUserConfig = async (userId: string) => {
     try {
       setIsLoading(true)
-      await natvService.reloadConfig()
-      const configInfo = natvService.getConfigInfo()
+      const hasConfig = await natvService.hasUserConfig(userId)
       
-      if (configInfo) {
-        setConfig(prev => ({
-          ...prev,
-          baseUrl: configInfo.baseUrl,
-          timeout: configInfo.timeout || 30000
-        }))
-        setIsConfigured(true)
+      if (hasConfig) {
+        const configInfo = await natvService.getUserConfigInfo(userId)
+        if (configInfo) {
+          setConfig(prev => ({
+            ...prev,
+            baseUrl: configInfo.baseUrl || 'https://revenda.pixbot.link',
+            timeout: configInfo.timeout || 30000
+          }))
+          setIsConfigured(true)
+        }
       } else {
         setIsConfigured(false)
       }
     } catch (error) {
-      console.error('Erro ao carregar configuração:', error)
+      console.error('Erro ao carregar configuração do usuário:', error)
       toast.error('Erro ao carregar configuração NATV')
+      setIsConfigured(false)
     } finally {
       setIsLoading(false)
     }
   }
 
+  const loadConfig = async () => {
+    if (currentUser) {
+      await loadUserConfig(currentUser.id)
+    }
+  }
+
   const handleSave = async () => {
     if (!config.token.trim()) {
-      toast.error('Token de autenticação é obrigatório')
+      toast.error('Token é obrigatório')
+      return
+    }
+
+    if (!currentUser) {
+      toast.error('Usuário não autenticado')
       return
     }
 
     try {
       setIsLoading(true)
-      await natvService.saveConfig(config)
+      await natvService.saveUserConfig(currentUser.id, config)
       setIsConfigured(true)
       toast.success('Configuração salva com sucesso!')
     } catch (error) {
@@ -120,14 +184,19 @@ export function NATVConfig() {
       return
     }
 
+    if (!currentUser) {
+      toast.error('Usuário não autenticado')
+      return
+    }
+
     try {
       setIsTesting(true)
       setTestResult(null)
       
       // Salva a configuração temporariamente para teste
-      await natvService.saveConfig(config)
+      await natvService.saveUserConfig(currentUser.id, config)
       
-      const result = await natvService.testConnection()
+      const result = await natvService.testUserConnection(currentUser.id)
       
       setTestResult({
         success: result.success,
@@ -160,9 +229,14 @@ export function NATVConfig() {
       return
     }
 
+    if (!currentUser) {
+      toast.error('Usuário não autenticado')
+      return
+    }
+
     try {
       setIsTesting(true)
-      const result = await natvService.createUser({
+      const result = await natvService.createUserWithConfig(currentUser.id, {
         username: testData.username,
         password: testData.password,
         duration: 1 // 1 dia de teste
@@ -194,9 +268,14 @@ export function NATVConfig() {
       return
     }
 
+    if (!currentUser) {
+      toast.error('Usuário não autenticado')
+      return
+    }
+
     try {
       setIsTesting(true)
-      const result = await natvService.searchUsers({
+      const result = await natvService.searchUsersWithConfig(currentUser.id, {
         username: testData.searchQuery
       })
       
@@ -208,7 +287,7 @@ export function NATVConfig() {
       })
       
       if (result.success) {
-        toast.success('Busca realizada com sucesso!')
+        toast.success(`Encontrados ${result.data?.length || 0} usuários`)
       } else {
         toast.error(result.error || 'Erro na busca')
       }
@@ -281,6 +360,9 @@ export function NATVConfig() {
                 />
               </div>
             </div>
+            
+            {/* Validação local em tempo real */}
+            <ValidationFeedback validation={localValidation} />
             
             <Separator />
             
@@ -477,7 +559,7 @@ export function NATVConfig() {
                     onClick={async () => {
                       setOperationLoading(true)
                       try {
-                        const result = await natvService.createUser({
+                        const result = await natvService.createUserWithConfig(currentUser.id, {
                           username: operationData.createUser.username || `user_${Date.now()}`,
                           password: `pass_${Date.now()}`,
                           duration: operationData.createUser.minutes
@@ -561,7 +643,7 @@ export function NATVConfig() {
                     onClick={async () => {
                       setOperationLoading(true)
                       try {
-                        const result = await natvService.activateUser({
+                        const result = await natvService.activateUserWithConfig(currentUser.id, {
                           username: operationData.activateUser.username,
                           plan: 'default',
                           duration: operationData.activateUser.months * 30
@@ -645,7 +727,7 @@ export function NATVConfig() {
                     onClick={async () => {
                       setOperationLoading(true)
                       try {
-                        const result = await natvService.searchUsers({
+                        const result = await natvService.searchUsersWithConfig(currentUser.id, {
                           username: operationData.searchUsers.username,
                           ...(operationData.searchUsers.userId && { email: operationData.searchUsers.userId })
                         })
@@ -811,3 +893,6 @@ export function NATVConfig() {
     </Card>
   )
 }
+
+// Export default para compatibilidade com lazy loading
+export default NATVConfig

@@ -1,5 +1,5 @@
 // @/lib/client-status-updater.ts
-import { createApiSupabaseClient } from '@/lib/supabase-api';
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 import { isPast, parseISO } from 'date-fns';
 
 /**

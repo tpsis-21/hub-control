@@ -1,0 +1,110 @@
+{
+  "timestamp": "2025-08-19T22:07:57.456Z",
+  "analysis": {
+    "dependencies": {
+      "total": 78,
+      "used": 63,
+      "unused": [
+        "@sentry/nextjs",
+        "@types/nodemailer",
+        "critters",
+        "dotenv",
+        "embla-carousel-react",
+        "node-fetch",
+        "patch-package",
+        "react-dom",
+        "tailwindcss-animate",
+        "@babel/plugin-syntax-import-attributes",
+        "@babel/preset-env",
+        "@babel/preset-react",
+        "@babel/preset-typescript",
+        "@eslint/eslintrc",
+        "@testing-library/jest-dom",
+        "@types/dompurify",
+        "@types/jest",
+        "@types/node",
+        "@types/papaparse",
+        "@types/react",
+        "@types/react-dom",
+        "autoprefixer",
+        "babel-jest",
+        "eslint",
+        "eslint-config-next",
+        "identity-obj-proxy",
+        "jest",
+        "jest-environment-jsdom",
+        "postcss",
+        "sharp",
+        "tailwindcss",
+        "ts-jest",
+        "typescript"
+      ],
+      "unusedCount": 33,
+      "usageRate": "80.77"
+    },
+    "chunks": {
+      "total": 0,
+      "totalSize": 0,
+      "totalSizeKB": "0.00",
+      "totalSizeMB": "0.00",
+      "largeChunks": 0,
+      "averageSize": 0,
+      "chunks": []
+    },
+    "treeShaking": {
+      "opportunities": 0,
+      "details": []
+    }
+  },
+  "recommendations": [
+    {
+      "type": "unused-dependencies",
+      "priority": "medium",
+      "title": "Remover dependências não utilizadas",
+      "description": "33 dependências não estão sendo utilizadas",
+      "action": "npm uninstall @sentry/nextjs @types/nodemailer critters dotenv embla-carousel-react node-fetch patch-package react-dom tailwindcss-animate @babel/plugin-syntax-import-attributes @babel/preset-env @babel/preset-react @babel/preset-typescript @eslint/eslintrc @testing-library/jest-dom @types/dompurify @types/jest @types/node @types/papaparse @types/react @types/react-dom autoprefixer babel-jest eslint eslint-config-next identity-obj-proxy jest jest-environment-jsdom postcss sharp tailwindcss ts-jest typescript",
+      "impact": "Redução do tamanho do bundle e tempo de instalação",
+      "dependencies": [
+        "@sentry/nextjs",
+        "@types/nodemailer",
+        "critters",
+        "dotenv",
+        "embla-carousel-react",
+        "node-fetch",
+        "patch-package",
+        "react-dom",
+        "tailwindcss-animate",
+        "@babel/plugin-syntax-import-attributes",
+        "@babel/preset-env",
+        "@babel/preset-react",
+        "@babel/preset-typescript",
+        "@eslint/eslintrc",
+        "@testing-library/jest-dom",
+        "@types/dompurify",
+        "@types/jest",
+        "@types/node",
+        "@types/papaparse",
+        "@types/react",
+        "@types/react-dom",
+        "autoprefixer",
+        "babel-jest",
+        "eslint",
+        "eslint-config-next",
+        "identity-obj-proxy",
+        "jest",
+        "jest-environment-jsdom",
+        "postcss",
+        "sharp",
+        "tailwindcss",
+        "ts-jest",
+        "typescript"
+      ]
+    }
+  ],
+  "metrics": {
+    "bundleHealth": 34,
+    "optimizationScore": 90,
+    "recommendations": 1,
+    "criticalIssues": 0
+  }
+}

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Send, Users, TrendingUp, Mail, Settings } from 'lucide-react'
 import { MarketingService } from '@/services/marketing.service'
-import { Campaign, MarketingDashboard } from '@/lib/types/marketing'
+import { Campaign, MarketingDashboard, SMTPConfig } from '@/lib/types/marketing'
 import { CampaignList } from '@/components/marketing/campaign-list'
 import { CreateCampaignDialog } from '@/components/marketing/create-campaign-dialog'
 import { MarketingMetrics } from '@/components/marketing/marketing-metrics'
@@ -19,6 +19,7 @@ import { AutomationRules } from '@/components/marketing/automation-rules'
 export default function MarketingPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [dashboard, setDashboard] = useState<MarketingDashboard | null>(null)
+  const [smtpConfigs, setSmtpConfigs] = useState<SMTPConfig[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('campaigns')
@@ -36,6 +37,33 @@ export default function MarketingPage() {
       ])
       setCampaigns(campaignsData)
       setDashboard(dashboardData)
+      
+      // Carregar configurações SMTP (mock data por enquanto)
+      setSmtpConfigs([
+        {
+          id: '1',
+          name: 'Gmail Principal',
+          host: 'smtp.gmail.com',
+          port: 587,
+          secure: false,
+          username: 'contato@empresa.com',
+          password: '***',
+          fromEmail: 'contato@empresa.com',
+          fromName: 'Empresa IPTV',
+          isDefault: true,
+          isActive: true,
+          lastTested: new Date().toISOString(),
+          testResult: { success: true },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          created_by: undefined,
+          useForNotifications: true,
+          useForMarketing: false,
+          priority: 1,
+          dailyLimit: 500,
+          currentDailyCount: 45
+        }
+      ])
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
     } finally {
@@ -161,7 +189,7 @@ export default function MarketingPage() {
 
         <TabsContent value="settings" className="space-y-4">
           <div className="space-y-6">
-            <SMTPGlobalSettings />
+            <SMTPGlobalSettings configs={smtpConfigs} />
             <SMTPSettings />
           </div>
         </TabsContent>

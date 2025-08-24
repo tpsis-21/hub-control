@@ -3,22 +3,16 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { createApiSupabaseClient } from "@/lib/supabase-api";
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 import type { Settings } from "@/lib/types";
 import { settingsSchema } from "@/lib/schemas";
 
-const defaultSettings: Omit<Settings, 'botApiKey'> & { botApiKey?: string } = {
-  manualTestDuration: 4,
-  bpixClientId: "",
-  bpixClientSecret: "",
-  bpixToken: "",
-  clientAreaSupportLink: "",
-  clientAreaContentRequestLink: "",
-  whatsappApiEndpoint: "https://backend.botconversa.com.br/api/v1/webhook",
-  whatsappApiKey: "",
-  smtpHost: "",
-  smtpUser: "",
-  smtpPass: "",
+const defaultSettings: Omit<Settings, 'bot_api_key'> & { bot_api_key?: string } = {
+  id: 'main',
+  company_name: null,
+  primary_color: null,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
 };
 
 // Substituir todas as operações Firestore por chamadas Supabase
@@ -33,13 +27,13 @@ export async function getSettings(): Promise<Settings> {
     return {
       ...defaultSettings,
       ...data,
-      botApiKey: data.bot_api_key || `secret_key_${new Date().getTime()}`,
+      bot_api_key: data.bot_api_key || `secret_key_${new Date().getTime()}`,
     } as Settings;
   } else {
     // Se as configurações não existem, cria com valores padrão, incluindo uma nova botApiKey
     const newSettings = {
       ...defaultSettings,
-      botApiKey: `secret_key_${new Date().getTime()}`,
+      bot_api_key: `secret_key_${new Date().getTime()}`,
       id: settingsId,
     };
     await supabase.from(settingsTable).insert([newSettings]);
@@ -59,7 +53,7 @@ export async function saveSettingsAction(data: z.infer<typeof settingsSchema>) {
 export async function generateNewApiKeyAction() {
     const newKey = `secret_key_${new Date().getTime()}${Math.random().toString(36).substring(2, 10)}`;
     const currentSettings = await getSettings();
-    const result = await saveSettingsAction({ ...currentSettings, botApiKey: newKey });
+    const result = await saveSettingsAction({ ...currentSettings, bot_api_key: newKey });
     if(result.success) {
         return { success: true, newApiKey: newKey };
     }

@@ -45,8 +45,8 @@ interface PaymentData {
   amount: number;
   status: string;
   date: string;
-  payment_method?: string;
-  transaction_id?: string;
+  payment_method: string | null;
+  transaction_id: string | null;
   client_id: string;
   clients?: { name: string };
 }
@@ -322,7 +322,7 @@ export function FinanceiroContent({ initialData }: FinanceiroContentProps) {
                     filteredTransactions.map((transaction) => (
                       <TableRow key={transaction.id}>
                         <TableCell>
-                          <FormattedDate dateString={transaction.transaction_date} />
+                          <FormattedDate dateString={transaction.transaction_date} format="dd/MM/yyyy" />
                         </TableCell>
                         <TableCell>
                           <Badge 
@@ -413,7 +413,7 @@ export function FinanceiroContent({ initialData }: FinanceiroContentProps) {
                     payments.map((payment) => (
                       <TableRow key={payment.id}>
                         <TableCell>
-                          <FormattedDate dateString={payment.date} />
+                          <FormattedDate dateString={payment.date} format="dd/MM/yyyy" />
                         </TableCell>
                         <TableCell className="font-medium">
                           {payment.clients?.name || 'Cliente não identificado'}

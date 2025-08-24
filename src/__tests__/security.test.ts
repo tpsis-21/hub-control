@@ -67,12 +67,12 @@ describe('🔒 Testes de Segurança - Hub Control', () => {
     test('Deve simular controle de taxa', () => {
       const rateLimiter = {
         requests: new Map(),
-        isAllowed: function(ip, limit = 10, window = 60000) {
+        isAllowed: function(ip: string, limit = 10, window = 60000) {
           const now = Date.now();
           const userRequests = this.requests.get(ip) || [];
           
           // Remove requests antigas
-          const validRequests = userRequests.filter(time => now - time < window);
+          const validRequests = userRequests.filter((time: number) => now - time < window);
           
           if (validRequests.length >= limit) {
             return false;
@@ -152,7 +152,7 @@ describe('🔒 Testes de Segurança - Hub Control', () => {
 
   describe('📊 Relatório de Segurança', () => {
     test('Deve gerar score de segurança', () => {
-      const calculateSecurityScore = (checks: any[]) => {
+      const calculateSecurityScore = (checks: Record<string, boolean>) => {
         const totalChecks = Object.keys(checks).length;
         const passedChecks = Object.values(checks).filter(Boolean).length;
         return Math.round((passedChecks / totalChecks) * 100);
@@ -180,7 +180,7 @@ const SecurityTestUtils = {
     nome: `Test User ${Date.now()}`
   }),
 
-  containsMaliciousContent: (input) => {
+  containsMaliciousContent: (input: string) => {
     const maliciousPatterns = [
       /<script/i,
       /javascript:/i,
@@ -190,5 +190,5 @@ const SecurityTestUtils = {
     return maliciousPatterns.some(pattern => pattern.test(input));
   },
 
-  delay: (ms) => new Promise(resolve => setTimeout(resolve, ms))
+  delay: (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 };

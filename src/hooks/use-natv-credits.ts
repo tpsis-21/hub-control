@@ -11,7 +11,7 @@ export interface NATVCreditsState {
   isConfigured: boolean;
 }
 
-export function useNATVCredits(autoRefreshInterval: number = 5 * 60 * 1000) {
+export function useNATVCredits(autoRefreshInterval: number = 0) { // Desabilitado por padrão
   const [state, setState] = useState<NATVCreditsState>({
     credits: null,
     loading: false,

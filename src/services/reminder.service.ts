@@ -1,6 +1,6 @@
 // @/services/reminder.service.ts
 
-import { createApiSupabaseClient } from "@/lib/supabase-api";
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 import { mapDatabaseClientToClient } from "@/lib/database-mappers";
 import { MessageQueueService } from "@/services/message-queue.service";
 import { LoggerService } from "@/services/logger.service";
@@ -29,7 +29,7 @@ export class ReminderService {
       this.checkExpiringClients();
     }, 60 * 60 * 1000); // 1 hora
 
-    LoggerService.log('system', 'Serviço de lembretes iniciado', {
+    LoggerService.info('Serviço de lembretes iniciado', 'system', {
       interval: '1 hora',
       timestamp: new Date().toISOString()
     });
@@ -51,7 +51,7 @@ export class ReminderService {
     }
 
     console.log('Serviço de lembretes parado');
-    LoggerService.log('system', 'Serviço de lembretes parado', {
+    LoggerService.info('Serviço de lembretes parado', 'system', {
       timestamp: new Date().toISOString()
     });
   }
@@ -107,14 +107,14 @@ export class ReminderService {
         }
       }
 
-      LoggerService.log('system', 'Verificação de lembretes concluída', {
+      LoggerService.info('Verificação de lembretes concluída', 'system', {
         clientsChecked: expiringClients.length,
         timestamp: new Date().toISOString()
       });
 
     } catch (error) {
       console.error('Erro na verificação de lembretes:', error);
-      LoggerService.log('error', 'Erro na verificação de lembretes', {
+      LoggerService.error('Erro na verificação de lembretes', 'system', {
         error: error instanceof Error ? error.message : 'Erro desconhecido',
         timestamp: new Date().toISOString()
       });
@@ -126,7 +126,7 @@ export class ReminderService {
    */
   private static async sendNormalReminder(client: Client, daysUntilExpiration: number) {
     try {
-      await MessageQueueService.queueExpirationReminder({
+      await MessageQueueService.getInstance().addMessage('reminder', {
         clientId: client.id,
         clientName: client.name,
         email: client.email,
@@ -147,7 +147,7 @@ export class ReminderService {
    */
   private static async sendUrgentReminder(client: Client, daysUntilExpiration: number) {
     try {
-      await MessageQueueService.queueExpirationReminder({
+      await MessageQueueService.getInstance().addMessage('reminder', {
         clientId: client.id,
         clientName: client.name,
         email: client.email,
@@ -209,8 +209,7 @@ export class ReminderService {
         
         if (client.email || client.whatsapp) {
           try {
-            await MessageQueueService.addMessage({
-              type: 'general',
+            await MessageQueueService.getInstance().addMessage('email', {
               clientId: client.id,
               clientName: client.name,
               email: client.email,
@@ -225,14 +224,14 @@ export class ReminderService {
         }
       }
 
-      LoggerService.log('system', 'Clientes vencidos processados', {
+      LoggerService.info('Clientes vencidos processados', 'system', {
         expiredCount: expiredClients.length,
         timestamp: new Date().toISOString()
       });
 
     } catch (error) {
       console.error('Erro na verificação de clientes vencidos:', error);
-      LoggerService.log('error', 'Erro na verificação de clientes vencidos', {
+      LoggerService.error('Erro na verificação de clientes vencidos', 'system', {
         error: error instanceof Error ? error.message : 'Erro desconhecido',
         timestamp: new Date().toISOString()
       });

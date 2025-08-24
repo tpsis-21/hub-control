@@ -1,0 +1,154 @@
+// src/lib/supabase/clients/browser.ts
+// Cliente Supabase consolidado para uso no browser (client-side)
+
+import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '../../database.types';
+import { supabaseConfig, defaultAuthConfig, storageConfig } from '../config';
+import { UserManager, signInWithEmail, signUpWithEmail, signOut } from '../auth/user';
+import { supabaseLogger } from '../utils/logger';
+
+// Cliente browser otimizado para SSR (substitui supabase-client.ts)
+let browserClient: ReturnType<typeof createBrowserClient<Database>> | null = null;
+
+export function createClientSupabaseClient() {
+  if (!browserClient) {
+    browserClient = createBrowserClient<Database>(
+      supabaseConfig.url,
+      supabaseConfig.anonKey
+    );
+    supabaseLogger.clientCreated('browser-ssr');
+  }
+  return browserClient;
+}
+
+// Cliente genérico com localStorage (substitui supabase.ts)
+let genericClient: ReturnType<typeof createClient<Database>> | null = null;
+
+export function createGenericSupabaseClient() {
+  if (!genericClient) {
+    genericClient = createClient<Database>(
+      supabaseConfig.url,
+      supabaseConfig.anonKey,
+      {
+        auth: {
+          ...defaultAuthConfig,
+          ...storageConfig,
+        }
+      }
+    );
+    supabaseLogger.clientCreated('browser-generic');
+  }
+  return genericClient;
+}
+
+// Instância padrão (compatibilidade com supabase.ts)
+export const supabase = createGenericSupabaseClient();
+
+// Manager de usuário para cliente browser
+const browserUserManager = new UserManager(createClientSupabaseClient());
+const genericUserManager = new UserManager(createGenericSupabaseClient());
+
+// === FUNÇÕES DO CLIENTE BROWSER (supabase-client.ts) ===
+
+// Função para obter o usuário atual no lado do cliente
+export async function getClientUser() {
+  return await browserUserManager.getCurrentUser();
+}
+
+// Função para verificar se o usuário está autenticado no lado do cliente
+export async function isClientAuthenticated() {
+  return await browserUserManager.isAuthenticated();
+}
+
+// Função para obter o papel (role) do usuário logado
+export async function getClientUserRole() {
+  return await browserUserManager.getUserRole();
+}
+
+// Função para obter se o usuário está aprovado
+export async function isClientUserApproved() {
+  return await browserUserManager.isUserApproved();
+}
+
+// === FUNÇÕES DO CLIENTE GENÉRICO (supabase.ts) ===
+
+// Função para obter o usuário atual
+export async function getCurrentUser() {
+  return await genericUserManager.getCurrentUser();
+}
+
+// Função para verificar se o usuário está autenticado
+export async function isAuthenticated() {
+  return await genericUserManager.isAuthenticated();
+}
+
+// === FUNÇÕES DE AUTENTICAÇÃO COMPARTILHADAS ===
+
+// Função para fazer login com email e senha (cliente browser)
+export async function signInWithEmailClient(email: string, password: string) {
+  const client = createClientSupabaseClient();
+  return await signInWithEmail(client, email, password);
+}
+
+// Função para fazer registro com email e senha (cliente browser)
+export async function signUpWithEmailClient(email: string, password: string) {
+  const client = createClientSupabaseClient();
+  return await signUpWithEmail(client, email, password);
+}
+
+// Função para fazer logout (cliente browser)
+export async function signOutClient() {
+  const client = createClientSupabaseClient();
+  return await signOut(client);
+}
+
+// Função para fazer login com email e senha (cliente genérico)
+export async function signInWithEmailGeneric(email: string, password: string) {
+  const client = createGenericSupabaseClient();
+  return await signInWithEmail(client, email, password);
+}
+
+// Função para fazer registro com email e senha (cliente genérico)
+export async function signUpWithEmailGeneric(email: string, password: string) {
+  const client = createGenericSupabaseClient();
+  return await signUpWithEmail(client, email, password);
+}
+
+// Função para fazer logout (cliente genérico)
+export async function signOutGeneric() {
+  const client = createGenericSupabaseClient();
+  return await signOut(client);
+}
+
+// === FUNÇÕES PRINCIPAIS PARA EXPORTAÇÃO ===
+
+// Funções principais do browser client
+export { createClientSupabaseClient as createBrowserSupabaseClient };
+export { createGenericSupabaseClient as createSSRSupabaseClient };
+export { getClientUser as getBrowserUser };
+export { isClientAuthenticated as isBrowserAuthenticated };
+export { getClientUserRole as getBrowserUserRole };
+export async function isBrowserUserAdmin() {
+  const role = await getClientUserRole();
+  return role === 'admin';
+}
+export { isClientUserApproved as isBrowserUserApproved };
+export async function getBrowserUserProfile() {
+  return await browserUserManager.getUserProfile();
+}
+
+// Funções de autenticação do browser
+export { signInWithEmailClient as browserSignIn };
+export { signUpWithEmailClient as browserSignUp };
+export { signOutClient as browserSignOut };
+
+// === COMPATIBILIDADE COM CÓDIGO EXISTENTE ===
+
+// Aliases para manter compatibilidade com supabase.ts
+export { signInWithEmailGeneric as signInWithEmail };
+export { signUpWithEmailGeneric as signUpWithEmail };
+export { signOutGeneric as signOut };
+
+// Export do cliente padrão para compatibilidade
+export default supabase;

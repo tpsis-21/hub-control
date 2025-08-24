@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
-import { createApiSupabaseClient } from '@/lib/supabase-api'
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api"
 import { LoggerService } from '@/services/logger.service'
 
 export async function POST(request: NextRequest) {

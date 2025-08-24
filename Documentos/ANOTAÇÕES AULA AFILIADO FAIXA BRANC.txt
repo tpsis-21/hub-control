@@ -1,0 +1,59 @@
+ANOTAÇÕES AULA AFILIADO FAIXA BRANCA
+
+Aula: A formula pra encontrar nichos que vendem todos os dias.
+
+1 - Nicho
+
+O nicho deve ser algo que possa ser explorado pra venda! Existem termos que não podem ser monetizados pra venda.
+
+O programa de afiliado que mais converte e com comissões mais atrativas é o da Amazon.
+
+2 - Concorrência
+(ver planilha de analise de nicho)
+
+Quanto maior a concorrência mais recursos serão necessários (conteúdo e backlinks)
+
+2.1 Sites específicos: Sites específicos tendem a posicionar melhor que sites generalistas.
+
+Considere pra concorrência somente os específicos.
+
+Através do comando em google Docker é possível ver quantas páginas tem rastreadas pelo google. 
+
+Comando: site:enderecoconcorrente.com
+
+outra possibilidade de comando é: site:enderecoconcorrente.com "palavra chave do nicho"
+
+Digamos que o concorrente tenha 80 páginas, nesse caso você deve ter em seu site mais de 80 páginas pra poder está melhor que ele. A quantidade de post que ele tenha, é a quantidade mínima que você deve ter.
+
+Os backlinks tbm devem ser considerados na analise da concorrência, Deve ser verificada a quantidade de backlinks, mas não necessariamente precisaremos ter uma quantidade maior pois deve ser considerado a qualidade (autoridade e contextualidade) do site de onde vem o link.
+
+resumindo: tenho que está ciente de que caso eu encontre algum site dentro do nicho, deve-se fazer a analise da quantidade de paginas e quantidade e qualidade de backlink.
+
+
+2.2 Sites generalistas: são sites que falam de muitos assuntos ao mesmo tempo.
+
+Sites específicos (especialistas) tendem a ganhar dos generalistas.
+
+3 - Quanto o nicho fatura?
+
+Consultar planilha SEO ROI - Planilha Com link do vídeo
+
+
+
+
+AULA 2: Como encontrar e validar nichos lucrativos (na prática)
+
+Planilha: https://docs.google.com/spreadsheets/d/1e-XeLjsJnUIVD0XxVWEAM9JrU-a1L-1RAfIJBSV0xiQ/edit?gid=390490343#gid=390490343
+
+Métodos pesquisa no semrush por alguns termos chaves:
+
+- melhores
+
+
+
+
+
+
+
+
+

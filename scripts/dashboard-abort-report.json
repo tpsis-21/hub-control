@@ -1,0 +1,226 @@
+{
+  "timestamp": "2025-08-18T18:21:44.790Z",
+  "tests": {
+    "connectivity": [
+      {
+        "name": "Servidor Next.js",
+        "url": "http://localhost:9010",
+        "status": 200,
+        "statusText": "OK",
+        "responseTime": 2371,
+        "headers": {
+          "cache-control": "no-store, must-revalidate",
+          "connection": "keep-alive",
+          "content-encoding": "gzip",
+          "content-type": "text/html; charset=utf-8",
+          "date": "Mon, 18 Aug 2025 18:21:47 GMT",
+          "keep-alive": "timeout=5",
+          "permissions-policy": "camera=(), microphone=(), geolocation=()",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "DENY"
+        },
+        "success": true
+      },
+      {
+        "name": "Página de Login",
+        "url": "http://localhost:9010/login",
+        "status": 200,
+        "statusText": "OK",
+        "responseTime": 138,
+        "headers": {
+          "cache-control": "no-store, must-revalidate",
+          "connection": "keep-alive",
+          "content-encoding": "gzip",
+          "content-type": "text/html; charset=utf-8",
+          "date": "Mon, 18 Aug 2025 18:21:47 GMT",
+          "keep-alive": "timeout=5",
+          "permissions-policy": "camera=(), microphone=(), geolocation=()",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "DENY"
+        },
+        "success": true
+      },
+      {
+        "name": "API Health Check",
+        "url": "http://localhost:9010/api/health",
+        "status": 404,
+        "statusText": "Not Found",
+        "responseTime": 338,
+        "headers": {
+          "cache-control": "no-store, must-revalidate",
+          "connection": "keep-alive",
+          "content-encoding": "gzip",
+          "content-type": "text/html; charset=utf-8",
+          "date": "Mon, 18 Aug 2025 18:21:47 GMT",
+          "keep-alive": "timeout=5",
+          "permissions-policy": "camera=(), microphone=(), geolocation=()",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "DENY"
+        },
+        "success": false
+      },
+      {
+        "name": "Dashboard (GET)",
+        "url": "http://localhost:9010/dashboard",
+        "status": 200,
+        "statusText": "OK",
+        "responseTime": 88,
+        "headers": {
+          "cache-control": "no-store, must-revalidate",
+          "connection": "keep-alive",
+          "content-encoding": "gzip",
+          "content-type": "text/html; charset=utf-8",
+          "date": "Mon, 18 Aug 2025 18:21:47 GMT",
+          "keep-alive": "timeout=5",
+          "permissions-policy": "camera=(), microphone=(), geolocation=()",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "DENY"
+        },
+        "success": true
+      }
+    ],
+    "redirects": [
+      {
+        "name": "Raiz para Dashboard",
+        "url": "http://localhost:9010",
+        "status": 307,
+        "statusText": "Temporary Redirect",
+        "location": "http://localhost:9010/dashboard",
+        "isRedirect": true
+      },
+      {
+        "name": "Dashboard direto",
+        "url": "http://localhost:9010/dashboard",
+        "status": 307,
+        "statusText": "Temporary Redirect",
+        "location": "http://localhost:9010/login?from=%2Fdashboard",
+        "isRedirect": true
+      }
+    ],
+    "dashboardAPIs": [
+      {
+        "name": "Clientes",
+        "endpoint": "/api/clientes",
+        "status": 404,
+        "statusText": "Not Found",
+        "responseTime": 31,
+        "contentType": "text/html; charset=utf-8",
+        "success": false
+      },
+      {
+        "name": "Planos",
+        "endpoint": "/api/planos",
+        "status": 404,
+        "statusText": "Not Found",
+        "responseTime": 37,
+        "contentType": "text/html; charset=utf-8",
+        "success": false
+      },
+      {
+        "name": "Servidores",
+        "endpoint": "/api/servidores",
+        "status": 404,
+        "statusText": "Not Found",
+        "responseTime": 34,
+        "contentType": "text/html; charset=utf-8",
+        "success": false
+      },
+      {
+        "name": "Logs",
+        "endpoint": "/api/logs",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "responseTime": 401,
+        "contentType": "application/json",
+        "success": false
+      },
+      {
+        "name": "Reports",
+        "endpoint": "/api/reports",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "responseTime": 754,
+        "contentType": "application/json",
+        "success": false
+      }
+    ],
+    "criticalFiles": [
+      {
+        "file": "src/app/(app)/dashboard/page.tsx",
+        "exists": true,
+        "size": 651
+      },
+      {
+        "file": "src/app/(app)/dashboard/dashboard-content.tsx",
+        "exists": true,
+        "size": 19732
+      },
+      {
+        "file": "src/app/(app)/layout.tsx",
+        "exists": true,
+        "size": 647
+      },
+      {
+        "file": "src/components/app/modern-header.tsx",
+        "exists": true,
+        "size": 7738
+      },
+      {
+        "file": "src/components/app/modern-sidebar.tsx",
+        "exists": true,
+        "size": 18125
+      },
+      {
+        "file": "src/hooks/useDashboardMetrics.ts",
+        "exists": true,
+        "size": 1033
+      },
+      {
+        "file": "src/services/dashboard.service.ts",
+        "exists": true,
+        "size": 6078
+      }
+    ],
+    "navigation": [
+      {
+        "name": "Acesso inicial",
+        "url": "http://localhost:9010",
+        "status": 200,
+        "statusText": "OK",
+        "responseTime": 184,
+        "contentLength": null,
+        "success": true
+      },
+      {
+        "name": "Dashboard direto",
+        "url": "http://localhost:9010/dashboard",
+        "status": 200,
+        "statusText": "OK",
+        "responseTime": 51,
+        "contentLength": null,
+        "success": true
+      },
+      {
+        "name": "Dashboard com parâmetros",
+        "url": "http://localhost:9010/dashboard?refresh=true",
+        "status": 200,
+        "statusText": "OK",
+        "responseTime": 43,
+        "contentLength": null,
+        "success": true
+      }
+    ]
+  }
+}

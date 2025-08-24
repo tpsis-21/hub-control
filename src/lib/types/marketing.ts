@@ -5,7 +5,7 @@ export interface Campaign {
   subject: string;
   htmlContent: string;
   textContent?: string;
-  status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused';
+  status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled';
   segmentation: CampaignSegmentation;
   scheduled_at?: string;
   created_at: string;
@@ -117,7 +117,7 @@ export interface EmailLog {
   client_id: string;
   email: string;
   subject: string;
-  status: 'queued' | 'sent' | 'delivered' | 'opened' | 'clicked' | 'bounced' | 'failed';
+  status: 'sent' | 'delivered' | 'opened' | 'clicked' | 'bounced' | 'failed' | 'unsubscribed';
   sent_at?: string;
   delivered_at?: string;
   opened_at?: string;

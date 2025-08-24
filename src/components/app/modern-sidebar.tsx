@@ -17,11 +17,16 @@ import {
   Search,
   ChevronRight,
   LogOut,
+  FileText,
+  ScrollText,
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { getBrowserUser, createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
+import { useToast } from "@/hooks/use-toast";
+import type { User } from "@supabase/supabase-js";
 import {
   Sidebar,
   SidebarContent,
@@ -55,11 +60,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navigationData = {
-  user: {
-    name: "Admin",
-    email: "admin@iptvmanager.com",
-    avatar: "/avatars/admin.jpg",
-  },
   navPrincipal: [
     {
       title: "Dashboard",
@@ -110,6 +110,12 @@ const navigationData = {
       icon: BarChart3,
       description: "Controle financeiro e relatórios",
     },
+    {
+      title: "Relatórios",
+      url: "/relatorios",
+      icon: FileText,
+      description: "Análise completa dos dados",
+    },
   ],
   navSistema: [
     {
@@ -131,6 +137,12 @@ const navigationData = {
       title: "Fila de Mensagens",
       url: "/mensagens",
       icon: BarChart3,
+    },
+    {
+      title: "Logs",
+      url: "/logs",
+      icon: ScrollText,
+      description: "Auditoria e monitoramento",
     },
     {
       title: "Painel Admin",
@@ -179,7 +191,146 @@ function SearchForm({ onSearch }: { onSearch: (term: string) => void }) {
   );
 }
 
-function NavUser({ user }: { user: typeof navigationData.user }) {
+function NavUser() {
+  const [user, setUser] = React.useState<User | null>(null);
+  const [userProfile, setUserProfile] = React.useState<any>(null);
+  const [mounted, setMounted] = React.useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  React.useEffect(() => {
+    setMounted(true);
+    const loadUserData = async () => {
+      try {
+        const currentUser = await getBrowserUser();
+        if (currentUser) {
+          setUser(currentUser);
+          
+          // Buscar dados do perfil do usuário
+          const supabase = createBrowserSupabaseClient();
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .single();
+          
+          setUserProfile(profile);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados do usuário:', error);
+      }
+    };
+    
+    loadUserData();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      const supabase = createBrowserSupabaseClient();
+      await supabase.auth.signOut();
+      router.push('/login');
+      toast({
+        title: 'Logout realizado',
+        description: 'Você foi desconectado com sucesso.',
+      });
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao fazer logout. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getUserDisplayName = () => {
+    if (userProfile?.full_name) return userProfile.full_name;
+    if (user?.user_metadata?.name) return user.user_metadata.name;
+    if (user?.user_metadata?.full_name) return user.user_metadata.full_name;
+    return user?.email?.split('@')[0] || "Usuário";
+  };
+
+  const getUserInitials = () => {
+    const name = getUserDisplayName();
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const getUserRole = () => {
+    if (userProfile?.role === 'admin') return 'Administrador';
+    if (userProfile?.role === 'user') return 'Usuário';
+    return 'Usuário';
+  };
+
+  // Evitar erro de hidratação - mostrar dados padrão até montar
+  if (!mounted) {
+    return (
+      <div className="space-y-2">
+        <div className="px-3 py-2 text-xs text-muted-foreground border-t">
+          <div className="truncate">admin@iptvmanager.com</div>
+        </div>
+        
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <Avatar className="h-8 w-8 rounded-lg">
+                    <AvatarImage src="" alt="Admin" />
+                    <AvatarFallback className="rounded-lg bg-hub-blue text-white font-semibold">
+                      AD
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">Admin</span>
+                    <span className="truncate text-xs text-muted-foreground">Administrador</span>
+                  </div>
+                  <ChevronRight className="ml-auto size-4" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                side="bottom"
+                align="end"
+                sideOffset={4}
+              >
+                <DropdownMenuItem asChild>
+                  <Link href="/perfil">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Perfil
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/configuracoes">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Configurações
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="space-y-2">
+        <div className="px-3 py-2 text-xs text-muted-foreground border-t">
+          <div className="truncate">Não autenticado</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       {/* Email do usuário */}
@@ -196,17 +347,14 @@ function NavUser({ user }: { user: typeof navigationData.user }) {
                 className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">
-                    {user.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
+                  <AvatarImage src={userProfile?.avatar_url || ""} alt={getUserDisplayName()} />
+                  <AvatarFallback className="rounded-lg bg-hub-blue text-white font-semibold">
+                    {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{user.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">Administrador</span>
+                  <span className="truncate font-semibold">{getUserDisplayName()}</span>
+                  <span className="truncate text-xs text-muted-foreground">{getUserRole()}</span>
                 </div>
                 <ChevronRight className="ml-auto size-4" />
               </SidebarMenuButton>
@@ -217,12 +365,20 @@ function NavUser({ user }: { user: typeof navigationData.user }) {
               align="end"
               sideOffset={4}
             >
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                Configurações
+              <DropdownMenuItem asChild>
+                <Link href="/perfil">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Perfil
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/configuracoes">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Configurações
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
               </DropdownMenuItem>
@@ -425,7 +581,7 @@ export function ModernSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
         <NavSecondary items={navigationData.navSecondary} />
       </SidebarContent>
       <SidebarFooter className="border-t">
-        <NavUser user={navigationData.user} />
+        <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

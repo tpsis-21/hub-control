@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Dashboard - Diagnóstico net::ERR_ABORTED</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .test-header {
+            background: #f8f9fa;
+            padding: 15px;
+            font-weight: bold;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .test-content {
+            padding: 15px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .log {
+            background: #1e1e1e;
+            color: #f0f0f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .metric {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .metric-label {
+            color: #666;
+            font-size: 14px;
+        }
+        .network-monitor {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .request-item {
+            padding: 8px;
+            border-bottom: 1px solid #e0e0e0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .request-item:last-child {
+            border-bottom: none;
+        }
+        .request-success {
+            color: #28a745;
+        }
+        .request-error {
+            color: #dc3545;
+        }
+        .request-pending {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Diagnóstico Dashboard - net::ERR_ABORTED</h1>
+            <p>Teste avançado para identificar problemas de navegação no dashboard</p>
+        </div>
+        
+        <div class="content">
+            <!-- Status Geral -->
+            <div class="test-section">
+                <div class="test-header">📊 Status Geral do Sistema</div>
+                <div class="test-content">
+                    <div class="grid">
+                        <div class="metric">
+                            <div class="metric-value" id="server-status">🔄</div>
+                            <div class="metric-label">Status do Servidor</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="dashboard-status">🔄</div>
+                            <div class="metric-label">Status do Dashboard</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="network-errors">0</div>
+                            <div class="metric-label">Erros de Rede</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="js-errors">0</div>
+                            <div class="metric-label">Erros JavaScript</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Testes de Navegação -->
+            <div class="test-section">
+                <div class="test-header">🧭 Testes de Navegação</div>
+                <div class="test-content">
+                    <button class="btn" onclick="testDashboardNavigation()">🔄 Testar Navegação Dashboard</button>
+                    <button class="btn" onclick="testDashboardIframe()">🖼️ Testar Dashboard em iFrame</button>
+                    <button class="btn" onclick="testDashboardFetch()">📡 Testar Dashboard via Fetch</button>
+                    <button class="btn" onclick="simulateUserNavigation()">👤 Simular Navegação do Usuário</button>
+                    <button class="btn" onclick="clearLogs()">🗑️ Limpar Logs</button>
+                    
+                    <div id="navigation-status"></div>
+                </div>
+            </div>
+
+            <!-- Monitor de Rede -->
+            <div class="test-section">
+                <div class="test-header">🌐 Monitor de Rede em Tempo Real</div>
+                <div class="test-content">
+                    <div class="network-monitor">
+                        <div id="network-requests">Aguardando requisições...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teste de iFrame -->
+            <div class="test-section">
+                <div class="test-header">🖼️ Teste de Dashboard em iFrame</div>
+                <div class="test-content">
+                    <div id="iframe-container" style="display: none;">
+                        <iframe id="dashboard-iframe" width="100%" height="400" style="border: 1px solid #ccc; border-radius: 6px;"></iframe>
+                    </div>
+                    <div id="iframe-status"></div>
+                </div>
+            </div>
+
+            <!-- Logs Detalhados -->
+            <div class="test-section">
+                <div class="test-header">📝 Logs Detalhados</div>
+                <div class="test-content">
+                    <div class="log" id="detailed-logs">Aguardando testes...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let networkRequests = [];
+        let jsErrors = 0;
+        let networkErrors = 0;
+        const BASE_URL = 'http://localhost:9010';
+        const DASHBOARD_URL = `${BASE_URL}/dashboard`;
+
+        // Função para log com timestamp
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            const logElement = document.getElementById('detailed-logs');
+            const colorMap = {
+                'info': '#61dafb',
+                'success': '#4caf50',
+                'error': '#f44336',
+                'warning': '#ff9800'
+            };
+            
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logElement.innerHTML += `<span style="color: ${colorMap[type] || '#f0f0f0'}">${logEntry}</span>`;
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        // Função para atualizar status
+        function updateStatus(elementId, value, type = 'info') {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = value;
+                element.className = `metric-value ${type}`;
+            }
+        }
+
+        // Função para mostrar status na seção
+        function showStatus(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = `<div class="status ${type}">${message}</div>`;
+            }
+        }
+
+        // Monitor de erros JavaScript
+        window.addEventListener('error', function(event) {
+            jsErrors++;
+            updateStatus('js-errors', jsErrors, 'error');
+            log(`❌ Erro JavaScript: ${event.message} em ${event.filename}:${event.lineno}`, 'error');
+        });
+
+        // Monitor de erros de recursos
+        window.addEventListener('error', function(event) {
+            if (event.target !== window) {
+                networkErrors++;
+                updateStatus('network-errors', networkErrors, 'error');
+                log(`🚫 Erro de recurso: ${event.target.src || event.target.href}`, 'error');
+            }
+        }, true);
+
+        // Monitor de requisições fetch
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            const url = args[0];
+            const startTime = Date.now();
+            
+            log(`📡 Iniciando requisição: ${url}`, 'info');
+            
+            return originalFetch.apply(this, args)
+                .then(response => {
+                    const endTime = Date.now();
+                    const duration = endTime - startTime;
+                    
+                    const requestInfo = {
+                        url,
+                        status: response.status,
+                        duration,
+                        timestamp: new Date().toLocaleTimeString('pt-BR'),
+                        success: response.ok
+                    };
+                    
+                    networkRequests.push(requestInfo);
+                    updateNetworkMonitor();
+                    
+                    if (response.ok) {
+                        log(`✅ Requisição bem-sucedida: ${url} (${response.status}) em ${duration}ms`, 'success');
+                    } else {
+                        networkErrors++;
+                        updateStatus('network-errors', networkErrors, 'error');
+                        log(`❌ Requisição falhou: ${url} (${response.status}) em ${duration}ms`, 'error');
+                    }
+                    
+                    return response;
+                })
+                .catch(error => {
+                    const endTime = Date.now();
+                    const duration = endTime - startTime;
+                    
+                    networkErrors++;
+                    updateStatus('network-errors', networkErrors, 'error');
+                    
+                    const requestInfo = {
+                        url,
+                        error: error.message,
+                        duration,
+                        timestamp: new Date().toLocaleTimeString('pt-BR'),
+                        success: false
+                    };
+                    
+                    networkRequests.push(requestInfo);
+                    updateNetworkMonitor();
+                    
+                    log(`🚫 Erro na requisição: ${url} - ${error.message} em ${duration}ms`, 'error');
+                    throw error;
+                });
+        };
+
+        // Atualizar monitor de rede
+        function updateNetworkMonitor() {
+            const container = document.getElementById('network-requests');
+            if (networkRequests.length === 0) {
+                container.innerHTML = 'Nenhuma requisição registrada ainda.';
+                return;
+            }
+            
+            const html = networkRequests.slice(-10).map(req => {
+                const statusClass = req.success ? 'request-success' : 'request-error';
+                const statusText = req.success ? `✅ ${req.status}` : `❌ ${req.error || req.status}`;
+                return `<div class="request-item ${statusClass}">[${req.timestamp}] ${req.url} - ${statusText} (${req.duration}ms)</div>`;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Teste de navegação do dashboard
+        async function testDashboardNavigation() {
+            log('🧭 Iniciando teste de navegação do dashboard...', 'info');
+            showStatus('navigation-status', '🔄 Testando navegação...', 'info');
+            
+            try {
+                // Teste 1: Verificar se o dashboard carrega
+                log('📍 Teste 1: Carregando dashboard via window.location', 'info');
+                
+                // Criar um iframe temporário para testar
+                const testFrame = document.createElement('iframe');
+                testFrame.style.display = 'none';
+                document.body.appendChild(testFrame);
+                
+                const loadPromise = new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Timeout ao carregar dashboard'));
+                    }, 10000);
+                    
+                    testFrame.onload = () => {
+                        clearTimeout(timeout);
+                        resolve('Dashboard carregado com sucesso');
+                    };
+                    
+                    testFrame.onerror = (error) => {
+                        clearTimeout(timeout);
+                        reject(error);
+                    };
+                });
+                
+                testFrame.src = DASHBOARD_URL;
+                
+                await loadPromise;
+                document.body.removeChild(testFrame);
+                
+                log('✅ Dashboard carregou com sucesso no iframe de teste', 'success');
+                showStatus('navigation-status', '✅ Navegação funcionando corretamente', 'success');
+                
+            } catch (error) {
+                log(`❌ Erro na navegação: ${error.message}`, 'error');
+                showStatus('navigation-status', `❌ Erro na navegação: ${error.message}`, 'error');
+            }
+        }
+
+        // Teste de dashboard em iframe
+        function testDashboardIframe() {
+            log('🖼️ Iniciando teste de dashboard em iframe...', 'info');
+            
+            const container = document.getElementById('iframe-container');
+            const iframe = document.getElementById('dashboard-iframe');
+            const statusDiv = document.getElementById('iframe-status');
+            
+            container.style.display = 'block';
+            showStatus('iframe-status', '🔄 Carregando dashboard em iframe...', 'info');
+            
+            const timeout = setTimeout(() => {
+                showStatus('iframe-status', '⏰ Timeout ao carregar iframe', 'warning');
+                log('⏰ Timeout ao carregar dashboard em iframe', 'warning');
+            }, 15000);
+            
+            iframe.onload = function() {
+                clearTimeout(timeout);
+                showStatus('iframe-status', '✅ Dashboard carregado com sucesso em iframe', 'success');
+                log('✅ Dashboard carregado com sucesso em iframe', 'success');
+            };
+            
+            iframe.onerror = function(error) {
+                clearTimeout(timeout);
+                showStatus('iframe-status', '❌ Erro ao carregar iframe', 'error');
+                log(`❌ Erro ao carregar dashboard em iframe: ${error}`, 'error');
+            };
+            
+            iframe.src = DASHBOARD_URL;
+        }
+
+        // Teste de dashboard via fetch
+        async function testDashboardFetch() {
+            log('📡 Iniciando teste de dashboard via fetch...', 'info');
+            
+            try {
+                const response = await fetch(DASHBOARD_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'User-Agent': 'Dashboard-Test-Script/1.0'
+                    }
+                });
+                
+                if (response.ok) {
+                    const content = await response.text();
+                    log(`✅ Dashboard fetch bem-sucedido: ${response.status} (${content.length} bytes)`, 'success');
+                } else {
+                    log(`❌ Dashboard fetch falhou: ${response.status} ${response.statusText}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`🚫 Erro no fetch do dashboard: ${error.message}`, 'error');
+            }
+        }
+
+        // Simular navegação do usuário
+        async function simulateUserNavigation() {
+            log('👤 Simulando navegação real do usuário...', 'info');
+            
+            try {
+                // Simular clique em link
+                log('🖱️ Simulando clique para navegar ao dashboard...', 'info');
+                
+                // Criar link temporário e clicar
+                const link = document.createElement('a');
+                link.href = DASHBOARD_URL;
+                link.target = '_blank';
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                
+                // Simular clique
+                link.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    log('✅ Simulação de navegação concluída (nova aba aberta)', 'success');
+                }, 1000);
+                
+            } catch (error) {
+                log(`❌ Erro na simulação de navegação: ${error.message}`, 'error');
+            }
+        }
+
+        // Limpar logs
+        function clearLogs() {
+            document.getElementById('detailed-logs').innerHTML = 'Logs limpos.\n';
+            networkRequests = [];
+            jsErrors = 0;
+            networkErrors = 0;
+            updateStatus('js-errors', 0);
+            updateStatus('network-errors', 0);
+            updateNetworkMonitor();
+            log('🗑️ Logs e contadores limpos', 'info');
+        }
+
+        // Verificação inicial do servidor
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(BASE_URL);
+                if (response.ok) {
+                    updateStatus('server-status', '✅ Online', 'success');
+                    log('✅ Servidor Next.js está online', 'success');
+                } else {
+                    updateStatus('server-status', '❌ Erro', 'error');
+                    log(`❌ Servidor retornou: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                updateStatus('server-status', '🚫 Offline', 'error');
+                log(`🚫 Servidor inacessível: ${error.message}`, 'error');
+            }
+        }
+
+        // Verificação inicial do dashboard
+        async function checkDashboardStatus() {
+            try {
+                const response = await fetch(DASHBOARD_URL);
+                if (response.ok) {
+                    updateStatus('dashboard-status', '✅ OK', 'success');
+                    log('✅ Dashboard está acessível', 'success');
+                } else {
+                    updateStatus('dashboard-status', '❌ Erro', 'error');
+                    log(`❌ Dashboard retornou: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                updateStatus('dashboard-status', '🚫 Falha', 'error');
+                log(`🚫 Dashboard inacessível: ${error.message}`, 'error');
+            }
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Iniciando diagnóstico do dashboard...', 'info');
+            log(`🌐 URL Base: ${BASE_URL}`, 'info');
+            log(`📊 URL Dashboard: ${DASHBOARD_URL}`, 'info');
+            
+            // Verificações iniciais
+            checkServerStatus();
+            checkDashboardStatus();
+            
+            // Configurar monitoramento contínuo
+            setInterval(() => {
+                checkServerStatus();
+                checkDashboardStatus();
+            }, 30000); // Verificar a cada 30 segundos
+            
+            log('✅ Diagnóstico inicializado. Use os botões para executar testes específicos.', 'success');
+        });
+    </script>
+</body>
+</html>

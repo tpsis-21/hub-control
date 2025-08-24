@@ -40,8 +40,7 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
       filtered = filtered.filter(payment => 
         payment.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         payment.plan?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        payment.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        payment.server?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        payment.transaction_id?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 

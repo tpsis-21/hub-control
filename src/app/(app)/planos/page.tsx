@@ -15,7 +15,7 @@ export default async function PlanosPage() {
     getPlanGroups()
   ]);
 
-  const plansWithoutGroup = plans.filter(p => !p.groupId);
+  const plansWithoutGroup = plans.filter(p => !p.group_id);
   
   return (
     <div className="space-y-6">
@@ -33,7 +33,7 @@ export default async function PlanosPage() {
           </CardHeader>
           <CardContent className="space-y-6">
               {planGroups.map((group) => {
-                  const groupedPlans = plans.filter(p => p.groupId === group.id);
+                  const groupedPlans = plans.filter(p => p.group_id === group.id);
                   if (groupedPlans.length === 0) return null;
 
                   return (

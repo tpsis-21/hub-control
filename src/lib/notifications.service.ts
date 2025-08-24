@@ -1,9 +1,7 @@
-import { createClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from "@/lib/supabase/clients/server";
 import { InAppNotification } from '@/lib/types';
 
 export class NotificationsService {
-  private supabase = createClient();
-
   // Criar notificação in-app
   async createInAppNotification({
     userId,
@@ -19,7 +17,8 @@ export class NotificationsService {
     data?: Record<string, any>;
   }): Promise<InAppNotification | null> {
     try {
-      const { data: notification, error } = await this.supabase
+      const supabase = await createServerSupabaseClient();
+      const { data: notification, error } = await supabase
         .from('in_app_notifications')
         .insert({
           user_id: userId,
@@ -47,7 +46,8 @@ export class NotificationsService {
   // Buscar notificações do usuário
   async getInAppNotifications(userId: string, limit = 20): Promise<InAppNotification[]> {
     try {
-      const { data: notifications, error } = await this.supabase
+      const supabase = await createServerSupabaseClient();
+      const { data: notifications, error } = await supabase
         .from('in_app_notifications')
         .select('*')
         .eq('user_id', userId)
@@ -69,7 +69,8 @@ export class NotificationsService {
   // Marcar notificação como lida
   async markNotificationAsRead(notificationId: string): Promise<boolean> {
     try {
-      const { error } = await this.supabase
+      const supabase = await createServerSupabaseClient();
+      const { error } = await supabase
         .from('in_app_notifications')
         .update({ read: true, updated_at: new Date().toISOString() })
         .eq('id', notificationId);
@@ -89,7 +90,8 @@ export class NotificationsService {
   // Marcar todas as notificações como lidas
   async markAllNotificationsAsRead(userId: string): Promise<boolean> {
     try {
-      const { error } = await this.supabase
+      const supabase = await createServerSupabaseClient();
+      const { error } = await supabase
         .from('in_app_notifications')
         .update({ read: true, updated_at: new Date().toISOString() })
         .eq('user_id', userId)
@@ -110,7 +112,8 @@ export class NotificationsService {
   // Contar notificações não lidas
   async getUnreadNotificationsCount(userId: string): Promise<number> {
     try {
-      const { count, error } = await this.supabase
+      const supabase = await createServerSupabaseClient();
+      const { count, error } = await supabase
         .from('in_app_notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
@@ -131,7 +134,8 @@ export class NotificationsService {
   // Deletar notificação
   async deleteNotification(notificationId: string): Promise<boolean> {
     try {
-      const { error } = await this.supabase
+      const supabase = await createServerSupabaseClient();
+      const { error } = await supabase
         .from('in_app_notifications')
         .delete()
         .eq('id', notificationId);
@@ -154,7 +158,8 @@ export class NotificationsService {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { error } = await this.supabase
+      const supabase = await createServerSupabaseClient();
+      const { error } = await supabase
         .from('in_app_notifications')
         .delete()
         .lt('created_at', thirtyDaysAgo.toISOString());

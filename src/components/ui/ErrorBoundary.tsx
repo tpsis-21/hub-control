@@ -3,6 +3,8 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { ErrorService, ErrorType } from "@/services/error.service";
 import { LoggerService } from "@/services/logger.service";
+import { reloadPage } from "@/utils/browser";
+import { isDevelopment } from "@/lib/env-validation";
 
 interface Props {
   children: ReactNode;
@@ -47,7 +49,7 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   private handleReload = () => {
-    window.location.reload();
+    reloadPage();
   };
 
   private getErrorMessage(): string {
@@ -60,8 +62,7 @@ class ErrorBoundary extends Component<Props, State> {
   private getErrorDetails(): string {
     if (!this.state.error) return '';
     
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    if (isDevelopment) {
+    if (isDevelopment()) {
       return `${this.state.error.message}\n\nStack: ${this.state.error.stack}`;
     }
     
@@ -88,7 +89,7 @@ class ErrorBoundary extends Component<Props, State> {
               </p>
             </div>
             
-            {process.env.NODE_ENV === 'development' && (
+            {isDevelopment() && (
               <details className="text-left bg-muted p-4 rounded-lg">
                 <summary className="cursor-pointer font-medium mb-2">
                   Detalhes técnicos (desenvolvimento)

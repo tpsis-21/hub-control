@@ -97,7 +97,7 @@ export function PaymentsTable({ payments, onPaymentUpdate, showActions = false }
   const handleStatusUpdate = async (paymentId: string, newStatus: string) => {
     setLoading(paymentId);
     try {
-      const result = await updatePaymentStatus(paymentId, newStatus);
+      const result = await updatePaymentStatus(paymentId, newStatus as any);
       if (result.success) {
         toast({
           title: "Status atualizado",

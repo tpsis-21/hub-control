@@ -1,12 +1,12 @@
 // src/app/api/messages/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-import MessageService, { EmailMessage, WhatsAppMessage } from '@/services/message.service';
+import { createServerSupabaseClient } from "@/lib/supabase/clients/server";
+import { MessageService, EmailMessage, WhatsAppMessage } from '@/services/message.service';
 import { LoggerService } from '@/services/logger.service';
 
 // Verificar se o usuário tem permissão para enviar mensagens
 async function verifyPermission(request: NextRequest) {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   
   // Verificar autenticação
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -15,15 +15,15 @@ async function verifyPermission(request: NextRequest) {
     return { authorized: false, error: 'Não autenticado' };
   }
 
-  // Verificar se é admin ou tem permissão especial
+  // Verificar se é admin
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, permissions')
+    .select('role')
     .eq('id', user.id)
     .single();
 
-  if (!profile || (profile.role !== 'admin' && !profile.permissions?.includes('send_messages'))) {
-    return { authorized: false, error: 'Sem permissão para enviar mensagens' };
+  if (!profile || profile.role !== 'admin') {
+    return { authorized: false, error: 'Apenas administradores podem enviar mensagens' };
   }
 
   return { authorized: true, user, profile };
@@ -34,9 +34,9 @@ export async function POST(request: NextRequest) {
   try {
     const { authorized, error, user } = await verifyPermission(request);
     
-    if (!authorized) {
+    if (!authorized || !user) {
       return NextResponse.json(
-        { error },
+        { error: error || 'Não autenticado' },
         { status: 401 }
       );
     }
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log da ação
-    LoggerService.logUserAction('send_message', user.id, {
+    LoggerService.logUserAction('send_message', user!.id, {
       type,
       recipientCount: recipientList.length,
       results
@@ -145,7 +145,7 @@ export async function PUT(request: NextRequest) {
     const result = await MessageService.sendWelcomeMessage(customerData);
 
     // Log da ação
-    LoggerService.logUserAction('send_welcome_message', user.id, {
+    LoggerService.logUserAction('send_welcome_message', user!.id, {
       customerName: customerData.name,
       result
     });
@@ -191,7 +191,7 @@ export async function PATCH(request: NextRequest) {
     const result = await MessageService.sendExpirationReminder(customerData);
 
     // Log da ação
-    LoggerService.logUserAction('send_expiration_reminder', user.id, {
+    LoggerService.logUserAction('send_expiration_reminder', user!.id, {
       customerName: customerData.name,
       daysUntilExpiration: customerData.daysUntilExpiration,
       result

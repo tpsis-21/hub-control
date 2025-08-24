@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { createStandardErrorResponse, createStandardSuccessResponse } from '@/middleware/shared/helpers'
 
 const planGroupSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -52,10 +53,7 @@ export async function POST(request: NextRequest) {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
     if (sessionError || !session) {
-      return NextResponse.json(
-        { error: 'Usuário não autenticado' },
-        { status: 401 }
-      )
+      return createStandardErrorResponse('UNAUTHORIZED', 'Usuário não autenticado', 401)
     }
     
     // Verificar se já existe um grupo com o mesmo nome
@@ -66,17 +64,11 @@ export async function POST(request: NextRequest) {
       .single()
     
     if (checkError && checkError.code !== 'PGRST116') {
-      return NextResponse.json(
-        { error: 'Erro ao verificar grupo existente' },
-        { status: 500 }
-      )
+      return createStandardErrorResponse('CHECK_ERROR', 'Erro ao verificar grupo existente', 500)
     }
     
     if (existingGroup) {
-      return NextResponse.json(
-        { error: 'Já existe um grupo de planos com este nome' },
-        { status: 400 }
-      )
+      return createStandardErrorResponse('DUPLICATE', 'Já existe um grupo de planos com este nome', 400)
     }
     
     // Inserir grupo de planos
@@ -87,31 +79,20 @@ export async function POST(request: NextRequest) {
       .single()
     
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      )
+      return createStandardErrorResponse('SUPABASE_ERROR', error.message, 400)
     }
-    
-    return NextResponse.json(
-      { 
-        success: true,
-        planGroup: inserted
-      },
-      { status: 201 }
+
+    return createStandardSuccessResponse(
+      { planGroup: inserted },
+      'Grupo de planos criado com sucesso',
+      201
     )
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: error.errors },
-        { status: 400 }
-      )
+      return createStandardErrorResponse('VALIDATION_ERROR', 'Dados inválidos', 400)
     }
-    
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
+
+    return createStandardErrorResponse('INTERNAL_ERROR', 'Erro interno do servidor', 500)
   }
 }
 
@@ -158,20 +139,13 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
     
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      )
+      return createStandardErrorResponse('SUPABASE_ERROR', error.message, 400)
     }
-    
-    return NextResponse.json(
-      { planGroups: data || [] },
-      { status: 200 }
+
+    return createStandardSuccessResponse(
+      { planGroups: data || [] }
     )
   } catch (error: any) {
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    return createStandardErrorResponse('INTERNAL_ERROR', 'Erro interno do servidor', 500)
   }
 }

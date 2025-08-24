@@ -2,6 +2,7 @@ import React from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { ModernSidebar } from "@/components/app/modern-sidebar";
 import { ModernHeader } from "@/components/app/modern-header";
+import { PrivacyBanner } from "@/components/lgpd/privacy-banner";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </SidebarInset>
+      <PrivacyBanner />
     </SidebarProvider>
   );
 }

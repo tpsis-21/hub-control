@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Login - Debug Frontend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin: 5px 0;
+            display: inline-block;
+        }
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .status.warning { background-color: #fff3cd; color: #856404; }
+        .status.info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Teste de Login - Debug Frontend</h1>
+        <p>Esta página testa o processo de login diretamente no navegador para identificar erros net::ERR_ABORTED.</p>
+        
+        <div class="test-section">
+            <h3>📊 Status dos Testes</h3>
+            <div id="status-container">
+                <div class="status info">⏳ Aguardando início dos testes...</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔐 Teste de Login</h3>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" value="test@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Senha:</label>
+                    <input type="password" id="password" value="testpassword123" required>
+                </div>
+                <button type="submit" id="login-btn">🚀 Testar Login</button>
+                <button type="button" id="test-connectivity" style="margin-left: 10px;">🌐 Testar Conectividade</button>
+                <button type="button" id="test-supabase" style="margin-left: 10px;">🔧 Testar Supabase</button>
+            </form>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Logs de Debug</h3>
+            <button type="button" id="clear-logs">🗑️ Limpar Logs</button>
+            <button type="button" id="export-logs">📄 Exportar Logs</button>
+            <div id="logs" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🌐 Informações do Ambiente</h3>
+            <div id="environment-info"></div>
+        </div>
+    </div>
+
+    <script>
+        class LoginTester {
+            constructor() {
+                this.logs = [];
+                this.statusContainer = document.getElementById('status-container');
+                this.logsContainer = document.getElementById('logs');
+                this.environmentInfo = document.getElementById('environment-info');
+                
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.displayEnvironmentInfo();
+                this.setupNetworkMonitoring();
+                this.log('🚀 Sistema de teste inicializado', 'info');
+            }
+
+            setupEventListeners() {
+                document.getElementById('login-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.testLogin();
+                });
+
+                document.getElementById('test-connectivity').addEventListener('click', () => {
+                    this.testConnectivity();
+                });
+
+                document.getElementById('test-supabase').addEventListener('click', () => {
+                    this.testSupabase();
+                });
+
+                document.getElementById('clear-logs').addEventListener('click', () => {
+                    this.clearLogs();
+                });
+
+                document.getElementById('export-logs').addEventListener('click', () => {
+                    this.exportLogs();
+                });
+            }
+
+            setupNetworkMonitoring() {
+                // Interceptar erros de rede
+                window.addEventListener('error', (event) => {
+                    if (event.target && event.target.tagName) {
+                        this.log(`❌ Erro de recurso: ${event.target.tagName} - ${event.target.src || event.target.href}`, 'error');
+                    }
+                });
+
+                // Interceptar erros não capturados
+                window.addEventListener('unhandledrejection', (event) => {
+                    this.log(`❌ Promise rejeitada: ${event.reason}`, 'error');
+                });
+            }
+
+            displayEnvironmentInfo() {
+                const info = {
+                    'URL Atual': window.location.href,
+                    'Protocolo': window.location.protocol,
+                    'Host': window.location.host,
+                    'User Agent': navigator.userAgent,
+                    'Cookies Habilitados': navigator.cookieEnabled,
+                    'Conexão': navigator.onLine ? 'Online' : 'Offline',
+                    'Idioma': navigator.language,
+                    'Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
+                };
+
+                let html = '<table style="width: 100%; border-collapse: collapse;">';
+                for (const [key, value] of Object.entries(info)) {
+                    html += `<tr><td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">${key}</td><td style="border: 1px solid #ddd; padding: 8px;">${value}</td></tr>`;
+                }
+                html += '</table>';
+                
+                this.environmentInfo.innerHTML = html;
+            }
+
+            async testLogin() {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const loginBtn = document.getElementById('login-btn');
+
+                loginBtn.disabled = true;
+                loginBtn.textContent = '⏳ Testando...';
+
+                this.log('🔐 Iniciando teste de login...', 'info');
+                this.updateStatus('⏳ Testando login...', 'info');
+
+                try {
+                    // Monitorar requisições de rede
+                    const startTime = performance.now();
+                    
+                    this.log(`📤 Enviando requisição para: ${window.location.origin}/api/auth/login`, 'info');
+                    this.log(`📋 Dados: email=${email}, password=[OCULTO]`, 'info');
+
+                    const response = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    const endTime = performance.now();
+                    const duration = Math.round(endTime - startTime);
+
+                    this.log(`📥 Resposta recebida em ${duration}ms`, 'info');
+                    this.log(`📊 Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                    this.log(`📋 Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}`, 'info');
+
+                    const responseText = await response.text();
+                    let responseData;
+                    
+                    try {
+                        responseData = JSON.parse(responseText);
+                        this.log(`📄 Resposta JSON: ${JSON.stringify(responseData, null, 2)}`, 'info');
+                    } catch {
+                        this.log(`📄 Resposta (texto): ${responseText}`, 'warning');
+                        responseData = { raw: responseText };
+                    }
+
+                    if (response.ok) {
+                        this.log('✅ Login bem-sucedido!', 'success');
+                        this.updateStatus('✅ Login funcionando', 'success');
+                    } else {
+                        this.log(`❌ Login falhou: ${responseData.message || responseData.error || 'Erro desconhecido'}`, 'error');
+                        this.updateStatus('❌ Login com problemas', 'error');
+                    }
+
+                } catch (error) {
+                    this.log(`💥 Erro na requisição: ${error.message}`, 'error');
+                    this.log(`🔍 Tipo do erro: ${error.name}`, 'error');
+                    this.log(`📚 Stack trace: ${error.stack}`, 'error');
+                    
+                    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                        this.log('🚨 ERRO net::ERR_ABORTED detectado!', 'error');
+                        this.log('💡 Possíveis causas:', 'warning');
+                        this.log('   - Servidor não está rodando', 'warning');
+                        this.log('   - Problemas de CORS', 'warning');
+                        this.log('   - Firewall/antivírus bloqueando', 'warning');
+                        this.log('   - Problemas de rede', 'warning');
+                    }
+                    
+                    this.updateStatus('💥 Erro de conexão', 'error');
+                } finally {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = '🚀 Testar Login';
+                }
+            }
+
+            async testConnectivity() {
+                this.log('🌐 Testando conectividade básica...', 'info');
+                
+                const tests = [
+                    { name: 'Página de Login', url: '/login' },
+                    { name: 'API Health', url: '/api/health' },
+                    { name: 'API Auth Status', url: '/api/auth/status' }
+                ];
+
+                for (const test of tests) {
+                    try {
+                        const startTime = performance.now();
+                        const response = await fetch(test.url);
+                        const endTime = performance.now();
+                        const duration = Math.round(endTime - startTime);
+
+                        this.log(`✅ ${test.name}: ${response.status} (${duration}ms)`, response.ok ? 'success' : 'warning');
+                    } catch (error) {
+                        this.log(`❌ ${test.name}: ${error.message}`, 'error');
+                    }
+                }
+            }
+
+            async testSupabase() {
+                this.log('🔧 Testando conectividade com Supabase...', 'info');
+                
+                // Tentar acessar endpoint público do Supabase
+                try {
+                    // Simular o que o frontend faz
+                    const supabaseUrl = 'https://your-project.supabase.co'; // Será substituído dinamicamente
+                    const testUrl = `${supabaseUrl}/auth/v1/settings`;
+                    
+                    this.log(`📤 Testando: ${testUrl}`, 'info');
+                    
+                    const response = await fetch(testUrl, {
+                        headers: {
+                            'apikey': 'your-anon-key', // Será substituído dinamicamente
+                        },
+                        mode: 'cors'
+                    });
+
+                    this.log(`📥 Supabase Auth Settings: ${response.status}`, response.ok ? 'success' : 'warning');
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.log(`📄 Configurações: ${JSON.stringify(data, null, 2)}`, 'info');
+                    }
+                } catch (error) {
+                    this.log(`❌ Erro ao conectar com Supabase: ${error.message}`, 'error');
+                    
+                    if (error.message.includes('CORS')) {
+                        this.log('🚨 Problema de CORS detectado!', 'error');
+                        this.log('💡 Verifique as configurações de CORS no Supabase', 'warning');
+                    }
+                }
+            }
+
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = {
+                    timestamp,
+                    message,
+                    type
+                };
+                
+                this.logs.push(logEntry);
+                
+                const logElement = document.createElement('div');
+                logElement.className = type;
+                logElement.textContent = `[${timestamp}] ${message}`;
+                
+                this.logsContainer.appendChild(logElement);
+                this.logsContainer.scrollTop = this.logsContainer.scrollHeight;
+            }
+
+            updateStatus(message, type) {
+                this.statusContainer.innerHTML = `<div class="status ${type}">${message}</div>`;
+            }
+
+            clearLogs() {
+                this.logs = [];
+                this.logsContainer.innerHTML = '';
+                this.log('🗑️ Logs limpos', 'info');
+            }
+
+            exportLogs() {
+                const logsText = this.logs.map(log => 
+                    `[${log.timestamp}] [${log.type.toUpperCase()}] ${log.message}`
+                ).join('\n');
+                
+                const blob = new Blob([logsText], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `login-debug-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                URL.revokeObjectURL(url);
+                this.log('📄 Logs exportados', 'success');
+            }
+        }
+
+        // Inicializar quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            new LoginTester();
+        });
+    </script>
+</body>
+</html>

@@ -1,7 +1,13 @@
 // src/services/message.service.ts
-import nodemailer from 'nodemailer';
 import { getSettings } from '@/app/(app)/configuracoes/actions';
 import { LoggerService } from './logger.service';
+
+// Importação dinâmica do nodemailer para evitar problemas no lado cliente
+let nodemailer: any = null;
+if (typeof window === 'undefined') {
+  // Só importa nodemailer no lado servidor
+  nodemailer = require('nodemailer');
+}
 
 export interface EmailMessage {
   to: string;

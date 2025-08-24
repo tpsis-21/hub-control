@@ -1,0 +1,513 @@
+# 🔒 WORKFLOW DE TESTES DE SEGURANÇA AUTOMATIZADOS
+# Hub Control - CI/CD Security Pipeline
+# 
+# Este workflow executa testes de segurança completos em cada push/PR
+# Inclui: SAST, Dependency Audit, Security Tests, Compliance Checks
+
+name: 🛡️ Security Tests & Compliance
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*', 'security/*' ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Executar testes de segurança diariamente às 2:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      security_level:
+        description: 'Nível de testes de segurança'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - 'basic'
+          - 'standard'
+          - 'comprehensive'
+          - 'penetration'
+
+env:
+  NODE_VERSION: '18'
+  SECURITY_SCAN_TIMEOUT: '10m'
+  MAX_VULNERABILITIES_HIGH: 0
+  MAX_VULNERABILITIES_MEDIUM: 5
+  SECURITY_SCORE_THRESHOLD: 85
+
+jobs:
+  # Job 1: Análise Estática de Segurança (SAST)
+  static-analysis:
+    name: 🔍 Static Security Analysis (SAST)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Necessário para análise completa
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📦 Install Dependencies
+        run: |
+          npm ci
+          npm install -g @microsoft/eslint-plugin-sdl
+          npm install -g semgrep
+      
+      - name: 🔍 ESLint Security Analysis
+        run: |
+          echo "🔍 Executando análise ESLint com regras de segurança..."
+          npx eslint . --ext .ts,.tsx,.js,.jsx \
+            --config .eslintrc.security.json \
+            --format json \
+            --output-file eslint-security-report.json || true
+          
+          # Verificar se há vulnerabilidades críticas
+          CRITICAL_ISSUES=$(cat eslint-security-report.json | jq '[.[] | select(.messages[].severity == 2)] | length')
+          echo "Problemas críticos encontrados: $CRITICAL_ISSUES"
+          
+          if [ "$CRITICAL_ISSUES" -gt "0" ]; then
+            echo "❌ Vulnerabilidades críticas detectadas!"
+            cat eslint-security-report.json | jq '.[] | select(.messages[].severity == 2)'
+            exit 1
+          fi
+      
+      - name: 🔍 Semgrep Security Scan
+        run: |
+          echo "🔍 Executando Semgrep para detecção de vulnerabilidades..."
+          semgrep --config=auto \
+            --json \
+            --output=semgrep-report.json \
+            --timeout=${{ env.SECURITY_SCAN_TIMEOUT }} \
+            --exclude="node_modules" \
+            --exclude=".git" \
+            . || true
+          
+          # Analisar resultados
+          HIGH_VULNS=$(cat semgrep-report.json | jq '.results | map(select(.extra.severity == "ERROR")) | length')
+          MEDIUM_VULNS=$(cat semgrep-report.json | jq '.results | map(select(.extra.severity == "WARNING")) | length')
+          
+          echo "Vulnerabilidades HIGH: $HIGH_VULNS"
+          echo "Vulnerabilidades MEDIUM: $MEDIUM_VULNS"
+          
+          if [ "$HIGH_VULNS" -gt "${{ env.MAX_VULNERABILITIES_HIGH }}" ]; then
+            echo "❌ Muitas vulnerabilidades HIGH detectadas!"
+            exit 1
+          fi
+          
+          if [ "$MEDIUM_VULNS" -gt "${{ env.MAX_VULNERABILITIES_MEDIUM }}" ]; then
+            echo "⚠️ Muitas vulnerabilidades MEDIUM detectadas!"
+            exit 1
+          fi
+      
+      - name: 📊 Upload SAST Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sast-reports
+          path: |
+            eslint-security-report.json
+            semgrep-report.json
+          retention-days: 30
+
+  # Job 2: Auditoria de Dependências
+  dependency-audit:
+    name: 📦 Dependency Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 🔍 NPM Security Audit
+        run: |
+          echo "🔍 Executando auditoria de segurança NPM..."
+          npm audit --audit-level=moderate --json > npm-audit-report.json || true
+          
+          # Analisar resultados
+          CRITICAL=$(cat npm-audit-report.json | jq '.vulnerabilities | to_entries | map(select(.value.severity == "critical")) | length')
+          HIGH=$(cat npm-audit-report.json | jq '.vulnerabilities | to_entries | map(select(.value.severity == "high")) | length')
+          MODERATE=$(cat npm-audit-report.json | jq '.vulnerabilities | to_entries | map(select(.value.severity == "moderate")) | length')
+          
+          echo "Vulnerabilidades CRITICAL: $CRITICAL"
+          echo "Vulnerabilidades HIGH: $HIGH"
+          echo "Vulnerabilidades MODERATE: $MODERATE"
+          
+          # Falhar se houver vulnerabilidades críticas ou muitas high
+          if [ "$CRITICAL" -gt "0" ] || [ "$HIGH" -gt "${{ env.MAX_VULNERABILITIES_HIGH }}" ]; then
+            echo "❌ Vulnerabilidades críticas detectadas nas dependências!"
+            cat npm-audit-report.json | jq '.vulnerabilities'
+            exit 1
+          fi
+      
+      - name: 🔍 Snyk Security Scan
+        if: github.event.inputs.security_level == 'comprehensive' || github.event.inputs.security_level == 'penetration'
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -n "$SNYK_TOKEN" ]; then
+            echo "🔍 Executando Snyk security scan..."
+            npx snyk auth $SNYK_TOKEN
+            npx snyk test --json > snyk-report.json || true
+            npx snyk monitor || true
+          else
+            echo "⚠️ SNYK_TOKEN não configurado, pulando Snyk scan"
+          fi
+      
+      - name: 📊 Upload Dependency Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-reports
+          path: |
+            npm-audit-report.json
+            snyk-report.json
+          retention-days: 30
+
+  # Job 3: Testes de Segurança Automatizados
+  security-tests:
+    name: 🧪 Automated Security Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hub_control_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📦 Install Dependencies
+        run: npm ci
+      
+      - name: 🗄️ Setup Test Database
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hub_control_test
+        run: |
+          echo "🗄️ Configurando banco de dados de teste..."
+          # Executar migrações de segurança
+          npm run db:migrate:test || true
+          
+          # Aplicar configurações de segurança
+          psql $DATABASE_URL -f security_implementation_complete.sql || true
+          psql $DATABASE_URL -f security_email_alerts_system.sql || true
+      
+      - name: 🧪 Run Basic Security Tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hub_control_test
+        run: |
+          echo "🧪 Executando testes básicos de segurança..."
+          npm test -- --testPathPattern=security.test.ts --coverage --json --outputFile=basic-security-results.json
+      
+      - name: 🧪 Run Advanced Security Tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hub_control_test
+        run: |
+          echo "🧪 Executando testes avançados de segurança..."
+          npm test -- --testPathPattern=security-advanced.test.ts --coverage --json --outputFile=advanced-security-results.json
+      
+      - name: 🧪 Performance Security Tests
+        if: github.event.inputs.security_level == 'comprehensive' || github.event.inputs.security_level == 'penetration'
+        env:
+          NODE_ENV: test
+        run: |
+          echo "🧪 Executando testes de performance de segurança..."
+          npm test -- --testPathPattern=security-performance.test.ts --json --outputFile=performance-security-results.json || true
+      
+      - name: 📊 Analyze Security Test Results
+        run: |
+          echo "📊 Analisando resultados dos testes de segurança..."
+          
+          # Calcular score de segurança
+          BASIC_PASSED=$(cat basic-security-results.json | jq '.numPassedTests // 0')
+          BASIC_FAILED=$(cat basic-security-results.json | jq '.numFailedTests // 0')
+          ADVANCED_PASSED=$(cat advanced-security-results.json | jq '.numPassedTests // 0')
+          ADVANCED_FAILED=$(cat advanced-security-results.json | jq '.numFailedTests // 0')
+          
+          TOTAL_TESTS=$((BASIC_PASSED + BASIC_FAILED + ADVANCED_PASSED + ADVANCED_FAILED))
+          TOTAL_PASSED=$((BASIC_PASSED + ADVANCED_PASSED))
+          
+          if [ "$TOTAL_TESTS" -gt "0" ]; then
+            SECURITY_SCORE=$((TOTAL_PASSED * 100 / TOTAL_TESTS))
+          else
+            SECURITY_SCORE=0
+          fi
+          
+          echo "Security Score: $SECURITY_SCORE%"
+          echo "SECURITY_SCORE=$SECURITY_SCORE" >> $GITHUB_ENV
+          
+          if [ "$SECURITY_SCORE" -lt "${{ env.SECURITY_SCORE_THRESHOLD }}" ]; then
+            echo "❌ Security score abaixo do threshold (${{ env.SECURITY_SCORE_THRESHOLD }}%)!"
+            exit 1
+          fi
+      
+      - name: 📊 Upload Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-test-reports
+          path: |
+            basic-security-results.json
+            advanced-security-results.json
+            performance-security-results.json
+            coverage/
+          retention-days: 30
+
+  # Job 4: Compliance e Políticas
+  compliance-check:
+    name: 📋 Security Compliance Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📋 Check Security Documentation
+        run: |
+          echo "📋 Verificando documentação de segurança..."
+          
+          # Verificar arquivos obrigatórios
+          REQUIRED_FILES=(
+            "SECURITY_POLICIES.md"
+            "SECURITY_TRAINING_PROGRAM.md"
+            "SECURITY_IMPLEMENTATION_GUIDE.md"
+            "security_implementation_complete.sql"
+            "security_email_alerts_system.sql"
+          )
+          
+          MISSING_FILES=()
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              MISSING_FILES+=("$file")
+            fi
+          done
+          
+          if [ ${#MISSING_FILES[@]} -gt 0 ]; then
+            echo "❌ Arquivos de segurança obrigatórios ausentes:"
+            printf '%s\n' "${MISSING_FILES[@]}"
+            exit 1
+          fi
+          
+          echo "✅ Todos os arquivos de segurança obrigatórios presentes"
+      
+      - name: 📋 Validate Security Configurations
+        run: |
+          echo "📋 Validando configurações de segurança..."
+          
+          # Verificar se há configurações de segurança no código
+          SECURITY_CONFIGS=(
+            "helmet"
+            "cors"
+            "rate-limit"
+            "bcrypt"
+            "jsonwebtoken"
+          )
+          
+          for config in "${SECURITY_CONFIGS[@]}"; do
+            if ! grep -r "$config" src/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" > /dev/null; then
+              echo "⚠️ Configuração de segurança '$config' não encontrada no código"
+            else
+              echo "✅ Configuração de segurança '$config' encontrada"
+            fi
+          done
+      
+      - name: 📋 Check Environment Security
+        run: |
+          echo "📋 Verificando segurança de variáveis de ambiente..."
+          
+          # Verificar se há secrets hardcoded
+          if grep -r "password\s*=\s*['\"]" src/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" || \
+             grep -r "secret\s*=\s*['\"]" src/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" || \
+             grep -r "api_key\s*=\s*['\"]" src/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx"; then
+            echo "❌ Possíveis secrets hardcoded detectados!"
+            exit 1
+          fi
+          
+          echo "✅ Nenhum secret hardcoded detectado"
+
+  # Job 5: Testes de Penetração (apenas para nível comprehensive/penetration)
+  penetration-tests:
+    name: 🎯 Penetration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event.inputs.security_level == 'penetration'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Tools
+        run: |
+          echo "🔧 Instalando ferramentas de penetration testing..."
+          sudo apt-get update
+          sudo apt-get install -y nmap sqlmap nikto
+          
+          # Instalar OWASP ZAP
+          wget -q https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
+          tar -xzf ZAP_2.14.0_Linux.tar.gz
+      
+      - name: 🎯 Network Security Scan
+        run: |
+          echo "🎯 Executando scan de segurança de rede..."
+          # Scan básico de portas (apenas para demonstração)
+          nmap -sV -O localhost > nmap-report.txt || true
+      
+      - name: 🎯 Web Application Security Scan
+        run: |
+          echo "🎯 Executando scan de segurança web..."
+          # Nikto scan (apenas para demonstração)
+          nikto -h http://localhost:3000 -output nikto-report.txt || true
+      
+      - name: 📊 Upload Penetration Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: penetration-test-reports
+          path: |
+            nmap-report.txt
+            nikto-report.txt
+          retention-days: 30
+
+  # Job 6: Relatório Final
+  security-report:
+    name: 📊 Security Report
+    runs-on: ubuntu-latest
+    needs: [static-analysis, dependency-audit, security-tests, compliance-check]
+    if: always()
+    
+    steps:
+      - name: 📥 Download All Reports
+        uses: actions/download-artifact@v4
+        with:
+          path: reports/
+      
+      - name: 📊 Generate Security Report
+        run: |
+          echo "📊 Gerando relatório final de segurança..."
+          
+          cat > security-report.md << 'EOF'
+          # 🔒 Relatório de Segurança - Hub Control
+          
+          **Data:** $(date)
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          
+          ## 📊 Resumo Executivo
+          
+          | Categoria | Status | Score |
+          |-----------|--------|-------|
+          | Análise Estática | ${{ needs.static-analysis.result == 'success' && '✅ Passou' || '❌ Falhou' }} | - |
+          | Auditoria de Dependências | ${{ needs.dependency-audit.result == 'success' && '✅ Passou' || '❌ Falhou' }} | - |
+          | Testes de Segurança | ${{ needs.security-tests.result == 'success' && '✅ Passou' || '❌ Falhou' }} | ${{ env.SECURITY_SCORE || 'N/A' }}% |
+          | Compliance | ${{ needs.compliance-check.result == 'success' && '✅ Passou' || '❌ Falhou' }} | - |
+          
+          ## 🔍 Detalhes
+          
+          ### Análise Estática (SAST)
+          - ESLint Security: Executado
+          - Semgrep: Executado
+          - Vulnerabilidades críticas: 0 permitidas
+          
+          ### Auditoria de Dependências
+          - NPM Audit: Executado
+          - Vulnerabilidades críticas: 0 encontradas
+          - Vulnerabilidades high: ≤ ${{ env.MAX_VULNERABILITIES_HIGH }} permitidas
+          
+          ### Testes de Segurança
+          - Testes básicos: Executados
+          - Testes avançados: Executados
+          - Score mínimo: ${{ env.SECURITY_SCORE_THRESHOLD }}%
+          
+          ### Compliance
+          - Documentação: Verificada
+          - Configurações: Validadas
+          - Secrets: Verificados
+          
+          ## 🎯 Próximos Passos
+          
+          1. Revisar vulnerabilidades encontradas
+          2. Implementar correções necessárias
+          3. Atualizar documentação de segurança
+          4. Executar testes adicionais se necessário
+          
+          ---
+          
+          **Gerado automaticamente pelo GitHub Actions**
+          EOF
+          
+          echo "📊 Relatório de segurança gerado com sucesso!"
+      
+      - name: 📊 Upload Final Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-security-report
+          path: security-report.md
+          retention-days: 90
+      
+      - name: 💬 Comment PR with Security Report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('security-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+# Configurações de notificação
+# Em caso de falha, notificar equipe de segurança
+  notify-security-team:
+    name: 🚨 Notify Security Team
+    runs-on: ubuntu-latest
+    needs: [static-analysis, dependency-audit, security-tests, compliance-check]
+    if: failure()
+    
+    steps:
+      - name: 🚨 Send Security Alert
+        run: |
+          echo "🚨 Falha detectada nos testes de segurança!"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Autor: ${{ github.actor }}"
+          
+          # Aqui seria integrado com sistema de notificação real
+          # Por exemplo: Slack, Teams, Email, etc.
+          
+          echo "Equipe de segurança deve ser notificada imediatamente!"

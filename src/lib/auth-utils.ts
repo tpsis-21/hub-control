@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from './supabase-server';
+import { createServerSupabaseClient } from "./supabase/clients/server";
 
 export interface UserPermissions {
   canManageSystem: boolean;

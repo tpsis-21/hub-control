@@ -1,11 +1,11 @@
 // @/app/(app)/financeiro/actions.ts
 'use server';
 
-import { createServerSupabaseClient, createServerSupabaseClientForActions } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { FinancialTransaction, FinancialSummary } from '@/lib/types';
-import { getFinancialSummary as getFinancialSummaryHelper } from '@/lib/financial-summary-helper';
+// import { getFinancialSummary as getFinancialSummaryHelper } from '@/lib/financial-summary-helper';
 
 export async function getFinancialData(): Promise<FinancialTransaction[]> {
   const supabase = await createServerSupabaseClient();
@@ -28,34 +28,9 @@ export async function getFinancialSummary(): Promise<FinancialSummary> {
   const supabase = await createServerSupabaseClient();
   
   try {
-    // Usar a função helper para obter dados agregados
-    const summaryData = await getFinancialSummaryHelper(supabase);
-    
-    const currentMonth = summaryData[0] || { total_income: 0, total_expenses: 0, net_profit: 0 };
-    const lastMonth = summaryData[1] || { total_income: 0, total_expenses: 0, net_profit: 0 };
-
-    // Calcular totais gerais (últimos 12 meses)
-    const totalReceitas = summaryData.reduce((sum, s) => sum + (s.total_income || 0), 0);
-    const totalDespesas = summaryData.reduce((sum, s) => sum + (s.total_expenses || 0), 0);
-
-    // Calcular crescimento
-    const crescimentoReceitas = lastMonth.total_income > 0 
-      ? ((currentMonth.total_income - lastMonth.total_income) / lastMonth.total_income) * 100 
-      : 0;
-    
-    const crescimentoDespesas = lastMonth.total_expenses > 0 
-      ? ((currentMonth.total_expenses - lastMonth.total_expenses) / lastMonth.total_expenses) * 100 
-      : 0;
-
-    return {
-      receitaMes: currentMonth.total_income || 0,
-      despesasMes: currentMonth.total_expenses || 0,
-      lucroLiquido: currentMonth.net_profit || 0,
-      receitaAnual: totalReceitas,
-      margemLucro: totalReceitas > 0 ? ((totalReceitas - totalDespesas) / totalReceitas) * 100 : 0,
-      crescimentoReceita: crescimentoReceitas || 0,
-      crescimentoDespesas: crescimentoDespesas || 0
-    };
+    // Temporariamente usando apenas fallback devido a erro de build
+    // const summaryData = await getFinancialSummaryHelper(supabase);
+    return await getFinancialSummaryFallback();
   } catch (error) {
     console.error('Erro ao buscar resumo financeiro:', error);
     // Fallback para cálculo manual se houver erro

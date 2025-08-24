@@ -214,7 +214,7 @@ export default function TestDetailPage() {
                     <div className="space-y-4">
                         <h4 className="text-sm font-medium text-muted-foreground">Dados de Acesso</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                            <CopyableField icon={User} label="Usuário IPTV" value={customer.iptvUsername} />
+                            <CopyableField icon={User} label="Usuário IPTV" value={customer.iptvUsername || ''} />
                             {customer.iptvPassword && (
                                 <CopyableField icon={ShieldCheck} label="Senha IPTV" value={customer.iptvPassword} />
                             )}

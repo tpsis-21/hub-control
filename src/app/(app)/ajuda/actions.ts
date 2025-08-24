@@ -7,19 +7,25 @@ import { revalidatePath } from "next/cache";
 // Removido: import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import type { KnowledgeBaseArticle } from "@/lib/types";
 import { articleSchema, editArticleSchema } from "@/lib/schemas";
-import { createApiSupabaseClient } from "@/lib/supabase-api";
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 
 // --- definição de articlesCollection removida pois não é mais usada ---
 
 // Substituir todas as operações Firestore por chamadas Supabase
 export async function getArticles(): Promise<KnowledgeBaseArticle[]> {
     const supabase = await createApiSupabaseClient();
-    const { data, error } = await supabase.from('knowledgeBaseArticles').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('knowledge_base_articles').select('*').order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return (data || []).map(article => ({
-        ...article,
-        serverIds: article.server_ids || [],
-        visibleToAllServers: article.visible_to_all_servers ?? true
+        id: article.id,
+      title: article.title,
+      content: article.content,
+      category: article.category as 'FAQ' | 'Tutoriais' | 'Solução de Problemas',
+      isPublic: article.is_public,
+      serverIds: article.server_ids || [],
+      visibleToAllServers: article.visible_to_all_servers,
+      created_at: article.created_at,
+      updated_at: article.updated_at
     }));
 }
 
@@ -30,7 +36,7 @@ export async function addArticleAction(data: z.infer<typeof articleSchema>) {
         title: data.title,
         content: data.content,
         category: data.category,
-        isPublic: data.isPublic,
+        is_public: data.isPublic,
         server_ids: data.serverIds || [],
         visible_to_all_servers: data.visibleToAllServers ?? true,
         created_at: new Date().toISOString(),
@@ -38,7 +44,7 @@ export async function addArticleAction(data: z.infer<typeof articleSchema>) {
     };
     
     const { data: article, error } = await supabase
-        .from('knowledgeBaseArticles')
+        .from('knowledge_base_articles')
         .insert(articleData)
         .select()
         .single();
@@ -52,9 +58,15 @@ export async function addArticleAction(data: z.infer<typeof articleSchema>) {
     }
     
     return { success: true, article: {
-        ...article,
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        category: article.category as 'FAQ' | 'Tutoriais' | 'Solução de Problemas',
+        isPublic: article.is_public,
         serverIds: article.server_ids || [],
-        visibleToAllServers: article.visible_to_all_servers ?? true
+        visibleToAllServers: article.visible_to_all_servers,
+        created_at: article.created_at,
+        updated_at: article.updated_at
     } as KnowledgeBaseArticle };
 }
 
@@ -69,16 +81,37 @@ export async function editArticleAction(data: z.infer<typeof editArticleSchema>)
         updated_at: new Date().toISOString()
     };
     
-    const { error } = await supabase.from('knowledgeBaseArticles').update(dbUpdateData).eq('id', id);
+    const { data: article, error } = await supabase
+        .from('knowledge_base_articles')
+        .update(dbUpdateData)
+        .eq('id', id)
+        .select()
+        .single();
+    
     revalidatePath('/ajuda');
     revalidatePath('/cliente');
-    if (error) return { success: false, error: error.message };
-    return { success: true, article: data as KnowledgeBaseArticle };
+    
+    if (error) {
+        console.error('Erro ao atualizar artigo:', error);
+        return { success: false, error: error.message };
+    }
+    
+    return { success: true, article: {
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        category: article.category as 'FAQ' | 'Tutoriais' | 'Solução de Problemas',
+        isPublic: article.is_public,
+        serverIds: article.server_ids || [],
+        visibleToAllServers: article.visible_to_all_servers,
+        created_at: article.created_at,
+        updated_at: article.updated_at
+    } as KnowledgeBaseArticle };
 }
 
 export async function deleteArticleAction(articleId: string) {
     const supabase = await createApiSupabaseClient();
-    const { error } = await supabase.from('knowledgeBaseArticles').delete().eq('id', articleId);
+    const { error } = await supabase.from('knowledge_base_articles').delete().eq('id', articleId);
     revalidatePath('/ajuda');
     revalidatePath('/cliente');
     if (error) return { success: false, error: error.message };

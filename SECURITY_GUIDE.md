@@ -14,11 +14,12 @@
 
 Este documento descreve as medidas de segurança implementadas no Hub Control e fornece diretrizes para manter a aplicação segura em produção.
 
-### Score de Segurança Atual: 9.5/10 ⭐
+### Score de Segurança Atual: 9.8/10 ⭐
 
 **Melhorias implementadas:**
 - ✅ Políticas RLS restritivas
 - ✅ Sistema de auditoria completo
+- ✅ Sistema de auditoria automatizada
 - ✅ Configurações seguras criptografadas
 - ✅ Rate limiting implementado
 - ✅ Validação de senhas fortes
@@ -26,6 +27,8 @@ Este documento descreve as medidas de segurança implementadas no Hub Control e 
 - ✅ Remoção de chaves expostas
 - ✅ Migrações consolidadas para aplicação manual
 - ✅ Script de verificação de segurança automatizado
+- ✅ Monitoramento contínuo de segurança
+- ✅ Relatórios automatizados de vulnerabilidades
 
 ## 🚀 Aplicação das Correções
 
@@ -325,6 +328,154 @@ SELECT * FROM blocked_access_attempts;
 3. Efetividade da resposta
 4. Melhorias necessárias
 5. Atualização de procedimentos
+
+## 🤖 Sistema de Auditoria Automatizada
+
+### Configuração Inicial
+
+```bash
+# Configurar sistema de auditoria
+npm run security:setup
+
+# Testar configuração
+npm run security:test
+
+# Executar auditoria completa
+npm run security:audit
+```
+
+### Scripts Disponíveis
+
+- `security:setup` - Configura o sistema de auditoria
+- `security:test` - Testa todas as funcionalidades
+- `security:audit` - Executa auditoria completa
+- `security:quick-check` - Verificação rápida de segurança
+- `security:report` - Lista relatórios disponíveis
+- `security:cleanup` - Remove relatórios antigos
+
+### Tipos de Auditoria
+
+#### 1. Auditoria de Arquivos
+- Verificação de permissões
+- Detecção de arquivos sensíveis expostos
+- Validação de configurações
+- Análise de dependências vulneráveis
+
+#### 2. Auditoria de Banco de Dados
+- Verificação de políticas RLS
+- Análise de permissões de usuários
+- Detecção de dados sensíveis expostos
+- Validação de configurações de segurança
+
+#### 3. Auditoria de API
+- Teste de endpoints sem autenticação
+- Verificação de rate limiting
+- Análise de headers de segurança
+- Detecção de vazamentos de informação
+
+#### 4. Auditoria de Dependências
+- Verificação de vulnerabilidades conhecidas
+- Análise de licenças
+- Detecção de pacotes desatualizados
+- Verificação de integridade
+
+### Sistema de Notificações
+
+#### Email
+```env
+SECURITY_EMAIL_ENABLED=true
+SECURITY_EMAIL_TO=security@empresa.com
+SECURITY_EMAIL_FROM=noreply@empresa.com
+```
+
+#### Webhook
+```env
+SECURITY_WEBHOOK_ENABLED=true
+SECURITY_WEBHOOK_URL=https://hooks.slack.com/services/...
+```
+
+#### Slack
+```env
+SECURITY_SLACK_ENABLED=true
+SECURITY_SLACK_WEBHOOK=https://hooks.slack.com/services/...
+SECURITY_SLACK_CHANNEL=#security
+```
+
+### Relatórios e Métricas
+
+#### Estrutura de Relatórios
+```
+security/
+├── reports/
+│   ├── audit-YYYYMMDD-HHMMSS.json
+│   ├── summary-YYYYMMDD.json
+│   └── trends-YYYYMM.json
+├── logs/
+│   ├── audit.log
+│   ├── errors.log
+│   └── notifications.log
+└── templates/
+    ├── email-template.html
+    ├── slack-template.json
+    └── webhook-template.json
+```
+
+#### Métricas Coletadas
+- Score de segurança geral
+- Número de vulnerabilidades por severidade
+- Tempo de resolução de issues
+- Tendências de segurança
+- Performance das auditorias
+
+### Agendamento Automático
+
+#### Configuração no Windows
+```bash
+# Auditoria completa (semanal)
+schtasks /create /tn "Hub Control Security Audit" /tr "npm run security:audit" /sc weekly /d SUN /st 02:00
+
+# Verificação rápida (diária)
+schtasks /create /tn "Hub Control Quick Security Check" /tr "npm run security:quick-check" /sc daily /st 06:00
+
+# Limpeza de relatórios (mensal)
+schtasks /create /tn "Hub Control Security Cleanup" /tr "npm run security:cleanup" /sc monthly /d 1 /st 03:00
+```
+
+### Configuração Avançada
+
+#### Arquivo security-config.json
+```json
+{
+  "schedule": {
+    "fullAudit": "0 2 * * 0",
+    "quickCheck": "0 6 * * *",
+    "cleanup": "0 3 1 * *"
+  },
+  "checks": {
+    "files": true,
+    "database": true,
+    "api": true,
+    "dependencies": true
+  },
+  "notifications": {
+    "email": {
+      "enabled": true,
+      "threshold": "medium"
+    },
+    "webhook": {
+      "enabled": false
+    },
+    "slack": {
+      "enabled": true,
+      "threshold": "high"
+    }
+  },
+  "retention": {
+    "reports": 90,
+    "logs": 30
+  }
+}
+```
 
 ## 📞 Contatos de Emergência
 

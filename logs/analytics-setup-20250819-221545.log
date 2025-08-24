@@ -1,0 +1,22 @@
+[2025-08-19 22:15:45] [INFO] ================================================================================
+[2025-08-19 22:15:45] [INFO] ?? SETUP DE ANALYTICS - HUB CONTROL
+[2025-08-19 22:15:45] [INFO] ================================================================================
+[2025-08-19 22:15:45] [INFO] ??  Ambiente: 
+[2025-08-19 22:15:45] [INFO] ??  Data: 
+[2025-08-19 22:15:45] [INFO] ??  
+[2025-08-19 22:15:45] [INFO] ??  Verificando pre-requisitos...
+[2025-08-19 22:15:45] [SUCCESS] ? Node.js: v22.17.1
+[2025-08-19 22:15:45] [SUCCESS] ? npm: 11.5.2
+[2025-08-19 22:15:45] [INFO] ??  Instalando dependencias do Node.js...
+[2025-08-19 22:15:47] [SUCCESS] ? Dependencias instaladas com sucesso
+[2025-08-19 22:15:47] [WARNING] ??  Migracao do banco de dados foi pulada
+[2025-08-19 22:15:47] [WARNING] ??  Configuracao inicial foi pulada
+[2025-08-19 22:15:47] [INFO] ??  Testando sistema de analytics...
+[2025-08-19 22:15:47] [INFO] ??  Carregando configuracoes de 
+[2025-08-19 22:15:47] [ERROR] ? Erro ao testar sistema: 
+[2025-08-19 22:15:47] [ERROR] ? Setup falhou: 
+[2025-08-19 22:15:47] [INFO] ================================================================================
+[2025-08-19 22:15:47] [INFO] ?? RESUMO DA CONFIGURACAO
+[2025-08-19 22:15:47] [INFO] ================================================================================
+[2025-08-19 22:15:47] [ERROR] ? Setup falhou. Verifique o log para detalhes: 
+[2025-08-19 22:15:47] [INFO] ??  Para suporte, consulte a documentacao ou entre em contato com a equipe tecnica.

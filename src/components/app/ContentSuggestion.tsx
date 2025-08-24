@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Film } from "lucide-react";
 
 // Substitua pela sua chave TMDB em variável de ambiente
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || "";
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+// Removido acesso direto à API do TMDB por segurança
+// Agora usa proxy interno para proteger a API key
 const TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
 interface TMDBResult {
@@ -36,10 +36,10 @@ const ContentSuggestion: React.FC = () => {
     setError("");
     setSuccess("");
     try {
-      const res = await fetch(
-        `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(query)}`
-      );
-      const data = await res.json();
+      const response = await fetch(
+         `/api/proxy/tmdb?endpoint=search/multi&language=pt-BR&query=${encodeURIComponent(query)}`
+       );
+       const data = await response.json();
       setResults(data.results || []);
     } catch (err) {
       setError("Erro ao buscar conteúdos. Tente novamente.");

@@ -1,0 +1,31 @@
+[2025-08-19 22:47:01] [INFO] ================================================================================
+[2025-08-19 22:47:01] [INFO] ?? SETUP DE ANALYTICS - HUB CONTROL
+[2025-08-19 22:47:01] [INFO] ================================================================================
+[2025-08-19 22:47:01] [INFO] ??  Ambiente: 
+[2025-08-19 22:47:01] [INFO] ??  Data: 
+[2025-08-19 22:47:01] [INFO] ??  
+[2025-08-19 22:47:01] [INFO] ??  Verificando pre-requisitos...
+[2025-08-19 22:47:01] [SUCCESS] ? Node.js: v22.17.1
+[2025-08-19 22:47:01] [SUCCESS] ? npm: 11.5.2
+[2025-08-19 22:47:01] [INFO] ??  Instalando dependencias do Node.js...
+[2025-08-19 22:47:03] [SUCCESS] ? Dependencias instaladas com sucesso
+[2025-08-19 22:47:03] [WARNING] ??  Migracao do banco de dados foi pulada
+[2025-08-19 22:47:03] [WARNING] ??  Configuracao inicial foi pulada
+[2025-08-19 22:47:03] [INFO] ??  Testando sistema de analytics...
+[2025-08-19 22:47:03] [SUCCESS] ? Configuracoes do Supabase encontradas
+[2025-08-19 22:47:03] [INFO] ??  URL do Supabase: 
+[2025-08-19 22:47:06] [SUCCESS] ? Conectividade com Supabase testada com sucesso
+[2025-08-19 22:47:06] [SUCCESS] ? Sistema de analytics configurado para usar Supabase
+[2025-08-19 22:47:06] [INFO] ??  Para criar as tabelas de analytics, execute as migracoes do Supabase
+[2025-08-19 22:47:06] [INFO] ================================================================================
+[2025-08-19 22:47:06] [INFO] ?? RESUMO DA CONFIGURACAO
+[2025-08-19 22:47:06] [INFO] ================================================================================
+[2025-08-19 22:47:06] [SUCCESS] ? Setup de analytics concluido com sucesso!
+[2025-08-19 22:47:06] [INFO] ??  Ambiente: 
+[2025-08-19 22:47:06] [INFO] ??  Log: 
+[2025-08-19 22:47:06] [INFO] ??  
+[2025-08-19 22:47:06] [INFO] ??  Proximos passos:
+[2025-08-19 22:47:06] [INFO] ??  1. Verificar configuracoes em /admin/analytics/config
+[2025-08-19 22:47:06] [INFO] ??  2. Configurar integracoes externas (Google Analytics, Mixpanel)
+[2025-08-19 22:47:06] [INFO] ??  3. Definir dashboards e alertas
+[2025-08-19 22:47:06] [INFO] ??  4. Treinar equipe no uso do sistema

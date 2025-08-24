@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   ArrowLeft, 
-  Server, 
+  Server as ServerIcon, 
   Activity, 
   Settings, 
   Zap, 
@@ -88,16 +88,31 @@ export default function ServerDetailsPage() {
         return;
       }
 
-      setServer(serverData);
+      // Mapear dados do banco (snake_case) para o tipo Server (camelCase)
+      const mappedServer: Server = {
+        id: serverData.id,
+        name: serverData.name,
+        url: serverData.url || undefined,
+        apiKey: serverData.api_key || undefined,
+        status: serverData.status,
+        integrationType: serverData.integration_type,
+        testAutomation: serverData.test_automation,
+        renewalAutomation: serverData.renewal_automation,
+        paymentGateway: serverData.payment_gateway,
+        sendExpirationReminder: serverData.send_expiration_reminder || false,
+        sendUsageInstructions: serverData.send_usage_instructions || false
+      };
+      
+      setServer(mappedServer);
 
       // Buscar estatísticas do servidor
       const { data: clientsData } = await supabase
-        .from('customers')
+        .from('clients')
         .select('id, status, created_at')
         .eq('server_id', serverId);
 
       const { data: testsData } = await supabase
-        .from('customers')
+        .from('clients')
         .select('id, created_at')
         .eq('server_id', serverId)
         .eq('is_test', true);
@@ -115,16 +130,16 @@ export default function ServerDetailsPage() {
       });
 
       // Determinar status de integração baseado no tipo e configurações
-      const hasIntegrationConfigured = serverData.integrationType !== 'none' && 
+      const hasIntegrationConfigured = serverData.integration_type !== 'none' && 
         serverData.api_key && 
         serverData.url;
       
       setIntegrationStatus({
-        connected: hasIntegrationConfigured && serverData.status === 'Online',
+        connected: Boolean(hasIntegrationConfigured && serverData.status === 'Online'),
         lastSync: hasIntegrationConfigured ? new Date().toISOString() : '',
-        credits: serverData.credits,
-        dailyLimit: serverData.integrationType === 'natv' ? 1000 : undefined,
-        usedToday: serverData.integrationType === 'natv' ? Math.floor(Math.random() * 500) : undefined
+        credits: serverData.credits || 0,
+        dailyLimit: serverData.integration_type === 'natv' ? 1000 : undefined,
+        usedToday: serverData.integration_type === 'natv' ? Math.floor(Math.random() * 500) : undefined
       });
 
     } catch (error) {
@@ -204,7 +219,7 @@ export default function ServerDetailsPage() {
   }
 
   const IntegrationIcon = getIntegrationIcon(server.integrationType);
-  const usagePercentage = integrationStatus?.dailyLimit 
+  const usagePercentage = integrationStatus?.dailyLimit && integrationStatus?.usedToday
     ? (integrationStatus.usedToday / integrationStatus.dailyLimit) * 100 
     : 0;
 
@@ -236,7 +251,7 @@ export default function ServerDetailsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
+            <ServerIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalClients || 0}</div>
@@ -316,12 +331,9 @@ export default function ServerDetailsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">ID do Painel:</span>
-                    <span className="text-sm font-mono">{server.panel_server_id || '--'}</span>
+                    <span className="text-sm font-mono">{server.panelServerId || '--'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Criado em:</span>
-                    <span className="text-sm">{new Date(server.created_at).toLocaleDateString('pt-BR')}</span>
-                  </div>
+
                 </div>
               </CardContent>
             </Card>
@@ -438,10 +450,10 @@ export default function ServerDetailsPage() {
                         <span className="text-sm text-muted-foreground">URL da API:</span>
                         <span className="text-sm font-mono">{server.url}</span>
                       </div>
-                      {server.api_key && (
+                      {server.apiKey && (
                         <div className="flex justify-between">
                           <span className="text-sm text-muted-foreground">Chave da API:</span>
-                          <span className="text-sm font-mono">••••••••••••{server.api_key.slice(-4)}</span>
+                          <span className="text-sm font-mono">••••••••••••{server.apiKey.slice(-4)}</span>
                         </div>
                       )}
                     </div>

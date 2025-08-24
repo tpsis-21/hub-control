@@ -345,13 +345,13 @@ CREATE TRIGGER on_auth_user_created
 CREATE OR REPLACE FUNCTION sanitize_profile_data()
 RETURNS trigger AS $$
 BEGIN
+  -- Sanitizar apenas campos que existem na tabela profiles
   IF NEW.full_name IS NOT NULL THEN
     NEW.full_name := sanitize_html(NEW.full_name);
   END IF;
   
-  IF NEW.company IS NOT NULL THEN
-    NEW.company := sanitize_html(NEW.company);
-  END IF;
+  -- Campo 'company' removido pois não existe na tabela profiles
+  -- Se precisar adicionar, primeiro execute: ALTER TABLE profiles ADD COLUMN company text;
   
   NEW.updated_at := now();
   RETURN NEW;

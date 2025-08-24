@@ -81,6 +81,7 @@ function DeletePlanDialog({ planId, planName, onOpenChange }: { planId: string, 
 export function PlanList({ plans, planGroups }: { plans: Plan[], planGroups: PlanGroup[] }) {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+    const { toast } = useToast();
 
     if (plans.length === 0) {
         return <p className="text-sm text-muted-foreground px-4 py-8 text-center">Nenhum plano para exibir.</p>;
@@ -106,10 +107,10 @@ export function PlanList({ plans, planGroups }: { plans: Plan[], planGroups: Pla
                 <TableBody>
                     {plans.map((plan) => {
                         const handleCopyId = () => {
-                            navigator.clipboard.writeText(plan.panelPlanId || '');
+                            navigator.clipboard.writeText(plan.panel_plan_id || '');
                             toast({
                                 title: "ID copiado!",
-                                description: `ID ${plan.panelPlanId} copiado para a área de transferência.`,
+                                description: `ID ${plan.panel_plan_id} copiado para a área de transferência.`,
                             });
                         };
 
@@ -118,9 +119,9 @@ export function PlanList({ plans, planGroups }: { plans: Plan[], planGroups: Pla
                             <TableCell>
                                 <div className="flex items-center gap-2">
                                     <Badge variant="outline" className="font-mono text-xs">
-                                        {plan.panelPlanId || 'N/A'}
+                                        {plan.panel_plan_id || 'N/A'}
                                     </Badge>
-                                    {plan.panelPlanId && (
+                                    {plan.panel_plan_id && (
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -137,13 +138,13 @@ export function PlanList({ plans, planGroups }: { plans: Plan[], planGroups: Pla
                             <TableCell>
                                 <TablePriceDisplay
                                     price={plan.price}
-                                    priceBeforeDiscount={plan.priceBeforeDiscount}
+                                    priceBeforeDiscount={plan.price_before_discount}
                                 />
                             </TableCell>
                             <TableCell>{plan.validity} dias</TableCell>
                             <TableCell>{plan.screens}</TableCell>
                             <TableCell>
-                                {plan.isPublic ?
+                                {plan.is_public ?
                                     <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Eye className="h-4 w-4 mr-1.5" /> Visível</Badge> :
                                     <Badge variant="outline"><EyeOff className="h-4 w-4 mr-1.5" /> Oculto</Badge>
                                 }

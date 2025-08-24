@@ -7,6 +7,9 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Tipo para severidade de segurança
+export type SecuritySeverity = 'low' | 'medium' | 'high' | 'critical'
+
 export interface Database {
   public: {
     Tables: {
@@ -222,6 +225,42 @@ export interface Database {
         }
         Relationships: []
       },
+      financial_transactions: {
+        Row: {
+          id: string
+          type: 'income' | 'expense'
+          description: string
+          amount: number
+          category: string
+          transaction_date: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          type: 'income' | 'expense'
+          description: string
+          amount: number
+          category: string
+          transaction_date: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          type?: 'income' | 'expense'
+          description?: string
+          amount?: number
+          category?: string
+          transaction_date?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      },
       knowledge_base_articles: {
         Row: {
           id: string
@@ -229,6 +268,8 @@ export interface Database {
           content: string
           category: string
           is_public: boolean
+          server_ids: string[] | null
+          visible_to_all_servers: boolean
           created_at: string
           updated_at: string
         }
@@ -238,6 +279,8 @@ export interface Database {
           content: string
           category: string
           is_public?: boolean
+          server_ids?: string[] | null
+          visible_to_all_servers?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -247,6 +290,8 @@ export interface Database {
           content?: string
           category?: string
           is_public?: boolean
+          server_ids?: string[] | null
+          visible_to_all_servers?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -257,7 +302,6 @@ export interface Database {
           id: string
           bot_api_key: string | null
           company_name: string | null
-          company_logo: string | null
           primary_color: string | null
           created_at: string
           updated_at: string
@@ -266,7 +310,6 @@ export interface Database {
           id?: string
           bot_api_key?: string | null
           company_name?: string | null
-          company_logo?: string | null
           primary_color?: string | null
           created_at?: string
           updated_at?: string
@@ -275,7 +318,6 @@ export interface Database {
           id?: string
           bot_api_key?: string | null
           company_name?: string | null
-          company_logo?: string | null
           primary_color?: string | null
           created_at?: string
           updated_at?: string
@@ -324,7 +366,7 @@ export interface Database {
           client_id: string
           date: string
           amount: number
-          status: 'Pago' | 'Pendente' | 'Atrasado'
+          status: 'Pago' | 'Pendente' | 'Atrasado' | 'Aguardando' | 'Confirmado' | 'Recusado' | 'Pendente de ativação manual' | 'Ativado'
           plan_id: string
           transaction_id: string | null
           payment_method: string | null
@@ -336,7 +378,7 @@ export interface Database {
           client_id: string
           date: string
           amount: number
-          status: 'Pago' | 'Pendente' | 'Atrasado'
+          status: 'Pago' | 'Pendente' | 'Atrasado' | 'Aguardando' | 'Confirmado' | 'Recusado' | 'Pendente de ativação manual' | 'Ativado'
           plan_id: string
           transaction_id?: string | null
           payment_method?: string | null
@@ -348,7 +390,7 @@ export interface Database {
           client_id?: string
           date?: string
           amount?: number
-          status?: 'Pago' | 'Pendente' | 'Atrasado'
+          status?: 'Pago' | 'Pendente' | 'Atrasado' | 'Aguardando' | 'Confirmado' | 'Recusado' | 'Pendente de ativação manual' | 'Ativado'
           plan_id?: string
           transaction_id?: string | null
           payment_method?: string | null
@@ -373,27 +415,25 @@ export interface Database {
       profiles: {
         Row: {
           id: string // UUID do usuário (igual ao id do auth.users)
-          user_id?: string // Referência ao auth.users
+          user_id: string // Referência ao auth.users
           role: 'admin' | 'user'
           approved: boolean // Novo campo para aprovação do usuário
           full_name?: string | null
           phone?: string | null
           company?: string | null
           avatar_url?: string | null
-          logo_url?: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id: string
-          user_id?: string
+          user_id: string
           role?: 'admin' | 'user'
           approved?: boolean
           full_name?: string | null
           phone?: string | null
           company?: string | null
           avatar_url?: string | null
-          logo_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -406,7 +446,6 @@ export interface Database {
           phone?: string | null
           company?: string | null
           avatar_url?: string | null
-          logo_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -739,9 +778,693 @@ export interface Database {
         }
         Relationships: []
       }
+      in_app_notifications: {
+        Row: {
+          id: string
+          user_id: string
+          client_id: string | null
+          type: 'payment_activated' | 'payment_pending' | 'payment_confirmed' | 'system'
+          title: string
+          message: string
+          data: Json | null
+          read: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          client_id?: string | null
+          type: 'payment_activated' | 'payment_pending' | 'payment_confirmed' | 'system'
+          title: string
+          message: string
+          data?: Json | null
+          read?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          client_id?: string | null
+          type?: 'payment_activated' | 'payment_pending' | 'payment_confirmed' | 'system'
+          title?: string
+          message?: string
+          data?: Json | null
+          read?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "in_app_notifications_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "in_app_notifications_client_id_fkey"
+            columns: ["client_id"]
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      audit_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          action: string
+          table_name: string | null
+          record_id: string | null
+          old_values: Json | null
+          new_values: Json | null
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          action: string
+          table_name?: string | null
+          record_id?: string | null
+          old_values?: Json | null
+          new_values?: Json | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          action?: string
+          table_name?: string | null
+          record_id?: string | null
+          old_values?: Json | null
+          new_values?: Json | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          endpoint: string
+          p256dh_key: string
+          auth_key: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          endpoint: string
+          p256dh_key: string
+          auth_key: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          endpoint?: string
+          p256dh_key?: string
+          auth_key?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      integration_configs: {
+        Row: {
+          id: string
+          provider: string
+          name: string
+          base_url: string | null
+          auth_token: string | null
+          auth_type: string
+          config_data: Json | null
+          is_active: boolean
+          is_default: boolean
+          rate_limit_per_minute: number | null
+          rate_limit_per_day: number | null
+          last_used_at: string | null
+          created_at: string
+          updated_at: string
+          created_by: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          provider: string
+          name: string
+          base_url?: string | null
+          auth_token?: string | null
+          auth_type?: string
+          config_data?: Json | null
+          is_active?: boolean
+          is_default?: boolean
+          rate_limit_per_minute?: number | null
+          rate_limit_per_day?: number | null
+          last_used_at?: string | null
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          provider?: string
+          name?: string
+          base_url?: string | null
+          auth_token?: string | null
+          auth_type?: string
+          config_data?: Json | null
+          is_active?: boolean
+          is_default?: boolean
+          rate_limit_per_minute?: number | null
+          rate_limit_per_day?: number | null
+          last_used_at?: string | null
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      audit_events: {
+        Row: {
+          id: string
+          type: string
+          user_id: string | null
+          ip: string | null
+          user_agent: string | null
+          resource: string | null
+          action: string
+          details: Json | null
+          timestamp: string
+          severity: SecuritySeverity
+          compliance: Json | null
+          data_classification: 'public' | 'internal' | 'confidential' | 'restricted'
+          retention_period: number
+          expires_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          type: string
+          user_id?: string | null
+          ip?: string | null
+          user_agent?: string | null
+          resource?: string | null
+          action: string
+          details?: Json | null
+          timestamp?: string
+          severity?: SecuritySeverity
+          compliance?: Json | null
+          data_classification?: 'public' | 'internal' | 'confidential' | 'restricted'
+          retention_period?: number
+          expires_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          type?: string
+          user_id?: string | null
+          ip?: string | null
+          user_agent?: string | null
+          resource?: string | null
+          action?: string
+          details?: Json | null
+          timestamp?: string
+          severity?: SecuritySeverity
+          compliance?: Json | null
+          data_classification?: 'public' | 'internal' | 'confidential' | 'restricted'
+          retention_period?: number
+          expires_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      security_events: {
+        Row: {
+          id: string
+          type: string
+          severity: SecuritySeverity
+          source: string
+          user_id: string | null
+          ip_address: string | null
+          user_agent: string | null
+          details: Json | null
+          metadata: Json | null
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          type: string
+          severity?: SecuritySeverity
+          source: string
+          user_id?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          details?: Json | null
+          metadata?: Json | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          type?: string
+          severity?: SecuritySeverity
+          source?: string
+          user_id?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          details?: Json | null
+          metadata?: Json | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      compliance_reports: {
+        Row: {
+          id: string
+          framework: string
+          period_start: string
+          period_end: string
+          status: 'draft' | 'in_progress' | 'completed' | 'failed'
+          score: number | null
+          findings: Json | null
+          recommendations: Json | null
+          metadata: Json | null
+          generated_at: string
+          generated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          framework: string
+          period_start: string
+          period_end: string
+          status?: 'draft' | 'in_progress' | 'completed' | 'failed'
+          score?: number | null
+          findings?: Json | null
+          recommendations?: Json | null
+          metadata?: Json | null
+          generated_at?: string
+          generated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          framework?: string
+          period_start?: string
+          period_end?: string
+          status?: 'draft' | 'in_progress' | 'completed' | 'failed'
+          score?: number | null
+          findings?: Json | null
+          recommendations?: Json | null
+          metadata?: Json | null
+          generated_at?: string
+          generated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+       }
+       workflows: {
+         Row: {
+           id: string
+           name: string
+           description: string
+           type: string
+           version: string
+           status: string
+           config: Json
+           triggers: Json
+           actions: Json
+           flow: Json
+           variables: Json
+           access: Json
+           metadata: Json
+           created_at: string
+           updated_at: string
+         }
+         Insert: {
+           id?: string
+           name: string
+           description: string
+           type: string
+           version: string
+           status: string
+           config: Json
+           triggers: Json
+           actions: Json
+           flow: Json
+           variables: Json
+           access: Json
+           metadata: Json
+           created_at?: string
+           updated_at?: string
+         }
+         Update: {
+           id?: string
+           name?: string
+           description?: string
+           type?: string
+           version?: string
+           status?: string
+           config?: Json
+           triggers?: Json
+           actions?: Json
+           flow?: Json
+           variables?: Json
+           access?: Json
+           metadata?: Json
+           created_at?: string
+           updated_at?: string
+         }
+         Relationships: []
+       }
+       workflow_executions: {
+         Row: {
+           id: string
+           workflow_id: string
+           workflow_version: string
+           status: string
+           context: Json
+           progress: Json
+           results: Json
+           control: Json
+           metadata: Json
+           created_at: string
+           updated_at: string
+         }
+         Insert: {
+           id?: string
+           workflow_id: string
+           workflow_version: string
+           status: string
+           context: Json
+           progress: Json
+           results: Json
+           control: Json
+           metadata: Json
+           created_at?: string
+           updated_at?: string
+         }
+         Update: {
+           id?: string
+           workflow_id?: string
+           workflow_version?: string
+           status?: string
+           context?: Json
+           progress?: Json
+           results?: Json
+           control?: Json
+           metadata?: Json
+           created_at?: string
+           updated_at?: string
+         }
+         Relationships: [
+           {
+             foreignKeyName: "workflow_executions_workflow_id_fkey"
+             columns: ["workflow_id"]
+             isOneToOne: false
+             referencedRelation: "workflows"
+             referencedColumns: ["id"]
+           }
+         ]
+       }
+       performance_metrics: {
+         Row: {
+           id: string
+           type: string
+           value: number
+           unit: string
+           timestamp: string
+           source: string
+           metadata: Json | null
+           tags: string[] | null
+           created_at: string
+         }
+         Insert: {
+           id?: string
+           type: string
+           value: number
+           unit: string
+           timestamp?: string
+           source: string
+           metadata?: Json | null
+           tags?: string[] | null
+           created_at?: string
+         }
+         Update: {
+           id?: string
+           type?: string
+           value?: number
+           unit?: string
+           timestamp?: string
+           source?: string
+           metadata?: Json | null
+           tags?: string[] | null
+           created_at?: string
+         }
+         Relationships: []
+       }
+       analytics_events: {
+         Row: {
+           id: string
+           type: string
+           timestamp: string
+           user_id: string | null
+           session_id: string | null
+           value: number
+           unit: string
+           dimensions: Json
+           metadata: Json
+           processed: boolean
+           processed_at: string | null
+           created_at: string
+         }
+         Insert: {
+           id: string
+           type: string
+           timestamp?: string
+           user_id?: string | null
+           session_id?: string | null
+           value?: number
+           unit?: string
+           dimensions?: Json
+           metadata?: Json
+           processed?: boolean
+           processed_at?: string | null
+           created_at?: string
+         }
+         Update: {
+           id?: string
+           type?: string
+           timestamp?: string
+           user_id?: string | null
+           session_id?: string | null
+           value?: number
+           unit?: string
+           dimensions?: Json
+           metadata?: Json
+           processed?: boolean
+           processed_at?: string | null
+           created_at?: string
+         }
+         Relationships: []
+       }
+       analytics_reports: {
+         Row: {
+           id: string
+           name: string
+           description: string | null
+           type: string
+           query: Json
+           visualization: Json
+           schedule: Json | null
+           alerts: Json | null
+           access: Json
+           metadata: Json
+           created_at: string
+           updated_at: string
+         }
+         Insert: {
+           id: string
+           name: string
+           description?: string | null
+           type: string
+           query: Json
+           visualization?: Json
+           schedule?: Json | null
+           alerts?: Json | null
+           access?: Json
+           metadata?: Json
+           created_at?: string
+           updated_at?: string
+         }
+         Update: {
+           id?: string
+           name?: string
+           description?: string | null
+           type?: string
+           query?: Json
+           visualization?: Json
+           schedule?: Json | null
+           alerts?: Json | null
+           access?: Json
+           metadata?: Json
+           created_at?: string
+           updated_at?: string
+         }
+         Relationships: []
+       }
+       analytics_dashboards: {
+         Row: {
+           id: string
+           name: string
+           description: string | null
+           widgets: Json
+           layout: Json
+           filters: Json
+           access: Json
+           metadata: Json
+           created_at: string
+           updated_at: string
+         }
+         Insert: {
+           id: string
+           name: string
+           description?: string | null
+           widgets?: Json
+           layout?: Json
+           filters?: Json
+           access?: Json
+           metadata?: Json
+           created_at?: string
+           updated_at?: string
+         }
+         Update: {
+           id?: string
+           name?: string
+           description?: string | null
+           widgets?: Json
+           layout?: Json
+           filters?: Json
+           access?: Json
+           metadata?: Json
+           created_at?: string
+           updated_at?: string
+         }
+         Relationships: []
+       }
+       system_config: {
+         Row: {
+           id: string
+           key: string
+           value: Json
+           description: string | null
+           category: string | null
+           is_public: boolean
+           created_at: string
+           updated_at: string
+         }
+         Insert: {
+           id?: string
+           key: string
+           value: Json
+           description?: string | null
+           category?: string | null
+           is_public?: boolean
+           created_at?: string
+           updated_at?: string
+         }
+         Update: {
+           id?: string
+           key?: string
+           value?: Json
+           description?: string | null
+           category?: string | null
+           is_public?: boolean
+           created_at?: string
+           updated_at?: string
+         }
+         Relationships: []
+       }
+      }
+       Views: {}
+    Functions: {
+      exec_sql: {
+        Args: {
+          sql_query: string
+        }
+        Returns: void
+      }
+      get_notification_delivery_summary: {
+        Args: {
+          start_date: string
+          end_date: string
+        }
+        Returns: {
+          sent: number
+          delivered: number
+          failed: number
+          pending: number
+          delivery_rate: number
+          avg_processing_time: number
+          by_channel: Json
+          by_type: Json
+          by_priority: Json
+        }
+      }
+      check_notification_system_health: {
+        Args: {}
+        Returns: {
+          status: string
+          delivery_rate: number
+          pending_notifications: number
+          failed_notifications_last_hour: number
+          average_processing_time_ms: number
+          active_channels: number
+          total_channels: number
+          issues: string[]
+        }
+      }
     }
-    Views: {}
-    Functions: {}
     Enums: {}
     CompositeTypes: {}
   }

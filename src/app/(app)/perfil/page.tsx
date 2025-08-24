@@ -1,0 +1,591 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { getBrowserUser, createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
+import { User, Mail, Calendar, Shield, ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { useRouter } from "next/navigation";
+
+export default function PerfilPage() {
+  const { toast } = useToast();
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [securityLoading, setSecurityLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    full_name: "",
+    phone: "",
+    company: "",
+    avatar_url: "",
+  });
+  const [securityData, setSecurityData] = useState({
+    newEmail: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        console.log('🔄 Carregando dados do usuário...');
+        const currentUser = await getBrowserUser();
+        
+        if (!currentUser) {
+          console.error('❌ Usuário não autenticado');
+          toast({
+            title: "Erro de Autenticação",
+            description: "Você precisa estar logado para acessar esta página.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        console.log('✅ Usuário autenticado:', currentUser.email);
+        setUser(currentUser);
+        
+        const supabase = createBrowserSupabaseClient();
+        
+        // Tentar buscar perfil por user_id primeiro
+        console.log('🔍 Buscando perfil por user_id...');
+        let { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .single();
+        
+        // Se não encontrar por user_id, tentar por id
+        if (profileError && profileError.code === 'PGRST116') {
+          console.log('🔍 Perfil não encontrado por user_id, tentando por id...');
+          const { data: profileById, error: profileByIdError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+          
+          if (!profileByIdError) {
+            profile = profileById;
+            profileError = null;
+          } else {
+            console.log('⚠️ Perfil não encontrado, criando novo...');
+            // Criar perfil se não existir
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: currentUser.id,
+                user_id: currentUser.id,
+                full_name: currentUser.user_metadata?.full_name || '',
+                role: currentUser.email === 'topplaytv7@gmail.com' ? 'admin' : 'user',
+                approved: true
+              })
+              .select()
+              .single();
+            
+            if (createError) {
+              console.error('❌ Erro ao criar perfil:', createError);
+            } else {
+              console.log('✅ Perfil criado com sucesso');
+              profile = newProfile;
+              profileError = null;
+            }
+          }
+        }
+        
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error('❌ Erro ao buscar perfil:', profileError);
+          throw profileError;
+        }
+        
+        console.log('📋 Perfil carregado:', profile);
+        setUserProfile(profile);
+        
+        if (profile) {
+          setFormData({
+            full_name: profile.full_name || "",
+            phone: profile.phone || "",
+            company: profile.company || "",
+            avatar_url: profile.avatar_url || "",
+          });
+        }
+        
+      } catch (error) {
+        console.error('🚨 Erro ao carregar dados do usuário:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados do perfil.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [toast]);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      
+      const user = await getBrowserUser();
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Usuário não autenticado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Dados do usuário:', user);
+      console.log('Dados do formulário:', formData);
+
+      const supabase = createBrowserSupabaseClient();
+
+      // Preparar dados para upsert
+      const profileData = {
+        id: user.id,
+        user_id: user.id,
+        full_name: formData.full_name || '',
+        phone: formData.phone || '',
+        company: formData.company || '',
+        avatar_url: formData.avatar_url || '',
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('Dados para upsert:', profileData);
+
+      // Usar upsert com user_id como chave de conflito
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(profileData, {
+          onConflict: 'user_id',
+          ignoreDuplicates: false
+        })
+        .select();
+
+      if (error) {
+        console.error('Erro detalhado do Supabase:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
+
+      console.log('Perfil salvo com sucesso:', data);
+      
+      toast({
+        title: "Sucesso",
+        description: "Perfil atualizado com sucesso!",
+      });
+
+      // Recarregar dados do perfil
+      const { data: updatedProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (fetchError) {
+        console.warn('⚠️ Erro ao recarregar perfil:', fetchError);
+      } else {
+        setUserProfile(updatedProfile);
+      }
+      
+    } catch (error: any) {
+      console.error('Erro ao salvar perfil:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao salvar perfil",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEmailChange = async () => {
+    if (!securityData.newEmail) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira o novo e-mail.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSecurityLoading(true);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error } = await supabase.auth.updateUser({
+        email: securityData.newEmail
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "E-mail atualizado",
+        description: "Verifique seu novo e-mail para confirmar a alteração.",
+      });
+
+      setSecurityData(prev => ({ ...prev, newEmail: "" }));
+    } catch (error: any) {
+      console.error('Erro ao alterar e-mail:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao alterar e-mail",
+        variant: "destructive",
+      });
+    } finally {
+      setSecurityLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!securityData.newPassword || !securityData.confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos de senha.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (securityData.newPassword !== securityData.confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "As senhas não coincidem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (securityData.newPassword.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSecurityLoading(true);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error } = await supabase.auth.updateUser({
+        password: securityData.newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Senha atualizada",
+        description: "Sua senha foi alterada com sucesso.",
+      });
+
+      setSecurityData(prev => ({ 
+        ...prev, 
+        newPassword: "", 
+        confirmPassword: "" 
+      }));
+    } catch (error: any) {
+      console.error('Erro ao alterar senha:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao alterar senha",
+        variant: "destructive",
+      });
+    } finally {
+      setSecurityLoading(false);
+    }
+  };
+
+  const getUserDisplayName = () => {
+    if (userProfile?.full_name) return userProfile.full_name;
+    if (user?.user_metadata?.name) return user.user_metadata.name;
+    if (user?.user_metadata?.full_name) return user.user_metadata.full_name;
+    return user?.email?.split('@')[0] || "Usuário";
+  };
+
+  const getUserInitials = () => {
+    const name = getUserDisplayName();
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-hub-blue mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando perfil...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-8 space-y-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+        <h1 className="text-2xl font-bold">Meu Perfil</h1>
+      </div>
+
+      <div className="flex items-center gap-4 mb-8">
+        <User className="h-8 w-8 text-hub-blue" />
+        <div>
+          <p className="text-muted-foreground">Gerencie suas informações pessoais</p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Informações do Usuário */}
+        <Card className="md:col-span-1">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <ImageUpload
+                value={formData.avatar_url}
+                onChange={(url) => setFormData({ ...formData, avatar_url: url })}
+                onRemove={() => setFormData({ ...formData, avatar_url: "" })}
+                type="avatar"
+                disabled={saving}
+              />
+            </div>
+            <CardTitle className="text-hub-dark">{getUserDisplayName()}</CardTitle>
+            <CardDescription className="flex items-center justify-center gap-2">
+              <Mail className="h-4 w-4" />
+              {user?.email}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Status:</span>
+              <Badge variant="secondary" className="bg-hub-green text-white">
+                Ativo
+              </Badge>
+            </div>
+            
+            {userProfile?.role && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Função:</span>
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Shield className="h-3 w-3" />
+                  {userProfile.role === 'admin' ? 'Administrador' : 'Usuário'}
+                </Badge>
+              </div>
+            )}
+            
+            {user?.created_at && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Membro desde:</span>
+                <div className="flex items-center gap-1 text-sm">
+                  <Calendar className="h-3 w-3" />
+                  {formatDate(user.created_at)}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Formulário de Edição */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-hub-dark">Informações Pessoais</CardTitle>
+            <CardDescription>
+              Atualize suas informações de perfil
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={user?.email || ""}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O email não pode ser alterado
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Nome Completo</Label>
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  placeholder="Seu nome completo"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="(11) 99999-9999"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="company">Empresa</Label>
+                <Input
+                  id="company"
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  placeholder="Nome da empresa"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <Button 
+                onClick={handleSave} 
+                disabled={saving}
+                className="bg-hub-blue hover:bg-hub-blue/90"
+              >
+                {saving ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Configurações de Segurança */}
+        <Card className="md:col-span-3">
+          <CardHeader>
+            <CardTitle className="text-hub-dark flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Configurações de Segurança
+            </CardTitle>
+            <CardDescription>
+              Gerencie suas credenciais de acesso
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Alterar Email */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Alterar E-mail
+                  </CardTitle>
+                  <CardDescription>
+                    Atualize seu endereço de e-mail de acesso
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>E-mail atual</Label>
+                    <Input
+                      value={user?.email || ""}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Novo e-mail</Label>
+                    <Input
+                      type="email"
+                      placeholder="novo@email.com"
+                      value={securityData.newEmail}
+                      onChange={(e) => setSecurityData(prev => ({ ...prev, newEmail: e.target.value }))}
+                    />
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    variant="outline"
+                    onClick={handleEmailChange}
+                    disabled={securityLoading}
+                  >
+                    {securityLoading ? "Processando..." : "Solicitar Alteração"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Você receberá um e-mail de confirmação no novo endereço
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Alterar Senha */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Alterar Senha
+                  </CardTitle>
+                  <CardDescription>
+                    Atualize sua senha de acesso
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Nova senha</Label>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={securityData.newPassword}
+                      onChange={(e) => setSecurityData(prev => ({ ...prev, newPassword: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirmar nova senha</Label>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={securityData.confirmPassword}
+                      onChange={(e) => setSecurityData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    />
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    variant="outline"
+                    onClick={handlePasswordChange}
+                    disabled={securityLoading}
+                  >
+                    {securityLoading ? "Processando..." : "Alterar Senha"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Use uma senha forte com pelo menos 8 caracteres
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

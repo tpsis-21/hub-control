@@ -18,6 +18,7 @@ import {
   Quote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface HtmlEditorProps {
   value: string;
@@ -33,7 +34,9 @@ export function HtmlEditor({ value, onChange, placeholder, className }: HtmlEdit
 
   useEffect(() => {
     if (editorRef.current && !isPreview) {
-      editorRef.current.innerHTML = value;
+      // Sanitiza o conteúdo antes de inserir no editor
+      const sanitizedValue = sanitizeHtml(value, 'html');
+      editorRef.current.innerHTML = sanitizedValue;
     }
   }, [value, isPreview]);
 
@@ -61,7 +64,9 @@ export function HtmlEditor({ value, onChange, placeholder, className }: HtmlEdit
 
   const updateContent = () => {
     if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
+      // Sanitiza o conteúdo antes de enviar para o onChange
+      const sanitizedContent = sanitizeHtml(editorRef.current.innerHTML, 'html');
+      onChange(sanitizedContent);
     }
   };
 
@@ -155,7 +160,7 @@ export function HtmlEditor({ value, onChange, placeholder, className }: HtmlEdit
         {isPreview ? (
           <div 
             className="p-4 prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: value }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(value, 'template') }}
           />
         ) : (
           <div

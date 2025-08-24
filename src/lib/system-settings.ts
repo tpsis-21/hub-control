@@ -1,5 +1,5 @@
 // src/lib/system-settings.ts
-import { createClientSupabaseClient } from './supabase-client';
+import { createBrowserSupabaseClient } from './supabase/clients/browser';
 
 // Configurações padrão do sistema
 const DEFAULT_SETTINGS = {
@@ -18,25 +18,19 @@ export interface SystemSettings {
 // Função para verificar se novos cadastros estão permitidos
 export async function areRegistrationsAllowed(): Promise<boolean> {
   try {
-    // Por enquanto, usar configuração local até termos a tabela system_settings
-    // TODO: Implementar consulta à tabela system_settings quando estiver disponível
+    const supabase = createBrowserSupabaseClient();
+    const { data, error } = await (supabase as any)
+      .from('system_config')
+      .select('value')
+      .eq('key', 'app.allow_new_registrations')
+      .single();
     
-    // Verificação temporária - permitir cadastros por padrão
-    return true;
+    if (error || !data) {
+      return DEFAULT_SETTINGS.allow_new_registrations;
+    }
     
-    // Código futuro para consultar a tabela:
-    // const supabase = createClientSupabaseClient();
-    // const { data, error } = await supabase
-    //   .from('system_settings')
-    //   .select('setting_value')
-    //   .eq('setting_key', 'allow_new_registrations')
-    //   .single();
-    // 
-    // if (error || !data) {
-    //   return DEFAULT_SETTINGS.allow_new_registrations;
-    // }
-    // 
-    // return data.setting_value === 'true';
+    // O valor está armazenado como JSONB, então precisamos fazer parse
+    return (data as any).value === true || (data as any).value === 'true';
   } catch (error) {
     console.error('Erro ao verificar configurações de registro:', error);
     return DEFAULT_SETTINGS.allow_new_registrations;
@@ -46,27 +40,35 @@ export async function areRegistrationsAllowed(): Promise<boolean> {
 // Função para obter todas as configurações do sistema
 export async function getSystemSettings(): Promise<SystemSettings> {
   try {
-    // Por enquanto, retornar configurações padrão
-    return DEFAULT_SETTINGS;
+    const supabase = createBrowserSupabaseClient();
+    const { data, error } = await (supabase as any)
+      .from('system_config')
+      .select('key, value')
+      .like('key', 'app.%');
     
-    // Código futuro para consultar a tabela:
-    // const supabase = createClientSupabaseClient();
-    // const { data, error } = await supabase
-    //   .from('system_settings')
-    //   .select('*');
-    // 
-    // if (error || !data) {
-    //   return DEFAULT_SETTINGS;
-    // }
-    // 
-    // const settings = { ...DEFAULT_SETTINGS };
-    // data.forEach(setting => {
-    //   if (setting.setting_key in settings) {
-    //     settings[setting.setting_key] = setting.setting_value === 'true';
-    //   }
-    // });
-    // 
-    // return settings;
+    if (error || !data) {
+      return DEFAULT_SETTINGS;
+    }
+    
+    const settings: SystemSettings = { ...DEFAULT_SETTINGS };
+    (data as Array<{ key: string; value: any }>).forEach(({ key, value }) => {
+      const settingKey = key.replace('app.', '') as keyof SystemSettings;
+      switch (settingKey) {
+        case 'allow_new_registrations':
+          settings.allow_new_registrations = value === true || value === 'true';
+          break;
+        case 'max_users':
+          settings.max_users = Number(value);
+          break;
+        case 'maintenance_mode':
+          settings.maintenance_mode = value === true || value === 'true';
+          break;
+        default:
+          break;
+      }
+    });
+    
+    return settings;
   } catch (error) {
     console.error('Erro ao obter configurações do sistema:', error);
     return DEFAULT_SETTINGS;
@@ -76,23 +78,45 @@ export async function getSystemSettings(): Promise<SystemSettings> {
 // Função para atualizar uma configuração do sistema
 export async function updateSystemSetting(key: keyof SystemSettings, value: boolean | number): Promise<boolean> {
   try {
-    // Por enquanto, apenas simular a atualização
-    console.log(`Configuração ${key} atualizada para:`, value);
-    return true;
+    const supabase = createBrowserSupabaseClient();
+    const configKey = `app.${key}`;
     
-    // Código futuro para atualizar a tabela:
-    // const supabase = createClientSupabaseClient();
-    // const { error } = await supabase
-    //   .from('system_settings')
-    //   .upsert({
-    //     setting_key: key,
-    //     setting_value: value.toString(),
-    //     updated_at: new Date().toISOString()
-    //   });
-    // 
-    // return !error;
+    console.log('Atualizando configuração:', { key: configKey, value, type: typeof value });
+    
+    const { data, error } = await supabase
+      .from('system_config')
+      .upsert({
+        key: configKey,
+        value: value,
+        description: `Configuração ${key}`,
+        category: 'app',
+        is_public: false,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'key'
+      })
+      .select();
+    
+    if (error) {
+      console.error('Erro detalhado ao atualizar configuração:', {
+        error,
+        key: configKey,
+        value,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      return false;
+    }
+    
+    console.log(`Configuração ${key} atualizada com sucesso:`, { value, data });
+    return true;
   } catch (error) {
-    console.error('Erro ao atualizar configuração do sistema:', error);
+    console.error('Erro de exceção ao atualizar configuração do sistema:', {
+      error,
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return false;
   }
 }
@@ -100,7 +124,7 @@ export async function updateSystemSetting(key: keyof SystemSettings, value: bool
 // Função para verificar se o usuário é administrador
 export async function isUserAdmin(): Promise<boolean> {
   try {
-    const supabase = createClientSupabaseClient();
+    const supabase = createBrowserSupabaseClient();
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.user) {
@@ -119,7 +143,7 @@ export async function isUserAdmin(): Promise<boolean> {
       .eq('id', session.user.id)
       .single();
     
-    return !error && data?.role === 'admin';
+    return !error && (data as any)?.role === 'admin';
   } catch (error) {
     console.error('Erro ao verificar se usuário é admin:', error);
     return false;

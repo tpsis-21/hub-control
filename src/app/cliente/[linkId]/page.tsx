@@ -105,8 +105,8 @@ export default async function ClientAreaPage({ params }: any) {
     
     const currentPlan = allPlans.find(p => p.id === customer.planId);
     const customerStatus = statusConfig[customer.status] || statusConfig['Inativo'];
-    const renewalPlans = currentPlan?.groupId 
-        ? allPlans.filter(p => p.groupId === currentPlan.groupId && p.isPublic) 
+    const renewalPlans = currentPlan?.group_id
+        ? allPlans.filter(p => p.group_id === currentPlan.group_id && p.is_public)
         : [];
     
     // Mock data, replace with real data from settings later
@@ -153,7 +153,7 @@ export default async function ClientAreaPage({ params }: any) {
                                 <div className="space-y-4">
                                      <h3 className="font-semibold text-lg flex items-center gap-2"><User className="w-5 h-5 text-primary" />Seus Dados de Acesso</h3>
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 border rounded-lg">
-                                        <CopyableField icon={User} label="Usuário IPTV" value={customer.iptvUsername} />
+                                        <CopyableField icon={User} label="Usuário IPTV" value={customer.iptvUsername || ''} />
                                         {customer.iptvPassword && (
                                              <CopyableField icon={ShieldCheck} label="Senha IPTV" value={customer.iptvPassword} />
                                         )}
@@ -178,7 +178,7 @@ export default async function ClientAreaPage({ params }: any) {
                                             <CardContent className="flex-grow space-y-2">
                                                 <CardPriceDisplay
                                                     price={plan.price}
-                                                    priceBeforeDiscount={plan.priceBeforeDiscount}
+                                                    priceBeforeDiscount={plan.price_before_discount}
                                                 />
                                                  <p className="text-sm text-muted-foreground">{plan.validity} dias de acesso</p>
                                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -199,16 +199,10 @@ export const editServerSchema = serverBaseSchema.extend({
 
 
 export const settingsSchema = z.object({
-  manualTestDuration: z.coerce.number().int().min(1),
-  bpixClientId: z.string().optional(),
-  bpixClientSecret: z.string().optional(),
-  bpixToken: z.string().optional(),
-  clientAreaSupportLink: z.string().url({message: "Por favor, insira uma URL válida."}).or(z.literal('')).optional(),
-  clientAreaContentRequestLink: z.string().url({message: "Por favor, insira uma URL válida."}).or(z.literal('')).optional(),
-  botApiKey: z.string().optional(),
-  whatsappApiEndpoint: z.string().url({message: "Por favor, insira uma URL válida."}).or(z.literal('')).optional(),
-  whatsappApiKey: z.string().optional(),
-  smtpHost: z.string().optional(),
-  smtpUser: z.string().optional(),
-  smtpPass: z.string().optional(),
+  id: z.string().optional(),
+  bot_api_key: z.string().nullable().optional(),
+  company_name: z.string().nullable().optional(),
+  primary_color: z.string().nullable().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
 });

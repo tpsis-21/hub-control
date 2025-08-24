@@ -1,5 +1,5 @@
 // src/services/marketing.service.ts
-import { createApiSupabaseClient } from '@/lib/supabase-api';
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 import { LoggerService } from './logger.service';
 import type { 
   Campaign, 
@@ -48,16 +48,56 @@ export class MarketingService {
         }
       };
 
+      // Mapear campos para o formato da tabela
+      const dbCampaign = {
+        id: campaign.id,
+        name: campaign.name,
+        subject: campaign.subject,
+        html_content: campaign.htmlContent,
+        text_content: campaign.textContent,
+        status: campaign.status,
+        segmentation: campaign.segmentation as any,
+        metrics: campaign.metrics as any,
+        scheduled_at: campaign.scheduled_at,
+        sent_at: campaign.sent_at,
+        created_at: campaign.created_at,
+        updated_at: campaign.updated_at,
+        created_by: undefined // Campo não existe no tipo Campaign
+      };
+
       const { data, error } = await supabase
         .from('marketing_campaigns')
-        .insert(campaign)
+        .insert(dbCampaign)
         .select()
         .single();
 
       if (error) throw error;
 
+      // Mapear dados de volta para o tipo Campaign
+      const mappedCampaign: Campaign = {
+        id: data.id,
+        name: data.name,
+        subject: data.subject,
+        htmlContent: data.html_content,
+        textContent: data.text_content || undefined,
+        status: data.status,
+        segmentation: data.segmentation as unknown as Campaign['segmentation'],
+        metrics: data.metrics as unknown as Campaign['metrics'],
+        scheduled_at: data.scheduled_at || undefined,
+        sent_at: data.sent_at || undefined,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        settings: {
+          fromName: '',
+          fromEmail: '',
+          trackOpens: true,
+          trackClicks: true,
+          unsubscribeLink: true
+        }
+      };
+
       LoggerService.info('Campanha criada com sucesso', 'MarketingService', { campaignId: campaign.id });
-      return data;
+      return mappedCampaign;
     } catch (error) {
       LoggerService.error('Erro ao criar campanha', 'MarketingService', { error });
       throw error;
@@ -93,7 +133,32 @@ export class MarketingService {
       const { data, error } = await query;
       if (error) throw error;
 
-      return data || [];
+      if (!data) return [];
+
+      // Mapear dados do Supabase para o tipo Campaign
+      const mappedCampaigns: Campaign[] = data.map(item => ({
+        id: item.id,
+        name: item.name,
+        subject: item.subject,
+        htmlContent: item.html_content,
+        textContent: item.text_content || undefined,
+        status: item.status,
+        segmentation: item.segmentation as unknown as Campaign['segmentation'],
+        metrics: item.metrics as unknown as Campaign['metrics'],
+        scheduled_at: item.scheduled_at || undefined,
+        sent_at: item.sent_at || undefined,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        settings: {
+          fromName: 'Hub Control',
+          fromEmail: 'noreply@hubcontrol.com',
+          trackOpens: true,
+          trackClicks: true,
+          unsubscribeLink: true
+        }
+      }));
+
+      return mappedCampaigns;
     } catch (error) {
       LoggerService.error('Erro ao buscar campanhas', 'MarketingService', { error });
       throw error;
@@ -223,8 +288,6 @@ export class MarketingService {
         sent: result.sentCount,
         failed: result.failedCount,
       };
-
-      return { success: true, sent, failed };
     } catch (error) {
       LoggerService.error('Erro ao enviar campanha', 'MarketingService', { campaignId, error });
       throw error;
@@ -243,7 +306,7 @@ export class MarketingService {
         id: crypto.randomUUID()
       };
 
-      await supabase.from('email_logs').insert(emailLog);
+      await supabase.from('email_logs').insert([emailLog]);
     } catch (error) {
       LoggerService.error('Erro ao registrar log de email', 'MarketingService', { error });
     }
@@ -257,10 +320,33 @@ export class MarketingService {
       const supabase = await createApiSupabaseClient();
       
       // Buscar campanhas
-      const { data: campaigns } = await supabase
+      const { data: campaignsData } = await supabase
         .from('marketing_campaigns')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // Mapear dados do Supabase para o tipo Campaign
+      const campaigns: Campaign[] = campaignsData?.map(item => ({
+        id: item.id,
+        name: item.name,
+        subject: item.subject,
+        htmlContent: item.html_content,
+        textContent: item.text_content || undefined,
+        status: item.status,
+        segmentation: item.segmentation as unknown as Campaign['segmentation'],
+        metrics: item.metrics as unknown as Campaign['metrics'],
+        scheduled_at: item.scheduled_at || undefined,
+        sent_at: item.sent_at || undefined,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        settings: {
+          fromName: 'Hub Control',
+          fromEmail: 'noreply@hubcontrol.com',
+          trackOpens: true,
+          trackClicks: true,
+          unsubscribeLink: true
+        }
+      })) || [];
 
       // Buscar automações
       const { data: automations } = await supabase
@@ -276,33 +362,52 @@ export class MarketingService {
       // Calcular métricas
       const totalCampaigns = campaigns?.length || 0;
       const activeCampaigns = campaigns?.filter(c => c.status === 'sending').length || 0;
-      const totalEmailsSent = campaigns?.reduce((sum, c) => sum + (c.metrics?.sent || 0), 0) || 0;
+      const totalEmailsSent = campaigns?.reduce((sum, c) => {
+        const metrics = c.metrics as any;
+        return sum + (metrics?.sent || 0);
+      }, 0) || 0;
       const activeClients = clients?.length || 0;
       
-      const campaignsWithMetrics = campaigns?.filter(c => c.metrics?.sent > 0) || [];
+      const campaignsWithMetrics = campaigns?.filter(c => {
+        const metrics = c.metrics as any;
+        return metrics?.sent > 0;
+      }) || [];
       const averageOpenRate = campaignsWithMetrics.length > 0 
-        ? campaignsWithMetrics.reduce((sum, c) => sum + (c.metrics?.openRate || 0), 0) / campaignsWithMetrics.length
+        ? campaignsWithMetrics.reduce((sum, c) => {
+            const metrics = c.metrics as any;
+            return sum + (metrics?.openRate || 0);
+          }, 0) / campaignsWithMetrics.length
         : 0;
       const averageClickRate = campaignsWithMetrics.length > 0
-        ? campaignsWithMetrics.reduce((sum, c) => sum + (c.metrics?.clickRate || 0), 0) / campaignsWithMetrics.length
+        ? campaignsWithMetrics.reduce((sum, c) => {
+            const metrics = c.metrics as any;
+            return sum + (metrics?.clickRate || 0);
+          }, 0) / campaignsWithMetrics.length
         : 0;
 
       return {
         totalCampaigns,
         activeCampaigns,
         totalEmailsSent,
+        emailsSent: totalEmailsSent, // Mesmo valor que totalEmailsSent
         averageOpenRate,
         averageClickRate,
+        openRate: averageOpenRate, // Mesmo valor que averageOpenRate
+        clickRate: averageClickRate, // Mesmo valor que averageClickRate
+        bounceRate: 0, // TODO: Calcular taxa de bounce real
+        deliveryRate: 95, // TODO: Calcular taxa de entrega real
+        spamRate: 0, // TODO: Calcular taxa de spam real
+        deliverabilityScore: 85, // TODO: Calcular score de deliverabilidade real
         activeClients,
         recentCampaigns: campaigns?.slice(0, 5) || [],
         topPerformingCampaigns: campaigns
-          ?.filter(c => c.metrics?.sent > 0)
-          ?.sort((a, b) => (b.metrics?.openRate || 0) - (a.metrics?.openRate || 0))
-          ?.slice(0, 5) || [],
+          ?.filter(c => (c.metrics as any)?.sent > 0)
+          .sort((a, b) => ((b.metrics as any)?.openRate || 0) - ((a.metrics as any)?.openRate || 0))
+          .slice(0, 5) || [],
         automationStats: {
           totalRules: automations?.length || 0,
-          activeRules: automations?.filter(a => a.isActive).length || 0,
-          executionsToday: 0 // TODO: Implementar contagem de execuções do dia
+          activeRules: automations?.filter(a => a.is_active).length || 0,
+          executionsToday: 0 // TODO: Implementar contagem de execuções
         }
       };
     } catch (error) {
@@ -322,18 +427,29 @@ export class MarketingService {
     try {
       const startTime = Date.now();
       
-      // Usar o MessageService para testar o envio
-      const result = await MessageService.sendEmail({
-        to: config.fromEmail,
-        subject: 'Teste de Configuração SMTP',
-        html: '<p>Este é um email de teste para verificar a configuração SMTP.</p>'
+      // Usar API route para testar o envio
+      const response = await fetch('/api/marketing/test-smtp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host: config.host,
+          port: config.port,
+          secure: config.secure,
+          username: config.username,
+          password: config.password,
+          fromEmail: config.fromEmail,
+          testEmail: config.fromEmail
+        }),
       });
 
+      const result = await response.json();
       const latency = Date.now() - startTime;
 
       return {
         success: result.success,
-        error: result.error,
+        error: result.error || result.message,
         latency
       };
     } catch (error) {
@@ -344,36 +460,7 @@ export class MarketingService {
     }
   }
 
-  /**
-   * Testa configuração SMTP
-   */
-  static async testSMTPConfig(config: {
-    host: string;
-    port: number;
-    security: string;
-    username: string;
-    password: string;
-    fromEmail: string;
-    testEmail: string;
-  }): Promise<{ success: boolean; message?: string; error?: string }> {
-    try {
-      const response = await fetch('/api/marketing/test-smtp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(config),
-      });
 
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      };
-    }
-  }
 }
 
 export default MarketingService;

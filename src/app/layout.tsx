@@ -1,4 +1,4 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import '../styles/hub-theme.css';
 import { Toaster } from "@/components/ui/toaster";
@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/app/theme-provider';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import { ServiceInitializer } from '@/components/app/service-initializer';
+
 
 // Configuração da fonte Inter para ser usada em toda a aplicação.
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
@@ -32,16 +34,6 @@ export const metadata: Metadata = {
     shortcut: '/assets/images/logo/favicon-32x32.png'
   },
   manifest: '/manifest.json',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#2196F3' },
-    { media: '(prefers-color-scheme: dark)', color: '#1976D2' }
-  ],
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
   robots: {
     index: false,
     follow: false,
@@ -65,6 +57,17 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#2196F3' },
+    { media: '(prefers-color-scheme: dark)', color: '#1976D2' }
+  ],
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -81,6 +84,7 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
           >
+            <ServiceInitializer />
             {children}
             <Toaster />
           </ThemeProvider>

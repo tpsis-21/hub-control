@@ -36,8 +36,8 @@ export function PlanGroupList({ initialGroups, initialPlans }: PlanGroupListProp
     setGroups(prev => prev.filter(group => group.id !== deletedGroupId));
     // Atualizar planos para remover a referência ao grupo excluído
     setPlans(prev => prev.map(plan => 
-      plan.groupId === deletedGroupId 
-        ? { ...plan, groupId: undefined }
+      plan.group_id === deletedGroupId 
+        ? { ...plan, group_id: undefined }
         : plan
     ));
   };
@@ -65,7 +65,7 @@ export function PlanGroupList({ initialGroups, initialPlans }: PlanGroupListProp
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {groups.map((group) => {
-                    const groupPlans = plans.filter(p => p.groupId === group.id);
+                    const groupPlans = plans.filter(p => p.group_id === group.id);
                     return (
                         <Card key={group.id} className="flex flex-col">
                             <CardHeader>

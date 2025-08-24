@@ -18,7 +18,7 @@ import {
 import { CreditCard, LogOut, Settings, User as UserIcon, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { getClientUser, createClientSupabaseClient } from "@/lib/supabase-client";
+import { getBrowserUser, createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
@@ -33,12 +33,12 @@ export function UserNav() {
 
   useEffect(() => {
     const loadUserData = async () => {
-      const currentUser = await getClientUser();
+      const currentUser = await getBrowserUser();
       if (currentUser) {
         setUser(currentUser);
         
         // Buscar dados do perfil do usuário
-        const supabase = createClientSupabaseClient();
+        const supabase = createBrowserSupabaseClient();
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -54,7 +54,7 @@ export function UserNav() {
 
   const handleLogout = async () => {
     try {
-      const supabase = createClientSupabaseClient();
+      const supabase = createBrowserSupabaseClient();
       await supabase.auth.signOut();
       router.push('/login');
       toast({

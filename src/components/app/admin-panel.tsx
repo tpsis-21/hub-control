@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClientSupabaseClient } from '@/lib/supabase-client';
+import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 import { getSystemSettings, updateSystemSetting, areRegistrationsAllowed } from '@/lib/system-settings';
 import { updateExpiredClientsStatus } from '@/lib/client-status-updater';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export function AdminPanel() {
     recentUsers: 0
   });
 
-  const supabase = createClientSupabaseClient();
+  const supabase = createBrowserSupabaseClient();
 
   const loadUsers = useCallback(async () => {
     try {

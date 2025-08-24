@@ -5,8 +5,8 @@ export type Payment = {
   amount: number;
   status: 'Pago' | 'Pendente' | 'Atrasado' | 'Aguardando' | 'Confirmado' | 'Recusado' | 'Pendente de ativação manual' | 'Ativado';
   plan_id: string;
-  transaction_id?: string;
-  payment_method?: string;
+  transaction_id: string | null;
+  payment_method: string | null;
   payment_type?: 'pix' | 'credit_card' | 'bank_transfer' | 'cash' | 'other';
   server_id?: string;
   notified?: boolean;
@@ -15,7 +15,7 @@ export type Payment = {
   client?: {
     id: string;
     name: string;
-    whatsapp?: string;
+    whatsapp: string | null;
   };
   plan?: {
     id: string;
@@ -34,7 +34,7 @@ export type InAppNotification = {
   user_id: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: 'payment_activated' | 'payment_pending' | 'payment_confirmed' | 'system';
   read: boolean;
   created_at: string;
   updated_at: string;
@@ -68,15 +68,17 @@ export type Plan = {
   id: string;
   name: string;
   price: number;
-  duration_days: number;
-  description?: string;
-  features?: string[];
-  is_active: boolean;
+  price_before_discount?: number;
+  validity: number;
+  screens: number;
+  panel_plan_id?: string;
+  restrictions?: string;
+  send_welcome_message?: boolean;
+  is_public?: boolean;
+  group_id?: string;
   created_at: string;
   updated_at: string;
-  group_id?: string;
   group?: PlanGroup;
-  panelPlanId?: string;
 };
 
 export type PlanGroup = {
@@ -133,26 +135,16 @@ export type KnowledgeBaseArticle = {
   category: 'FAQ' | 'Tutoriais' | 'Solução de Problemas';
   isPublic: boolean;
   serverIds?: string[];
+  visibleToAllServers?: boolean;
   created_at: string;
   updated_at: string;
 };
 
 export type Settings = {
   id: string;
-  smtpHost?: string;
-  smtpPort?: number;
-  smtpUser?: string;
-  smtpPassword?: string;
-  smtpFromEmail?: string;
-  smtpFromName?: string;
-  whatsapp_api_url?: string;
-  whatsapp_api_key?: string;
-  whatsapp_instance_id?: string;
-  payment_gateway_enabled?: boolean;
-  payment_gateway_api_url?: string;
-  payment_gateway_api_key?: string;
-  auto_renewal_enabled?: boolean;
-  expiration_reminder_days?: number;
+  bot_api_key?: string | null;
+  company_name?: string | null;
+  primary_color?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -164,7 +156,7 @@ export type FinancialTransaction = {
   amount: number;
   category: string;
   transaction_date: string;
-  notes?: string;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 };

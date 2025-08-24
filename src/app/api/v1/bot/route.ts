@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   try {
     // 1. Busca a API Key das configurações do Firestore
     const settings = await getSettings();
-    const API_KEY = settings.botApiKey;
+    const API_KEY = settings.bot_api_key;
 
     if (!API_KEY) {
         return NextResponse.json({ error: 'API Key not configured in the system.' }, { status: 500 });

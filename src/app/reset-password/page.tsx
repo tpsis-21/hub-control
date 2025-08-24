@@ -3,7 +3,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClientSupabaseClient } from "@/lib/supabase-client";
+import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,19 +22,71 @@ function ResetPasswordForm() {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('🔍 [RESET-PASSWORD] Iniciando verificação de tokens');
+    console.log('🔍 [RESET-PASSWORD] URL completa:', window.location.href);
+    console.log('🔍 [RESET-PASSWORD] Hash:', window.location.hash);
+    console.log('🔍 [RESET-PASSWORD] Search:', window.location.search);
+    
     // Verifica se há um token de recuperação válido na URL
+    // Primeiro verifica na hash (#)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token');
-    const type = hashParams.get('type');
+    let accessToken = hashParams.get('access_token');
+    let refreshToken = hashParams.get('refresh_token');
+    let type = hashParams.get('type');
+    
+    console.log('🔍 [RESET-PASSWORD] Tokens da hash:', { 
+      accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : null, 
+      refreshToken: refreshToken ? `${refreshToken.substring(0, 20)}...` : null, 
+      type 
+    });
+
+    // Se não encontrou na hash, verifica nos query parameters (?)
+    if (!accessToken || !refreshToken || !type) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const searchAccessToken = searchParams.get('access_token');
+      const searchRefreshToken = searchParams.get('refresh_token');
+      const searchType = searchParams.get('type');
+      
+      console.log('🔍 [RESET-PASSWORD] Tokens dos query params:', { 
+        accessToken: searchAccessToken ? `${searchAccessToken.substring(0, 20)}...` : null, 
+        refreshToken: searchRefreshToken ? `${searchRefreshToken.substring(0, 20)}...` : null, 
+        type: searchType 
+      });
+      
+      accessToken = searchAccessToken || accessToken;
+      refreshToken = searchRefreshToken || refreshToken;
+      type = searchType || type;
+    }
+
+    console.log('🔍 [RESET-PASSWORD] Tokens finais:', { 
+      hasAccessToken: !!accessToken, 
+      hasRefreshToken: !!refreshToken, 
+      type,
+      isValidCombination: type === 'recovery' && accessToken && refreshToken
+    });
 
     if (type === 'recovery' && accessToken && refreshToken) {
+      console.log('✅ [RESET-PASSWORD] Tokens válidos encontrados, definindo sessão...');
       setIsValidToken(true);
       // Define a sessão com os tokens de recuperação
-      const supabase = createClientSupabaseClient();
+      const supabase = createBrowserSupabaseClient();
       supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
+      }).then(({ error }) => {
+        if (error) {
+          console.error('❌ [RESET-PASSWORD] Erro ao definir sessão:', error);
+          setIsValidToken(false);
+        } else {
+          console.log('✅ [RESET-PASSWORD] Sessão definida com sucesso');
+        }
+      });
+    } else {
+      console.log('❌ [RESET-PASSWORD] Token inválido ou ausente');
+      console.log('❌ [RESET-PASSWORD] Detalhes:', {
+        typeCheck: type === 'recovery',
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken
       });
     }
   }, []);
@@ -45,7 +97,7 @@ function ResetPasswordForm() {
     if (password !== confirmPassword) {
       toast({
         title: "Senhas não coincidem",
-        description: "Por favor, verifique se as senhas são iguais.",
+        description: "🔒 As senhas digitadas são diferentes. Por favor, verifique e digite novamente.",
         variant: "destructive",
       });
       return;
@@ -54,7 +106,7 @@ function ResetPasswordForm() {
     if (password.length < 6) {
       toast({
         title: "Senha muito curta",
-        description: "A senha deve ter pelo menos 6 caracteres.",
+        description: "🔐 Para sua segurança, a senha deve ter pelo menos 6 caracteres. Que tal adicionar mais alguns?",
         variant: "destructive",
       });
       return;
@@ -63,23 +115,31 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      const supabase = createClientSupabaseClient();
+      const supabase = createBrowserSupabaseClient();
       const { error } = await supabase.auth.updateUser({
         password: password
       });
 
       if (error) {
+        let friendlyMessage = "🔧 Não foi possível redefinir a senha. Tente novamente.";
+        
+        if (error.message?.includes('session')) {
+          friendlyMessage = "⏰ Sua sessão expirou. Solicite um novo link de redefinição de senha.";
+        } else if (error.message?.includes('weak')) {
+          friendlyMessage = "🔒 Sua senha precisa ser mais forte. Tente usar letras, números e símbolos.";
+        }
+        
         toast({
           title: "Erro ao redefinir senha",
-          description: error.message || "Não foi possível redefinir a senha.",
+          description: friendlyMessage,
           variant: "destructive",
         });
         return;
       }
 
       toast({
-        title: "Senha redefinida com sucesso",
-        description: "Você pode agora fazer login com sua nova senha.",
+        title: "🎉 Senha redefinida com sucesso!",
+        description: "✅ Perfeito! Agora você pode fazer login com sua nova senha.",
       });
 
       // Redireciona para a página de login após 2 segundos
@@ -87,9 +147,10 @@ function ResetPasswordForm() {
         router.push("/login");
       }, 2000);
     } catch (error: any) {
+      console.error('Erro ao redefinir senha:', error);
       toast({
         title: "Erro ao redefinir senha",
-        description: error.message || "Não foi possível redefinir a senha.",
+        description: "🔧 Ocorreu um problema inesperado. Tente novamente ou solicite um novo link de redefinição.",
         variant: "destructive",
       });
     } finally {

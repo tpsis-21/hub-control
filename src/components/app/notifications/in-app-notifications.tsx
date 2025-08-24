@@ -44,19 +44,27 @@ const notificationColors = {
   default: "text-gray-600",
 };
 
-export function InAppNotifications({ userId }: { userId: string }) {
+export function InAppNotifications({ userId, autoRefresh = false, refreshInterval = 300 }: { 
+  userId: string;
+  autoRefresh?: boolean;
+  refreshInterval?: number;
+}) {
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Carregamento inicial
   useEffect(() => {
     loadNotifications();
-    
-    // Polling para novas notificações a cada 30 segundos
-    const interval = setInterval(loadNotifications, 30000);
-    
-    return () => clearInterval(interval);
   }, [userId]);
+
+  // Auto-refresh apenas se explicitamente habilitado e com intervalo mínimo de 5 minutos
+  useEffect(() => {
+    if (!autoRefresh || refreshInterval < 300) return;
+    
+    const interval = setInterval(loadNotifications, refreshInterval * 1000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshInterval]);
 
   const loadNotifications = async () => {
     try {
@@ -74,7 +82,7 @@ export function InAppNotifications({ userId }: { userId: string }) {
     if (!notification.read) {
       await markNotificationAsRead(notification.id);
       setNotifications(prev => 
-        prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+        (prev || []).map(n => n.id === notification.id ? { ...n, read: true } : n)
       );
     }
 
@@ -84,7 +92,7 @@ export function InAppNotifications({ userId }: { userId: string }) {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
   const getNotificationIcon = (type: string) => {
     const IconComponent = notificationIcons[type as keyof typeof notificationIcons] || notificationIcons.default;
@@ -121,14 +129,14 @@ export function InAppNotifications({ userId }: { userId: string }) {
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
             <p className="text-sm text-muted-foreground mt-2">Carregando...</p>
           </div>
-        ) : notifications.length === 0 ? (
+        ) : (notifications?.length || 0) === 0 ? (
           <div className="p-4 text-center">
             <Bell className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Nenhuma notificação</p>
           </div>
         ) : (
           <ScrollArea className="h-80">
-            {notifications.map((notification) => (
+            {notifications?.map((notification) => (
               <DropdownMenuItem
                 key={notification.id}
                 className={`p-3 cursor-pointer hover:bg-muted/50 ${
@@ -167,7 +175,7 @@ export function InAppNotifications({ userId }: { userId: string }) {
           </ScrollArea>
         )}
         
-        {notifications.length > 0 && (
+        {(notifications?.length || 0) > 0 && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem 

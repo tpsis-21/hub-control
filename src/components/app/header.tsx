@@ -3,7 +3,7 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { UserNav } from "./user-nav";
 import { InAppNotifications } from "./notifications/in-app-notifications";
-import { getClientUser } from "@/lib/supabase-client";
+import { getBrowserUser } from "@/lib/supabase/clients/browser";
 import { useEffect, useState } from "react";
 
 type HeaderProps = {
@@ -14,7 +14,7 @@ export function Header({ title }: HeaderProps) {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    getClientUser().then(user => {
+    getBrowserUser().then(user => {
       if (user) {
         setUserId(user.id);
       }

@@ -52,15 +52,15 @@ export function EditPlanForm({ plan, planGroups, children }: EditPlanFormProps) 
       id: plan.id,
       name: plan.name,
       price: plan.price,
-      priceBeforeDiscount: plan.priceBeforeDiscount,
+      priceBeforeDiscount: plan.price_before_discount,
       validity: plan.validity,
-      countingType: plan.countingType || 'month',
+      countingType: 'month', // Valor padrão já que o campo não existe
       screens: plan.screens,
-      panelPlanId: plan.panelPlanId || "",
+      panelPlanId: plan.panel_plan_id || "",
       restrictions: plan.restrictions || "",
-      sendWelcomeMessage: plan.sendWelcomeMessage,
-      isPublic: plan.isPublic,
-      groupId: plan.groupId || 'none',
+      sendWelcomeMessage: plan.send_welcome_message,
+      isPublic: plan.is_public,
+      groupId: plan.group_id || 'none',
     },
   });
 
@@ -76,7 +76,7 @@ export function EditPlanForm({ plan, planGroups, children }: EditPlanFormProps) 
           console.log('✅ EditPlanForm - Sucesso na edição');
           toast({
             title: "Sucesso!",
-            description: `Plano ${result.plan?.name || ''} atualizado.`,
+            description: `Plano ${result.data?.name || ''} atualizado.`,
           });
           setOpen(false);
         } else {

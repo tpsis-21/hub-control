@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { createClientSupabaseClient } from '@/lib/supabase-client';
+import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 
 export function RegisterForm() {
   const [email, setEmail] = useState("");
@@ -47,7 +47,7 @@ export function RegisterForm() {
     }
 
     try {
-      const supabase = createClientSupabaseClient();
+      const supabase = createBrowserSupabaseClient();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,

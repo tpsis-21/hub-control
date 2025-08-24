@@ -5,7 +5,7 @@ import { ConfigService } from "@/services/config.service";
 import { LoggerService, LogLevel } from "@/services/logger.service";
 import { CacheService } from "@/services/cache.service";
 import { ErrorService } from "@/services/error.service";
-import { createClientSupabaseClient } from '@/lib/supabase-client';
+import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 
 /**
  * Configurações de inicialização da aplicação
@@ -426,7 +426,7 @@ export class AppInitializer {
    */
   private static async checkSupabaseConnection(): Promise<void> {
     try {
-      const supabase = createClientSupabaseClient();
+      const supabase = createBrowserSupabaseClient();
       
       // Verifica se o cliente Supabase foi criado corretamente
       if (!supabase) {

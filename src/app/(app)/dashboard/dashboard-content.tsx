@@ -21,7 +21,9 @@ import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useTestConversionRate } from "@/hooks/useTestConversionRate";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { Badge } from "@/components/ui/badge";
-import { scheduleStatusUpdates } from "@/lib/client-status-updater";
+
+import { RecentActivities } from "@/components/dashboard/recent-activities";
+import { ContextualAssistant } from "@/components/ui/contextual-assistant";
 
 type DashboardContentProps = {
     clients: Client[];
@@ -32,8 +34,7 @@ type DashboardContentProps = {
 export function DashboardContent({ clients, plans, servers }: DashboardContentProps) {
   const { handleError } = useErrorHandler();
   
-  // Ativar atualização automática de status dos clientes
-  scheduleStatusUpdates();
+  // Atualização automática de status agora é gerenciada centralmente pelo ServiceInitializer
   
   // Usar hooks especializados para cálculos
   const metrics = useDashboardMetrics(clients, [], plans);
@@ -87,7 +88,7 @@ export function DashboardContent({ clients, plans, servers }: DashboardContentPr
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-        <div className="flex items-center justify-end gap-3">
+        <div id="dashboard-header" className="flex items-center justify-end gap-3">
             <AddTestForm plans={plans} servers={servers}>
               <Button className="btn-gradient" style={{width: '160px', height: '40px'}}>
                 <FlaskConical className="h-4 w-4 mr-2" />
@@ -103,7 +104,7 @@ export function DashboardContent({ clients, plans, servers }: DashboardContentPr
         </div>
       
       {/* Seção de Faturamento */}
-      <div className="space-y-4">
+      <div id="stats-section" className="space-y-4">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             <h2 className="heading-3 text-foreground">Faturamento</h2>
@@ -251,7 +252,7 @@ export function DashboardContent({ clients, plans, servers }: DashboardContentPr
       </div>
 
       {/* Seção de Clientes Vencendo Hoje */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+      <div id="expiring-clients-section" className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         <Card className="clean-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground heading-3">
@@ -274,7 +275,7 @@ export function DashboardContent({ clients, plans, servers }: DashboardContentPr
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">{client.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      Vence: <FormattedDate dateString={client.expirationDate} />
+                      Vence: <FormattedDate dateString={client.expirationDate} format="dd/MM/yyyy" />
                     </p>
                   </div>
                   <div className="ml-auto font-medium">
@@ -295,7 +296,7 @@ export function DashboardContent({ clients, plans, servers }: DashboardContentPr
           </CardContent>
         </Card>
         
-        <Card className="clean-card">
+        <Card id="new-clients-section" className="clean-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground heading-3">
               <Users className="h-5 w-5" />
@@ -317,7 +318,7 @@ export function DashboardContent({ clients, plans, servers }: DashboardContentPr
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">{client.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      Cadastrado: <FormattedDate dateString={client.createdAt} />
+                      Cadastrado: <FormattedDate dateString={client.created_at || new Date().toISOString()} format="dd/MM/yyyy" />
                     </p>
                   </div>
                   <div className="ml-auto font-medium">
@@ -338,6 +339,48 @@ export function DashboardContent({ clients, plans, servers }: DashboardContentPr
           </CardContent>
         </Card>
       </div>
+      
+      {/* Seção de Últimas Atividades */}
+      <div id="recent-activities-section" className="grid gap-4">
+        <RecentActivities limit={8} />
+      </div>
+      
+      {/* Assistente Contextual */}
+      <ContextualAssistant
+        pageId="dashboard"
+        steps={[
+          {
+            id: "welcome",
+            title: "Bem-vindo ao Dashboard!",
+            content: "Esta é sua tela principal onde você pode visualizar um resumo geral do sistema.",
+            target: "dashboard-header"
+          },
+          {
+            id: "stats",
+            title: "Estatísticas Gerais",
+            content: "Aqui você vê o total de clientes, clientes ativos, receita mensal e taxa de conversão.",
+            target: "stats-section"
+          },
+          {
+            id: "new-clients",
+            title: "Novos Clientes",
+            content: "Esta seção mostra os clientes adicionados recentemente ao sistema.",
+            target: "new-clients-section"
+          },
+          {
+            id: "expiring-clients",
+            title: "Clientes Vencendo",
+            content: "Aqui você pode ver quais clientes têm pagamentos vencendo hoje.",
+            target: "expiring-clients-section"
+          },
+          {
+            id: "recent-activities",
+            title: "Últimas Atividades",
+            content: "Esta seção exibe as atividades mais recentes do sistema, como logins, criação de clientes, etc.",
+            target: "recent-activities-section"
+          }
+        ]}
+      />
     </div>
   );
 }

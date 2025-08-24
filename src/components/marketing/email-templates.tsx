@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { 
   Dialog,
   DialogContent,
@@ -391,7 +392,7 @@ export function EmailTemplates() {
                   <div className="space-y-2">
                     <div><strong>Descrição:</strong> {formData.description}</div>
                     <div className="border rounded p-4 bg-white">
-                      <div dangerouslySetInnerHTML={{ __html: formData.htmlContent }} />
+                      <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(formData.htmlContent, 'template') }} />
                     </div>
                   </div>
                 </div>
@@ -535,7 +536,7 @@ export function EmailTemplates() {
               <div className="space-y-2">
                 <Label>Conteúdo</Label>
                 <div className="border rounded p-4 bg-white max-h-96 overflow-y-auto">
-                  <div dangerouslySetInnerHTML={{ __html: previewTemplate.htmlContent }} />
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewTemplate.htmlContent, 'template') }} />
                 </div>
               </div>
               

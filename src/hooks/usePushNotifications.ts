@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase-client';
+import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 import { useToast } from '@/hooks/use-toast';
 
 interface PushSubscriptionData {
@@ -30,7 +30,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const { toast } = useToast();
-  const supabase = createClient();
+  const supabase = createBrowserSupabaseClient();
 
   // Verificar suporte a notificações push
   useEffect(() => {

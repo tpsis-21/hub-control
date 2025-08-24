@@ -58,6 +58,8 @@ export default function AdminMensagensPage() {
   const [connectivity, setConnectivity] = useState<MessageConnectivity | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(300); // 5 minutos
 
   const fetchData = async () => {
     try {
@@ -92,12 +94,18 @@ export default function AdminMensagensPage() {
     }
   };
 
+  // Carregamento inicial
   useEffect(() => {
     fetchData();
-    // Atualizar dados a cada 30 segundos
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
   }, []);
+
+  // Auto-refresh apenas se habilitado
+  useEffect(() => {
+    if (!autoRefresh || refreshInterval < 60) return;
+    
+    const interval = setInterval(fetchData, refreshInterval * 1000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshInterval]);
 
   const handleQueueAction = async (action: string) => {
     try {
@@ -182,10 +190,33 @@ export default function AdminMensagensPage() {
           <h1 className="text-3xl font-bold">Administração de Mensagens</h1>
           <p className="text-muted-foreground">Gerencie o sistema de mensagens e lembretes automáticos</p>
         </div>
-        <Button onClick={fetchData} variant="outline" disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium">Auto-refresh:</label>
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="rounded"
+            />
+            {autoRefresh && (
+              <select
+                value={refreshInterval}
+                onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                className="text-sm border rounded px-2 py-1"
+              >
+                <option value={60}>1 min</option>
+                <option value={300}>5 min</option>
+                <option value={600}>10 min</option>
+                <option value={1800}>30 min</option>
+              </select>
+            )}
+          </div>
+          <Button onClick={fetchData} variant="outline" disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="queue" className="space-y-6">

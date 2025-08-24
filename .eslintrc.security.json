@@ -1,0 +1,187 @@
+{
+  "extends": [
+    "@typescript-eslint/recommended",
+    "plugin:@microsoft/sdl/required",
+    "plugin:@microsoft/sdl/typescript",
+    "plugin:security/recommended"
+  ],
+  "plugins": [
+    "@typescript-eslint",
+    "@microsoft/sdl",
+    "security",
+    "no-secrets"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2022": true
+  },
+  "rules": {
+    // 🔒 Regras de Segurança Críticas
+    "@microsoft/sdl/no-html-method": "error",
+    "@microsoft/sdl/no-inner-html": "error",
+    "@microsoft/sdl/no-msapp-exec-unsafe": "error",
+    "@microsoft/sdl/no-winjs-html-unsafe": "error",
+    "@microsoft/sdl/no-angular-bypass-sanitizer": "error",
+    "@microsoft/sdl/no-angular-sanitization-trusted-urls": "error",
+    "@microsoft/sdl/no-cookies": "warn",
+    "@microsoft/sdl/no-document-domain": "error",
+    "@microsoft/sdl/no-document-write": "error",
+    "@microsoft/sdl/no-eval": "error",
+    "@microsoft/sdl/no-function-constructor-with-string-args": "error",
+    "@microsoft/sdl/no-postmessage-star-origin": "error",
+    "@microsoft/sdl/no-unsafe-alloc": "error",
+    "@microsoft/sdl/no-weak-crypto-algorithm": "error",
+    "@microsoft/sdl/no-wildcards-in-csp": "error",
+    
+    // 🛡️ Regras de Segurança Gerais
+    "security/detect-buffer-noassert": "error",
+    "security/detect-child-process": "error",
+    "security/detect-disable-mustache-escape": "error",
+    "security/detect-eval-with-expression": "error",
+    "security/detect-new-buffer": "error",
+    "security/detect-no-csrf-before-method-override": "error",
+    "security/detect-non-literal-fs-filename": "warn",
+    "security/detect-non-literal-regexp": "error",
+    "security/detect-non-literal-require": "warn",
+    "security/detect-object-injection": "error",
+    "security/detect-possible-timing-attacks": "error",
+    "security/detect-pseudoRandomBytes": "error",
+    "security/detect-unsafe-regex": "error",
+    
+    // 🔐 Detecção de Secrets
+    "no-secrets/no-secrets": ["error", {
+      "tolerance": 4.2,
+      "ignoreContent": [
+        "test",
+        "example",
+        "demo",
+        "placeholder",
+        "lorem",
+        "ipsum",
+        "password",
+        "secret",
+        "token",
+        "key"
+      ],
+      "ignoreModules": true,
+      "ignoreIdentifiers": [
+        "BASE64_CHARS",
+        "HEX_CHARS",
+        "ALPHABET",
+        "CHARSET"
+      ]
+    }],
+    
+    // 🚫 Práticas Inseguras
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-script-url": "error",
+    "no-alert": "error",
+    "no-console": ["warn", {
+      "allow": ["warn", "error"]
+    }],
+    
+    // 🔒 TypeScript Security
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unsafe-assignment": "error",
+    "@typescript-eslint/no-unsafe-call": "error",
+    "@typescript-eslint/no-unsafe-member-access": "error",
+    "@typescript-eslint/no-unsafe-return": "error",
+    "@typescript-eslint/no-unsafe-argument": "error",
+    "@typescript-eslint/ban-ts-comment": "error",
+    "@typescript-eslint/prefer-as-const": "error",
+    
+    // 🌐 Segurança Web
+    "no-restricted-globals": ["error", {
+      "name": "event",
+      "message": "Use local parameter instead."
+    }],
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "document",
+        "property": "write",
+        "message": "document.write is unsafe and can lead to XSS."
+      },
+      {
+        "object": "document",
+        "property": "writeln",
+        "message": "document.writeln is unsafe and can lead to XSS."
+      },
+      {
+        "property": "innerHTML",
+        "message": "innerHTML can lead to XSS. Use textContent or a sanitization library."
+      },
+      {
+        "property": "outerHTML",
+        "message": "outerHTML can lead to XSS. Use textContent or a sanitization library."
+      }
+    ],
+    
+    // 📝 Validação de Dados
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["error", {
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_"
+    }],
+    
+    // 🔄 Async/Await Security
+    "require-await": "error",
+    "no-async-promise-executor": "error",
+    "no-await-in-loop": "warn",
+    
+    // 🎯 Regex Security
+    "no-control-regex": "error",
+    "no-invalid-regexp": "error",
+    "no-regex-spaces": "error",
+    
+    // 🔗 Import Security
+    "no-restricted-imports": ["error", {
+      "patterns": [
+        {
+          "group": ["**/node_modules/**"],
+          "message": "Direct node_modules imports are not allowed."
+        }
+      ]
+    }]
+  },
+  "overrides": [
+    {
+      "files": ["*.test.ts", "*.test.tsx", "*.spec.ts", "*.spec.tsx"],
+      "rules": {
+        "@microsoft/sdl/no-cookies": "off",
+        "security/detect-non-literal-fs-filename": "off",
+        "security/detect-non-literal-require": "off",
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["*.config.js", "*.config.ts", "next.config.js"],
+      "rules": {
+        "security/detect-non-literal-require": "off",
+        "@typescript-eslint/no-var-requires": "off"
+      }
+    },
+    {
+      "files": ["src/lib/crypto/**", "src/lib/security/**"],
+      "rules": {
+        "@microsoft/sdl/no-weak-crypto-algorithm": "off"
+      }
+    }
+  ],
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
+}

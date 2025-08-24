@@ -12,9 +12,26 @@ export function createClientSupabaseClient() {
 
 // Função para obter o usuário atual no lado do cliente
 export async function getClientUser() {
-  const supabase = createClientSupabaseClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.user;
+  try {
+    const supabase = createClientSupabaseClient();
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Erro ao obter sessão do usuário:', error);
+      return null;
+    }
+    
+    if (!session?.user) {
+      console.log('Nenhuma sessão ativa encontrada');
+      return null;
+    }
+    
+    console.log('Usuário obtido com sucesso:', session.user.email);
+    return session.user;
+  } catch (error) {
+    console.error('Erro na função getClientUser:', error);
+    return null;
+  }
 }
 
 // Função para verificar se o usuário está autenticado no lado do cliente
@@ -88,7 +105,7 @@ export async function isClientUserApproved() {
     try {
       await supabase
         .from('profiles')
-        .upsert({ id: user.id, role: 'admin' }, { onConflict: 'id' });
+        .upsert({ id: user.id, user_id: user.id, role: 'admin' }, { onConflict: 'user_id' });
       console.log('✅ Perfil de admin criado/atualizado');
     } catch (error) {
       console.log('⚠️ Não foi possível criar perfil (modo somente leitura), mas admin aprovado');

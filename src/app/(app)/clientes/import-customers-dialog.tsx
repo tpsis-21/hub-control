@@ -61,7 +61,7 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
         "senha123",
         "joao@email.com",
         "5511999999999",
-        allPlans[0]?.panelPlanId || "10",
+        allPlans[0]?.panel_plan_id || "10",
         allServers[0]?.panelServerId || "none",
         "Cliente VIP - Renovação automática"
       ],
@@ -71,7 +71,7 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
         "senha456",
         "maria@email.com",
         "5511888888888",
-        allPlans[1]?.panelPlanId || "11",
+        allPlans[1]?.panel_plan_id || "11",
         "none",
         "Cliente novo"
       ]
@@ -104,7 +104,7 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
         "senha123",
         "joao@email.com",
         "5511999999999",
-        allPlans[0]?.panelPlanId || "10",
+        allPlans[0]?.panel_plan_id || "10",
         allServers[0]?.panelServerId || "none",
         "Cliente VIP - Renovação automática"
       ],
@@ -114,7 +114,7 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
         "senha456",
         "maria@email.com",
         "5511888888888",
-        allPlans[1]?.panelPlanId || "11",
+        allPlans[1]?.panel_plan_id || "11",
         "none",
         "Cliente novo"
       ]
@@ -374,7 +374,7 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
                                             <div key={plan.id} className="flex justify-between py-1">
                                                 <span className="truncate">{plan.name}</span>
                                                 <code className="bg-background px-1 rounded font-bold text-green-600">
-                                                    {plan.panelPlanId || 'ID não definido'}
+                                                    {plan.panel_plan_id || 'ID não definido'}
                                                 </code>
                                             </div>
                                         ))
@@ -408,7 +408,7 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
                         <div className="mt-3">
                             <p className="font-medium text-xs mb-1">💡 Exemplo de linha CSV/Excel completa:</p>
                             <code className="text-xs bg-muted/50 p-2 rounded block">
-                                João Silva,joao123,senha123,joao@email.com,5511999999999,{allPlans[0]?.panelPlanId || '25'},{allServers[0]?.panelServerId || 'none'},Cliente VIP - Renovação automática
+                                João Silva,joao123,senha123,joao@email.com,5511999999999,{allPlans[0]?.panel_plan_id || '25'},{allServers[0]?.panelServerId || 'none'},Cliente VIP - Renovação automática
                             </code>
                             <p className="text-xs text-muted-foreground mt-1">
                                 ⚠️ <strong>Importante:</strong> Use APENAS os IDs numéricos de 2 dígitos (planos e servidores), não os UUIDs!

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createClientSupabaseClient } from "@/lib/supabase-client";
+import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 
 export function UserSettingsForm() {
   const [email, setEmail] = useState("");
@@ -13,7 +13,7 @@ export function UserSettingsForm() {
     e.preventDefault();
     setLoading(true);
     setMessage("");
-    const supabase = createClientSupabaseClient();
+    const supabase = createBrowserSupabaseClient();
     const { error } = await supabase.auth.updateUser({ email: newEmail });
     if (error) {
       setMessage("Erro ao atualizar e-mail: " + error.message);
@@ -27,7 +27,7 @@ export function UserSettingsForm() {
     e.preventDefault();
     setLoading(true);
     setMessage("");
-    const supabase = createClientSupabaseClient();
+    const supabase = createBrowserSupabaseClient();
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
       setMessage("Erro ao atualizar senha: " + error.message);

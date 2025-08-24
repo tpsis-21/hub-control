@@ -45,14 +45,14 @@ const paymentStatusConfig = {
     'Atrasado': { color: 'text-red-600' },
 };
 
-function RenewButton({ customerId, planValidity }: { customerId: string, planValidity: number }) {
+function RenewButton({ customerId, planId, serverId }: { customerId: string, planId: string, serverId?: string }) {
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
     const router = useRouter();
 
     const handleRenew = () => {
         startTransition(async () => {
-            const result = await renewCustomerAction(customerId, planValidity);
+            const result = await renewCustomerAction(customerId, planId, serverId);
             if (result.success) {
                 toast({
                     title: "Sucesso!",
@@ -316,7 +316,7 @@ export default function CustomerDetailPage() {
                         <div className="space-y-4">
                             <h4 className="text-sm font-medium text-muted-foreground">Dados de Acesso e IDs</h4>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                <CopyableField icon={User} label="Usuário IPTV" value={customer.iptvUsername} />
+                                <CopyableField icon={User} label="Usuário IPTV" value={customer.iptvUsername || ''} />
                                 {customer.iptvPassword && (
                                     <CopyableField icon={ShieldCheck} label="Senha IPTV" value={customer.iptvPassword} />
                                 )}
@@ -378,7 +378,7 @@ export default function CustomerDetailPage() {
                     </CardContent>
                     {plan && (
                         <CardFooter>
-                            <RenewButton customerId={customer.id} planValidity={plan.validity} />
+                            <RenewButton customerId={customer.id} planId={plan.id} serverId={customer.serverId} />
                         </CardFooter>
                     )}
                 </Card>

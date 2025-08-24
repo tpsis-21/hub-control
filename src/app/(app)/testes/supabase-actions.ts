@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { addMinutes, format } from "date-fns";
 import type { Client, Plan, Server, ServerTestConfig } from "@/lib/types";
 import { addTestSchema } from "@/lib/schemas";
-import { createApiSupabaseClient } from "@/lib/supabase-api";
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 // Usando fetch nativo do Node.js/Next.js
 
 // Helper para gerar um link único para a área do cliente.
@@ -28,7 +28,29 @@ export async function getTestes(): Promise<Client[]> {
     return [];
   }
   
-  return data as Client[];
+  // Mapear dados do banco (snake_case) para o tipo Client (camelCase)
+    const mappedClients: Client[] = data.map(client => ({
+      id: client.id,
+      name: client.name,
+      iptvUsername: client.iptv_username,
+      iptvUserId: client.iptv_user_id || undefined,
+      iptvPassword: client.iptv_password || undefined,
+      managerId: client.manager_id || undefined,
+      email: client.email || undefined,
+      whatsapp: client.whatsapp || undefined,
+      startDate: client.start_date,
+      expirationDate: client.expiration_date,
+      status: client.status,
+      planId: client.plan_id,
+      serverId: client.server_id || undefined,
+      notes: client.notes || undefined,
+      paymentHistory: client.payment_history as any[] | undefined,
+      uniqueLink: client.unique_link || undefined,
+      created_at: client.created_at,
+       updated_at: client.updated_at
+    }));
+  
+  return mappedClients as Client[];
 }
 
 /**
@@ -50,7 +72,29 @@ export async function getTesteById(id: string): Promise<Client | undefined> {
     return undefined;
   }
   
-  return data as Client;
+  // Mapear dados do banco (snake_case) para o tipo Client (camelCase)
+  const mappedClient: Client = {
+    id: data.id,
+    name: data.name,
+    iptvUsername: data.iptv_username,
+    iptvUserId: data.iptv_user_id || undefined,
+    iptvPassword: data.iptv_password || undefined,
+    managerId: data.manager_id || undefined,
+    email: data.email || undefined,
+    whatsapp: data.whatsapp || undefined,
+    startDate: data.start_date,
+    expirationDate: data.expiration_date,
+    status: data.status,
+    planId: data.plan_id,
+    serverId: data.server_id || undefined,
+    notes: data.notes || undefined,
+    paymentHistory: data.payment_history as any[] | undefined,
+    uniqueLink: data.unique_link || undefined,
+    created_at: data.created_at,
+     updated_at: data.updated_at
+  };
+  
+  return mappedClient;
 }
 
 /**
@@ -145,7 +189,7 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
           const bodyString = (testConfig.apiBody || '{}')
             .replace('{{USUARIO_IPTV}}', data.iptvUsername)
             .replace('{{SENHA_IPTV}}', data.iptvPassword || '')
-            .replace('{{ID_PLANO_PAINEL}}', plan.panelPlanId || '');
+            .replace('{{ID_PLANO_PAINEL}}', plan.panel_plan_id || '');
 
           const response = await fetch(url, {
             method: 'POST',
@@ -184,13 +228,22 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
     'yyyy-MM-dd'
   );
 
-  const newTestCustomerData: Omit<Client, 'id'> = {
-    ...data,
-    ...apiResponseData, // Sobrescreve os dados manuais com os da API
+  // Mapear dados do tipo Client (camelCase) para o banco (snake_case)
+  const newTestCustomerData = {
+    name: data.name,
+    iptv_username: data.iptvUsername || '',
+    iptv_user_id: data.iptvUserId || null,
+    iptv_password: data.iptvPassword || null,
+    whatsapp: data.whatsapp || null,
+    start_date: startDate,
+    expiration_date: expirationDate,
     status: 'Em teste' as const,
-    startDate,
-    expirationDate,
-    uniqueLink: generateUniqueLink(),
+    plan_id: data.planId,
+    server_id: data.serverId || null,
+    notes: data.notes || null,
+    payment_history: null,
+    unique_link: generateUniqueLink(),
+    ...apiResponseData, // Sobrescreve os dados manuais com os da API
   };
 
   // Inserir o novo teste no Supabase
@@ -210,7 +263,29 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
   revalidatePath('/testes');
   revalidatePath('/dashboard');
   
-  return { success: true, customer: newTest as Client };
+  // Mapear dados do banco (snake_case) para o tipo Client (camelCase)
+  const mappedClient: Client = {
+    id: newTest.id,
+    name: newTest.name,
+    iptvUsername: newTest.iptv_username,
+    iptvUserId: newTest.iptv_user_id || undefined,
+    iptvPassword: newTest.iptv_password || undefined,
+    managerId: newTest.manager_id || undefined,
+    email: newTest.email || undefined,
+    whatsapp: newTest.whatsapp || undefined,
+    startDate: newTest.start_date,
+    expirationDate: newTest.expiration_date,
+    status: newTest.status,
+    planId: newTest.plan_id,
+    serverId: newTest.server_id || undefined,
+    notes: newTest.notes || undefined,
+    paymentHistory: newTest.payment_history as any[] | undefined,
+    uniqueLink: newTest.unique_link || undefined,
+    created_at: newTest.created_at,
+    updated_at: newTest.updated_at
+  };
+  
+  return { success: true, customer: mappedClient };
 }
 
 /**

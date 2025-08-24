@@ -1,0 +1,114 @@
+{
+  "monitoringDuration": "572.79 segundos",
+  "statistics": {
+    "totalRequests": 16,
+    "dashboardRequests": 0,
+    "errors": 0,
+    "warnings": 0,
+    "startTime": "2025-08-18T18:32:18.390Z"
+  },
+  "errorRate": "0.00%",
+  "dashboardRequestRate": "0.00%",
+  "recentLogs": [
+    {
+      "timestamp": "2025-08-18T18:32:48.397Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (30s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:33:18.396Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (60s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:33:48.407Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (90s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:34:18.411Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (120s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:34:48.425Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (150s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:35:18.431Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (180s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:35:48.446Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (210s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:36:18.452Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (240s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:36:48.457Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (270s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:37:18.464Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (300s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:37:48.466Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (330s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:38:18.466Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (360s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:38:48.476Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (390s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:39:18.482Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (420s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:39:48.485Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (450s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:40:18.490Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (480s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:40:48.495Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (510s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:41:18.497Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (540s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:41:48.498Z",
+      "level": "STATUS",
+      "message": "📊 Status: 16 logs, 0 erros, 0 dashboard (570s)"
+    },
+    {
+      "timestamp": "2025-08-18T18:41:51.183Z",
+      "level": "INFO",
+      "message": "🛑 Monitoramento interrompido pelo usuário"
+    }
+  ]
+}

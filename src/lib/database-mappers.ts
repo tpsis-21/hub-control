@@ -28,8 +28,8 @@ export function mapDatabaseClientToClient(dbClient: DatabaseClient): Client {
     planId: dbClient.plan_id,
     serverId: dbClient.server_id || undefined,
     notes: dbClient.notes || undefined,
-    paymentHistory: dbClient.payment_history || [],
-    uniqueLink: dbClient.unique_link,
+    paymentHistory: Array.isArray(dbClient.payment_history) ? dbClient.payment_history : [],
+    uniqueLink: dbClient.unique_link || undefined,
   };
 }
 
@@ -39,7 +39,7 @@ export function mapDatabaseClientToClient(dbClient: DatabaseClient): Client {
 export function mapClientToDatabaseClient(client: Omit<Client, 'id'>): Omit<DatabaseClient, 'id'> {
   return {
     name: client.name,
-    iptv_username: client.iptvUsername,
+    iptv_username: client.iptvUsername || '',
     iptv_user_id: client.iptvUserId || null,
     iptv_password: client.iptvPassword || null,
     manager_id: client.managerId || null,
@@ -52,7 +52,9 @@ export function mapClientToDatabaseClient(client: Omit<Client, 'id'>): Omit<Data
     server_id: client.serverId || null,
     notes: client.notes || null,
     payment_history: client.paymentHistory || [],
-    unique_link: client.uniqueLink,
+    unique_link: client.uniqueLink || null,
+    created_at: client.created_at || new Date().toISOString(),
+    updated_at: client.updated_at || new Date().toISOString(),
   };
 }
 

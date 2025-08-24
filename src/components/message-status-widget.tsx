@@ -27,46 +27,39 @@ interface MessageStats {
   };
 }
 
-export function MessageStatusWidget() {
+export function MessageStatusWidget({ autoRefresh = false, refreshInterval = 300 }: {
+  autoRefresh?: boolean;
+  refreshInterval?: number;
+}) {
   const [stats, setStats] = useState<MessageStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
     try {
-      const [queueResponse, remindersResponse, connectivityResponse] = await Promise.all([
-        fetch('/api/message-queue'),
-        fetch('/api/reminders'),
-        fetch('/api/messages?action=test')
-      ]);
-
-      const queueData = await queueResponse.json();
-      const remindersData = await remindersResponse.json();
-      const connectivityData = await connectivityResponse.json();
-
-      setStats({
-        queue: queueData.stats || { total: 0, pending: 0, processing: 0, completed: 0, failed: 0 },
-        reminders: {
-          isRunning: remindersData.isRunning || false,
-          expiringClients: remindersData.expiringClients || 0,
-          expiredClients: remindersData.expiredClients || 0
-        },
-        connectivity: {
-          email: connectivityData.email?.success || false,
-          whatsapp: connectivityData.whatsapp?.success || false
-        }
-      });
+      const response = await fetch('/api/admin/messages/stats');
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
     } catch (error) {
-      console.error('Erro ao buscar estatísticas de mensagens:', error);
+      console.error('Erro ao buscar estatísticas:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Carregamento inicial
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 30000); // Atualizar a cada 30 segundos
-    return () => clearInterval(interval);
   }, []);
+
+  // Auto-refresh apenas se habilitado e com intervalo mínimo de 5 minutos
+  useEffect(() => {
+    if (!autoRefresh || refreshInterval < 300) return;
+    
+    const interval = setInterval(fetchStats, refreshInterval * 1000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshInterval]);
 
   if (loading) {
     return (

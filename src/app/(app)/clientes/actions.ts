@@ -6,14 +6,170 @@ import { revalidatePath } from "next/cache";
 import { addDays } from "date-fns";
 import type { Client, Plan, Server } from "@/lib/types";
 import { addCustomerSchema, editCustomerSchema, importCustomerSchema } from "@/lib/schemas";
-import { createApiSupabaseClient } from "@/lib/supabase-api";
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 import { mapDatabaseClientToClient, mapClientToDatabaseClient, mapClientUpdateToDatabaseUpdate } from "@/lib/database-mappers";
 import { generateUniqueManagerId } from "@/lib/id-generators";
 import { getServers } from "@/app/(app)/servidores/actions";
 import { MessageQueueService } from "@/services/message-queue.service";
+import { PeriodCalculationService } from "@/services/period-calculation.service";
 
 // Helper para gerar um link único para a área do cliente.
 const generateUniqueLink = () => `/cliente/link_${new Date().getTime()}${Math.random().toString(36).substring(2, 8)}`;
+
+// Helper para sincronizar renovação com painel IPTV
+async function syncRenewalWithPanel({
+  server,
+  client,
+  plan,
+  newExpirationDate
+}: {
+  server: any;
+  client: any;
+  plan: any;
+  newExpirationDate: Date;
+}) {
+  if (!server.api_url) return;
+  
+  try {
+    // Obter configuração de identificação do painel
+    const panelConfig = PeriodCalculationService.getPanelIdentificationConfig(server);
+    
+    // Calcular período para o painel
+    const renewalPeriod = PeriodCalculationService.calculateRenewalPeriod(
+      plan.validity,
+      panelConfig
+    );
+    
+    const apiBody = JSON.parse(server.api_body || '{}');
+    
+    // Preparar dados baseado no tipo de painel
+    let requestBody: any = {
+      ...apiBody,
+      plan_id: plan.panel_plan_id,
+      expiration_date: newExpirationDate.toISOString()
+    };
+    
+    // Lógica específica para cada tipo de painel
+    switch (panelConfig.panelType) {
+      case 'natv':
+        // NATV pode usar tanto ID quanto username
+        if (client.iptv_user_id) {
+          requestBody.user_id = client.iptv_user_id;
+        }
+        if (client.iptv_username) {
+          requestBody.username = client.iptv_username;
+        }
+        // Adicionar período em formato que o NATV entende
+        if (renewalPeriod.unit === 'months') {
+          requestBody.duration_months = renewalPeriod.value;
+        } else {
+          requestBody.duration_days = renewalPeriod.value;
+        }
+        break;
+        
+      case 'thebest':
+        // The Best usa apenas ID
+        if (!client.iptv_user_id) {
+          throw new Error('ID IPTV é obrigatório para renovação no painel The Best');
+        }
+        requestBody.user_id = client.iptv_user_id;
+        // The Best sempre usa meses
+        requestBody.duration_months = renewalPeriod.value;
+        break;
+        
+      default:
+        // Painel genérico - incluir ambos se disponíveis
+        if (client.iptv_user_id) {
+          requestBody.user_id = client.iptv_user_id;
+        }
+        if (client.iptv_username) {
+          requestBody.username = client.iptv_username;
+        }
+        requestBody.duration = renewalPeriod.value;
+        requestBody.duration_unit = renewalPeriod.unit;
+        break;
+    }
+    
+    // Processar tags no corpo da requisição
+    const processedBody = processApiBodyTags(requestBody, {
+      client,
+      plan,
+      server,
+      renewalPeriod,
+      newExpirationDate
+    });
+    
+    const headers = JSON.parse(server.api_headers || '{}');
+    
+    const response = await fetch(server.api_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers
+      },
+      body: JSON.stringify(processedBody)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Erro na API do painel: ${response.status} ${response.statusText}`);
+    }
+    
+    const responseData = await response.json();
+    console.log('Sincronização com painel IPTV realizada com sucesso:', {
+      panelType: panelConfig.panelType,
+      serverId: server.id,
+      clientId: client.id,
+      renewalPeriod,
+      response: responseData
+    });
+    
+    return responseData;
+  } catch (error) {
+    console.error('Erro ao sincronizar com painel IPTV:', error);
+    throw error;
+  }
+}
+
+// Helper para processar tags no corpo da API
+function processApiBodyTags(body: any, context: {
+  client: any;
+  plan: any;
+  server: any;
+  renewalPeriod: { value: number; unit: 'days' | 'months' };
+  newExpirationDate: Date;
+}): any {
+  const { client, plan, server, renewalPeriod, newExpirationDate } = context;
+  
+  // Converter objeto para string para processar tags
+  let bodyString = JSON.stringify(body);
+  
+  // Substituir tags comuns
+  const tagReplacements: Record<string, string> = {
+    '{{USUARIO_IPTV}}': client.iptv_username || '',
+    '{{SENHA_IPTV}}': client.iptv_password || '',
+    '{{ID_PLANO_PAINEL}}': plan.panel_plan_id || '',
+    '{{ID_USUARIO_IPTV}}': client.iptv_user_id || '',
+    '{{DATA_EXPIRACAO}}': newExpirationDate.toISOString(),
+    '{{DURACAO_DIAS}}': renewalPeriod.unit === 'days' ? renewalPeriod.value.toString() : '',
+    '{{DURACAO_MESES}}': renewalPeriod.unit === 'months' ? renewalPeriod.value.toString() : '',
+    '{{NOME_CLIENTE}}': client.name || '',
+    '{{EMAIL_CLIENTE}}': client.email || '',
+    '{{TELEFONE_CLIENTE}}': client.whatsapp || ''
+  };
+  
+  // Aplicar substituições
+  Object.entries(tagReplacements).forEach(([tag, value]) => {
+    bodyString = bodyString.replace(new RegExp(tag, 'g'), value);
+  });
+  
+  // Converter de volta para objeto
+  try {
+    return JSON.parse(bodyString);
+  } catch (error) {
+    console.error('Erro ao processar tags do corpo da API:', error);
+    return body;
+  }
+}
 
 export async function getClienteById(id: string): Promise<Client | undefined> {
   const supabase = await createApiSupabaseClient();
@@ -47,7 +203,7 @@ export async function getClientes(params?: {
     const searchTerm = params.q.toLowerCase();
     clientsData = clientsData.filter(client =>
       client.name.toLowerCase().includes(searchTerm) ||
-      client.iptvUsername.toLowerCase().includes(searchTerm) ||
+      client.iptvUsername?.toLowerCase().includes(searchTerm) ||
       client.iptvUserId?.toLowerCase().includes(searchTerm) ||
       client.managerId?.toLowerCase().includes(searchTerm)
     );
@@ -117,7 +273,7 @@ export async function addCustomerAction(data: z.infer<typeof addCustomerSchema>,
   if (inserted && (newCustomerData.email || newCustomerData.whatsapp)) {
     try {
       const client = mapDatabaseClientToClient(inserted);
-      await MessageQueueService.addWelcomeMessage({
+      await MessageQueueService.getInstance().queueWelcomeMessage({
         clientId: client.id,
         clientName: client.name,
         email: client.email,
@@ -187,24 +343,99 @@ export async function updateCustomerStatusAction(customerId: string, status: 'At
 /**
  * Renova a assinatura de um cliente.
  * @param customerId - ID do cliente a ser renovado.
- * @param planValidity - Validade do plano em dias a ser adicionada.
+ * @param planId - ID do plano para renovação.
+ * @param serverId - ID do servidor (opcional) para sincronização com painel IPTV.
  * @returns Um objeto indicando sucesso ou falha na operação.
  */
-export async function renewCustomerAction(customerId: string, planValidity: number) {
+export async function renewCustomerAction(
+  customerId: string, 
+  planId: string,
+  serverId?: string
+) {
   const supabase = await createApiSupabaseClient();
-  const { data, error } = await supabase.from('clients').select('expiration_date').eq('id', customerId).single();
-  if (error || !data) return { success: false, error: "Cliente não encontrado" };
-  const currentExpiration = new Date(data.expiration_date);
-  const newExpirationDate = addDays(currentExpiration > new Date() ? currentExpiration : new Date(), planValidity);
-  const { error: updateError } = await supabase.from('clients').update({ expiration_date: newExpirationDate.toISOString(), status: 'Ativo' }).eq('id', customerId);
   
-  // Buscar dados completos do cliente para enviar mensagem de renovação
-  if (!updateError) {
+  try {
+    // 1. Buscar dados necessários
+    const [clientResult, planResult, serverResult] = await Promise.all([
+      supabase
+        .from('clients')
+        .select('id, expiration_date, status, iptv_username, iptv_user_id')
+        .eq('id', customerId)
+        .single(),
+      supabase
+        .from('plans')
+        .select('id, name, validity, period_type, period_config, panel_plan_id')
+        .eq('id', planId)
+        .single(),
+      serverId ? supabase
+        .from('servers')
+        .select('id, name, period_calculation_type, period_calculation_config, api_url, api_headers, api_body, response_username_path, response_expiration_path')
+        .eq('id', serverId)
+        .single() : { data: null, error: null }
+    ]);
+    
+    // Validar dados
+    if (clientResult.error || !clientResult.data) {
+      return { success: false, error: "Cliente não encontrado" };
+    }
+    
+    if (planResult.error || !planResult.data) {
+      return { success: false, error: "Plano não encontrado" };
+    }
+    
+    const client = clientResult.data;
+    const plan = planResult.data;
+    const server = serverResult?.data;
+    
+    // 2. Calcular nova data de expiração usando o PeriodCalculationService
+    const currentExpiration = new Date(client.expiration_date);
+    const baseDate = currentExpiration > new Date() ? currentExpiration : new Date();
+    
+    const serverConfig = server || { 
+      period_calculation_type: 'days', 
+      period_calculation_config: {} 
+    };
+    
+    const newExpirationDate = PeriodCalculationService.calculateExpirationDate(
+      baseDate,
+      plan.validity,
+      serverConfig
+    );
+    
+    // 3. Atualizar cliente no banco de dados
+    const { error: updateError } = await supabase
+      .from('clients')
+      .update({ 
+        expiration_date: newExpirationDate.toISOString(), 
+        status: 'Ativo' 
+      })
+      .eq('id', customerId);
+    
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+    
+    // 4. Se há servidor configurado, sincronizar com painel IPTV
+    if (server && server.api_url) {
+      try {
+        await syncRenewalWithPanel({
+          server,
+          client,
+          plan,
+          newExpirationDate
+        });
+      } catch (syncError) {
+        console.error('Erro ao sincronizar com painel IPTV:', syncError);
+        // Não falha a renovação se a sincronização falhar
+      }
+    }
+    
+    // 5. Buscar dados completos do cliente para enviar mensagem de renovação
     try {
       const { data: clientData } = await supabase.from('clients').select('*').eq('id', customerId).single();
       if (clientData && (clientData.email || clientData.whatsapp)) {
         const client = mapDatabaseClientToClient(clientData);
-        await MessageQueueService.addWelcomeMessage({
+        await MessageQueueService.getInstance().queueWelcomeMessage({
           type: 'general',
           clientId: client.id,
           clientName: client.name,
@@ -218,12 +449,19 @@ export async function renewCustomerAction(customerId: string, planValidity: numb
     } catch (messageError) {
       console.error('Erro ao enviar mensagem de renovação:', messageError);
     }
+    
+    revalidatePath('/clientes');
+    revalidatePath(`/clientes/${customerId}`);
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('Erro na renovação do cliente:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erro interno do servidor' 
+    };
   }
-  
-  revalidatePath('/clientes');
-  revalidatePath(`/clientes/${customerId}`);
-  if (updateError) return { success: false, error: updateError.message };
-  return { success: true };
 }
 
 /**
@@ -249,7 +487,7 @@ export async function convertTestToCustomerAction(customerId: string, planValidi
   if (!updateError && (data.email || data.whatsapp)) {
     try {
       const client = mapDatabaseClientToClient(data);
-      await MessageQueueService.addWelcomeMessage({
+      await MessageQueueService.getInstance().queueWelcomeMessage({
         type: 'general',
         clientId: client.id,
         clientName: client.name,
@@ -322,7 +560,7 @@ export async function importCustomersAction(importedData: z.infer<typeof importC
       // 1. Validação dos dados da linha com Zod
       const validatedData = importCustomerSchema.parse(row);
       // 2. Validação de regras de negócio (ex: plano existe?)
-      const plan = allPlans.find(p => p.panelPlanId === validatedData.planId);
+      const plan = allPlans.find(p => p.panel_plan_id === validatedData.planId);
       if (!plan) {
         throw new Error(`Plano com ID "${validatedData.planId}" não encontrado.`);
       }

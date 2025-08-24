@@ -4,7 +4,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
-import { createApiSupabaseClient, createAdminSupabaseClient, isUserAdmin } from "@/lib/supabase-api";
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { isBrowserUserAdmin } from "@/lib/supabase/clients/browser";
 import type { Plan, PlanGroup } from "@/lib/types";
 import { planSchema, editPlanSchema, planGroupSchema, editPlanGroupSchema } from "@/lib/schemas";
 
@@ -23,7 +24,6 @@ export async function getPlans(): Promise<Plan[]> {
   // Mapear campos do banco (snake_case) para o frontend (camelCase)
   const plans = (data || []).map(plan => ({
     ...plan,
-    countingType: plan.counting_type || 'month', // Mapear snake_case para camelCase
     groupId: plan.group_id,
     panelPlanId: plan.panel_plan_id,
     priceBeforeDiscount: plan.price_before_discount,
@@ -60,7 +60,6 @@ export async function addPlanAction(data: z.infer<typeof planSchema>) {
   
   const newPlanData = {
     ...data,
-    counting_type: data.countingType, // Mapear camelCase para snake_case
     is_public: data.isPublic, // Mapear camelCase para snake_case
     send_welcome_message: data.sendWelcomeMessage, // Mapear camelCase para snake_case
     price_before_discount: data.priceBeforeDiscount, // Mapear camelCase para snake_case
@@ -113,7 +112,6 @@ export async function editPlanAction(data: z.infer<typeof editPlanSchema>) {
     
     const finalUpdateData = {
         ...updateData,
-        counting_type: updateData.countingType,
         is_public: updateData.isPublic,
         send_welcome_message: updateData.sendWelcomeMessage,
         price_before_discount: updateData.priceBeforeDiscount,
@@ -133,43 +131,35 @@ export async function editPlanAction(data: z.infer<typeof editPlanSchema>) {
     
     console.log('🔍 editPlanAction - finalUpdateData após limpeza:', JSON.stringify(finalUpdateData, null, 2));
     
-    // Tentar usar cliente admin com service role key
-    let adminSupabase;
+    // Usar endpoint seguro do backend para operações administrativas
     try {
-      adminSupabase = await createAdminSupabaseClient();
-      console.log('🔍 editPlanAction - Cliente admin criado com sucesso');
-    } catch (adminError) {
-      console.log('🔍 editPlanAction - Falha ao criar cliente admin, usando cliente normal:', adminError);
-      adminSupabase = supabase;
+      const response = await fetch('/api/admin/plans', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({ id, ...finalUpdateData })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ editPlanAction - Erro na API:', errorData);
+        return { success: false, error: errorData.error || 'Erro ao atualizar plano' };
+      }
+      
+      const { data: updated } = await response.json();
+      console.log('✅ editPlanAction - Plano atualizado via API segura:', updated);
+      
+      revalidatePath('/planos');
+      return { success: true, data: updated };
+      
+    } catch (apiError) {
+      console.error('❌ editPlanAction - Erro na requisição:', apiError);
+      return { success: false, error: 'Erro de comunicação com o servidor' };
     }
     
-    // Tentar atualizar com cliente admin
-    const { data: updated, error } = await adminSupabase
-      .from('plans')
-      .update(finalUpdateData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    console.log('🔍 editPlanAction - Resultado da atualização:');
-    console.log('  - updated:', JSON.stringify(updated, null, 2));
-    console.log('  - error:', error);
-    
-    if (error) {
-      console.error('❌ editPlanAction - Erro ao atualizar plano:', error);
-      return { success: false, error: error.message || 'Erro ao atualizar plano' };
-    }
-    
-    if (!updated) {
-      console.error('❌ editPlanAction - Nenhum plano foi atualizado');
-      return { success: false, error: 'Plano não encontrado ou não foi possível atualizar' };
-    }
-    
-    revalidatePath('/planos');
-    revalidatePath('/planos/grupos');
-    
-    console.log('✅ editPlanAction - Plano atualizado com sucesso');
-    return { success: true, plan: updated as Plan };
+    // Código removido - lógica já tratada acima no bloco try/catch
   } catch (err) {
     console.error('❌ editPlanAction - Erro inesperado:', err);
     return { success: false, error: 'Erro inesperado ao atualizar plano' };
@@ -179,18 +169,27 @@ export async function editPlanAction(data: z.infer<typeof editPlanSchema>) {
 export async function deletePlanAction(planId: string) {
   try {
     const supabase = await createApiSupabaseClient();
-    const { data: clients, error: clientsError } = await supabase.from('clients').select('id').eq('plan_id', planId);
-    if (clientsError) return { success: false, error: clientsError.message };
-    if (clients && clients.length > 0) {
-      return { success: false, error: `Não é possível excluir o plano, pois ele está sendo utilizado por ${clients.length} cliente(s).` };
+    
+    const response = await fetch(`/api/admin/plans?id=${planId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('❌ deletePlanAction - Erro na API:', errorData);
+      return { success: false, error: errorData.error || 'Erro ao deletar plano' };
     }
-    const { error } = await supabase.from('plans').delete().eq('id', planId);
+    
+    console.log('✅ deletePlanAction - Plano deletado via API segura');
     revalidatePath('/planos');
-    if (error) return { success: false, error: error.message };
     return { success: true };
-  } catch (error: any) {
-    console.error("Error deleting plan: ", error);
-    return { success: false, error: "Failed to delete plan." };
+    
+  } catch (apiError) {
+    console.error('❌ deletePlanAction - Erro na requisição:', apiError);
+    return { success: false, error: 'Erro de comunicação com o servidor' };
   }
 }
 

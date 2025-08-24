@@ -12,9 +12,15 @@ import {
   MessageSquare, 
   Mail,
   Plus,
-  ExternalLink
+  ExternalLink,
+  CreditCard,
+  Package
 } from 'lucide-react'
 import { NATVConfig } from '@/components/integrations/natv-config'
+import { BPIXConfig } from '@/components/integrations/bpix-config'
+import { BPIXMetrics } from '@/components/integrations/bpix-metrics'
+import { TheBestConfig } from '@/components/integrations/thebest-config'
+import { TheBestPackageManager } from '@/components/integrations/thebest-package-manager'
 
 export default function IntegracoesPage() {
   const [activeTab, setActiveTab] = useState('natv')
@@ -25,6 +31,22 @@ export default function IntegracoesPage() {
       name: 'NATV',
       description: 'API para criação e gerenciamento de usuários de teste',
       icon: Zap,
+      status: 'available',
+      category: 'Streaming'
+    },
+    {
+      id: 'bpix',
+      name: 'BPIX',
+      description: 'Processamento de pagamentos PIX instantâneos',
+      icon: CreditCard,
+      status: 'available',
+      category: 'Pagamentos'
+    },
+    {
+      id: 'thebest',
+      name: 'The Best',
+      description: 'Gerenciamento de pacotes e renovações automáticas',
+      icon: Package,
       status: 'available',
       category: 'Streaming'
     },
@@ -87,7 +109,7 @@ export default function IntegracoesPage() {
             <Plug className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
+            <div className="text-2xl font-bold">{integrations.filter(i => i.status === 'available').length}</div>
             <p className="text-xs text-muted-foreground">
               {integrations.filter(i => i.status === 'available').length} disponíveis
             </p>
@@ -100,9 +122,9 @@ export default function IntegracoesPage() {
             <Settings className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
+            <div className="text-2xl font-bold">3</div>
             <p className="text-xs text-muted-foreground">
-              Streaming e Comunicação
+              Streaming, Pagamentos e Comunicação
             </p>
           </CardContent>
         </Card>
@@ -164,6 +186,14 @@ export default function IntegracoesPage() {
             <Zap className="h-4 w-4 mr-2" />
             NATV
           </TabsTrigger>
+          <TabsTrigger value="bpix" disabled={!integrations.find(i => i.id === 'bpix')?.status.includes('available')}>
+            <CreditCard className="h-4 w-4 mr-2" />
+            BPIX
+          </TabsTrigger>
+          <TabsTrigger value="thebest" disabled={!integrations.find(i => i.id === 'thebest')?.status.includes('available')}>
+            <Package className="h-4 w-4 mr-2" />
+            The Best
+          </TabsTrigger>
           <TabsTrigger value="whatsapp" disabled>
             <MessageSquare className="h-4 w-4 mr-2" />
             WhatsApp
@@ -176,6 +206,16 @@ export default function IntegracoesPage() {
 
         <TabsContent value="natv" className="space-y-4">
           <NATVConfig />
+        </TabsContent>
+
+        <TabsContent value="bpix" className="space-y-4">
+          <BPIXMetrics />
+          <BPIXConfig />
+        </TabsContent>
+
+        <TabsContent value="thebest" className="space-y-4">
+          <TheBestConfig />
+          <TheBestPackageManager />
         </TabsContent>
 
         <TabsContent value="whatsapp" className="space-y-4">

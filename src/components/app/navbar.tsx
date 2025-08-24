@@ -4,7 +4,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClientSupabaseClient } from "@/lib/supabase-client";
+import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,7 +27,7 @@ export function Navbar() {
 
   const handleLogout = async () => {
     try {
-      const supabase = createClientSupabaseClient();
+      const supabase = createBrowserSupabaseClient();
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 

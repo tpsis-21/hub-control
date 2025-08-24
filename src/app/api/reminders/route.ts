@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ReminderService } from "@/services/reminder.service";
 import { LoggerService } from "@/services/logger.service";
-import { createApiSupabaseClient } from "@/lib/supabase-api";
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 import { getUserPermissions } from "@/lib/auth-utils";
 
 /**
@@ -198,10 +198,10 @@ export async function PUT(request: NextRequest) {
     const expirationDate = new Date(clientData.expiration_date);
     const daysUntilExpiration = Math.ceil((expirationDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
 
-    // Importar MessageQueueService dinamicamente para evitar problemas de importação circular
-    const { MessageQueueService } = await import('@/services/message-queue.service');
+    // Importar messageQueue dinamicamente para evitar problemas de importação circular
+    const { messageQueue } = await import('@/services/message-queue.service');
     
-    await MessageQueueService.addExpirationReminder({
+    await messageQueue.addMessage('reminder', {
       clientId: clientData.id,
       clientName: clientData.name,
       email: clientData.email,

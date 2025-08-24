@@ -1,0 +1,39 @@
+[2025-08-18T18:32:18.390Z] [INFO] 🚀 Iniciando monitoramento de logs do dashboard...
+[2025-08-18T18:32:18.391Z] [INFO] 🎯 Procurando por padrões relacionados a net::ERR_ABORTED
+[2025-08-18T18:32:18.393Z] [INFO] ✅ Monitoramento ativo. Pressione Ctrl+C para parar e gerar relatório final.
+[2025-08-18T18:32:18.449Z] [INFO] 📝 LOG: node.exe :  ??? Failed to start server
+[2025-08-18T18:32:18.450Z] [INFO] 📝 LOG: No C:\Program Files\nodejs\npx.ps1:29 caractere:3
+[2025-08-18T18:32:18.450Z] [INFO] 📝 LOG: +   & $NODE_EXE $NPX_CLI_JS $args
+[2025-08-18T18:32:18.451Z] [INFO] 📝 LOG: +   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[2025-08-18T18:32:18.451Z] [INFO] 📝 LOG:     + CategoryInfo          : NotSpecified: ( ??? Failed to start server:String) [], RemoteException
+[2025-08-18T18:32:18.451Z] [INFO] 📝 LOG:     + FullyQualifiedErrorId : NativeCommandError
+[2025-08-18T18:32:18.452Z] [INFO] 📝 LOG: Error: listen EADDRINUSE: address already in use :::9010
+[2025-08-18T18:32:18.452Z] [INFO] 📝 LOG:     at <unknown> (Error: listen EADDRINUSE: address already in use :::9010)
+[2025-08-18T18:32:18.452Z] [INFO] 📝 LOG:     at new Promise (<anonymous>) {
+[2025-08-18T18:32:18.452Z] [INFO] 📝 LOG:   code: 'EADDRINUSE',
+[2025-08-18T18:32:18.453Z] [INFO] 📝 LOG:   errno: -4091,
+[2025-08-18T18:32:18.453Z] [INFO] 📝 LOG:   syscall: 'listen',
+[2025-08-18T18:32:18.454Z] [INFO] 📝 LOG:   address: '::',
+[2025-08-18T18:32:18.454Z] [INFO] 📝 LOG:   port: 9010
+[2025-08-18T18:32:18.454Z] [INFO] 📝 LOG: }
+[2025-08-18T18:32:18.455Z] [INFO] 📝 LOG: [?25h
+[2025-08-18T18:32:48.397Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (30s)
+[2025-08-18T18:33:18.396Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (60s)
+[2025-08-18T18:33:48.407Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (90s)
+[2025-08-18T18:34:18.411Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (120s)
+[2025-08-18T18:34:48.425Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (150s)
+[2025-08-18T18:35:18.431Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (180s)
+[2025-08-18T18:35:48.446Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (210s)
+[2025-08-18T18:36:18.452Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (240s)
+[2025-08-18T18:36:48.457Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (270s)
+[2025-08-18T18:37:18.464Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (300s)
+[2025-08-18T18:37:48.466Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (330s)
+[2025-08-18T18:38:18.466Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (360s)
+[2025-08-18T18:38:48.476Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (390s)
+[2025-08-18T18:39:18.482Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (420s)
+[2025-08-18T18:39:48.485Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (450s)
+[2025-08-18T18:40:18.490Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (480s)
+[2025-08-18T18:40:48.495Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (510s)
+[2025-08-18T18:41:18.497Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (540s)
+[2025-08-18T18:41:48.498Z] [STATUS] 📊 Status: 16 logs, 0 erros, 0 dashboard (570s)
+[2025-08-18T18:41:51.183Z] [INFO] 🛑 Monitoramento interrompido pelo usuário

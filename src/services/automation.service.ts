@@ -1,5 +1,5 @@
 // src/services/automation.service.ts
-import { createApiSupabaseClient } from '@/lib/supabase-api';
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 import { LoggerService } from './logger.service';
 import { MarketingService } from './marketing.service';
 import type { 
@@ -73,16 +73,46 @@ export class AutomationService {
         executionCount: 0
       };
 
+      // Mapear para o formato da tabela
+      const dbRule = {
+        id: rule.id,
+        name: rule.name,
+        description: rule.description,
+        trigger: rule.trigger as any,
+        conditions: rule.conditions as any,
+        actions: rule.actions as any,
+        is_active: rule.isActive,
+        execution_count: rule.executionCount,
+        last_executed: rule.lastExecuted,
+        created_at: rule.created_at,
+        updated_at: rule.updated_at
+      };
+
       const { data, error } = await supabase
         .from('automation_rules')
-        .insert(rule)
+        .insert(dbRule)
         .select()
         .single();
 
       if (error) throw error;
 
+      // Mapear de volta para AutomationRule
+      const result: AutomationRule = {
+        id: data.id,
+        name: data.name,
+        description: data.description || undefined,
+        trigger: data.trigger as unknown as AutomationTrigger,
+        conditions: data.conditions as unknown as AutomationCondition[],
+        actions: data.actions as unknown as AutomationAction[],
+        isActive: data.is_active,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        lastExecuted: data.last_executed || undefined,
+        executionCount: data.execution_count
+      };
+
       LoggerService.info('Regra de automação criada', 'AutomationService', { ruleId: rule.id });
-      return data;
+      return result;
     } catch (error) {
       LoggerService.error('Erro ao criar regra de automação', 'AutomationService', { error });
       throw error;
@@ -107,14 +137,14 @@ export class AutomationService {
       return data ? data.map(dbRule => ({
         id: dbRule.id,
         name: dbRule.name,
-        description: dbRule.description,
-        trigger: dbRule.trigger as AutomationTrigger,
-        conditions: dbRule.conditions as AutomationCondition[],
-        actions: dbRule.actions as AutomationAction[],
+        description: dbRule.description || undefined,
+        trigger: dbRule.trigger as unknown as AutomationTrigger,
+        conditions: dbRule.conditions as unknown as AutomationCondition[],
+        actions: dbRule.actions as unknown as AutomationAction[],
         isActive: dbRule.is_active,
         created_at: dbRule.created_at,
         updated_at: dbRule.updated_at,
-        lastExecuted: dbRule.last_executed,
+        lastExecuted: dbRule.last_executed || undefined,
         executionCount: dbRule.execution_count
       })) : [];
     } catch (error) {
@@ -154,14 +184,14 @@ export class AutomationService {
       const rule: AutomationRule = {
         id: data.id,
         name: data.name,
-        description: data.description,
-        trigger: data.trigger as AutomationTrigger,
-        conditions: data.conditions as AutomationCondition[],
-        actions: data.actions as AutomationAction[],
+        description: data.description || undefined,
+        trigger: data.trigger as unknown as AutomationTrigger,
+        conditions: data.conditions as unknown as AutomationCondition[],
+        actions: data.actions as unknown as AutomationAction[],
         isActive: data.is_active,
         created_at: data.created_at,
         updated_at: data.updated_at,
-        lastExecuted: data.last_executed,
+        lastExecuted: data.last_executed || undefined,
         executionCount: data.execution_count
       };
 

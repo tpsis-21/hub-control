@@ -1,12 +1,12 @@
 // src/app/api/message-queue/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from "@/lib/supabase/clients/server";
 import { messageQueue } from '@/services/message-queue.service';
 import { LoggerService } from '@/services/logger.service';
 
 // Verificar se o usuário tem permissão para gerenciar a fila
 async function verifyPermission(request: NextRequest) {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   
   // Verificar autenticação
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -18,7 +18,7 @@ async function verifyPermission(request: NextRequest) {
   // Verificar se é admin
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, permissions')
+    .select('role')
     .eq('id', user.id)
     .single();
 
@@ -70,9 +70,16 @@ export async function GET(request: NextRequest) {
         const allStats = messageQueue.getStats();
         const recentMessages = messageQueue.getMessages({ limit: 20 });
         
+        // Adiciona estatísticas extras
+        const extendedStats = {
+          ...allStats,
+          total: allStats.pending + allStats.processing + allStats.completed + allStats.failed,
+          isProcessing: allStats.processing > 0
+        };
+        
         return NextResponse.json({
           success: true,
-          stats: allStats,
+          ...extendedStats,
           recentMessages: recentMessages.map(msg => ({
             ...msg,
             data: undefined // Remove dados sensíveis
@@ -94,9 +101,9 @@ export async function POST(request: NextRequest) {
   try {
     const { authorized, error, user } = await verifyPermission(request);
     
-    if (!authorized) {
+    if (!authorized || !user) {
       return NextResponse.json(
-        { error },
+        { error: error || 'Não autenticado' },
         { status: 401 }
       );
     }
@@ -115,7 +122,7 @@ export async function POST(request: NextRequest) {
 
         const messageId = await messageQueue.addMessage(type, data, options || {});
         
-        LoggerService.logUserAction('add_message_to_queue', user.id, {
+        LoggerService.logUserAction('add_message_to_queue', user!.id, {
           messageId,
           type,
           priority: options?.priority
@@ -137,7 +144,7 @@ export async function POST(request: NextRequest) {
 
         const welcomeId = await messageQueue.queueWelcomeMessage(data, options || {});
         
-        LoggerService.logUserAction('queue_welcome_message', user.id, {
+        LoggerService.logUserAction('queue_welcome_message', user!.id, {
           messageId: welcomeId,
           customerName: data.name
         });
@@ -161,7 +168,7 @@ export async function POST(request: NextRequest) {
           options?.reminderDays
         );
         
-        LoggerService.logUserAction('schedule_expiration_reminders', user.id, {
+        LoggerService.logUserAction('schedule_expiration_reminders', user!.id, {
           messageIds: reminderIds,
           customerName: data.name,
           reminderCount: reminderIds.length
@@ -174,9 +181,10 @@ export async function POST(request: NextRequest) {
         });
 
       case 'retry_failed':
+      case 'reprocess-failed':
         const retriedCount = messageQueue.retryFailedMessages();
         
-        LoggerService.logUserAction('retry_failed_messages', user.id, {
+        LoggerService.logUserAction('retry_failed_messages', user!.id, {
           retriedCount
         });
 
@@ -186,11 +194,32 @@ export async function POST(request: NextRequest) {
           message: `${retriedCount} mensagens reprocessadas`
         });
 
+      case 'pause':
+        messageQueue.stopProcessing();
+        
+        LoggerService.logUserAction('pause_message_queue', user!.id, {});
+
+        return NextResponse.json({
+          success: true,
+          message: 'Processamento da fila pausado'
+        });
+
+      case 'resume':
+        // Reinicia o processamento
+        messageQueue.startProcessing();
+        
+        LoggerService.logUserAction('resume_message_queue', user!.id, {});
+
+        return NextResponse.json({
+          success: true,
+          message: 'Processamento da fila retomado'
+        });
+
       case 'cleanup':
         const olderThanDays = options?.olderThanDays || 7;
         const removedCount = messageQueue.cleanup(olderThanDays);
         
-        LoggerService.logUserAction('cleanup_message_queue', user.id, {
+        LoggerService.logUserAction('cleanup_message_queue', user!.id, {
           removedCount,
           olderThanDays
         });
@@ -236,7 +265,7 @@ export async function PUT(request: NextRequest) {
       case 'stop':
         messageQueue.stopProcessing();
         
-        LoggerService.logUserAction('stop_message_queue', user.id, {});
+        LoggerService.logUserAction('stop_message_queue', user!.id, {});
 
         return NextResponse.json({
           success: true,
@@ -247,7 +276,7 @@ export async function PUT(request: NextRequest) {
         // Note: O serviço não tem método público para start, pois inicia automaticamente
         // Mas podemos reiniciar criando uma nova instância
         
-        LoggerService.logUserAction('restart_message_queue', user.id, {});
+        LoggerService.logUserAction('restart_message_queue', user!.id, {});
 
         return NextResponse.json({
           success: true,

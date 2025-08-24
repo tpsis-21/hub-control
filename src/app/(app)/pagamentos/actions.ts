@@ -1,7 +1,7 @@
 // @/app/(app)/pagamentos/actions.ts
 "use server";
 
-import { createApiSupabaseClient } from "@/lib/supabase-api";
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 import type { Payment } from "@/lib/types";
 
 export async function getPayments(): Promise<Payment[]> {
@@ -11,9 +11,8 @@ export async function getPayments(): Promise<Payment[]> {
     .from('payments')
     .select(`
       *,
-      client:clients(name, whatsapp),
-      plan:plans(name, price),
-      server:servers(name)
+      client:clients(id, name, whatsapp),
+      plan:plans(id, name, price)
     `)
     .order('created_at', { ascending: false });
 
@@ -32,8 +31,7 @@ export async function getPaymentsByClient(clientId: string): Promise<Payment[]> 
     .from('payments')
     .select(`
       *,
-      plan:plans(name, price),
-      server:servers(name)
+      plan:plans(id, name, price)
     `)
     .eq('client_id', clientId)
     .order('created_at', { ascending: false });
@@ -53,9 +51,8 @@ export async function getPendingManualPayments(): Promise<Payment[]> {
     .from('payments')
     .select(`
       *,
-      client:clients(name, whatsapp),
-      plan:plans(name, price),
-      server:servers(name, renewal_automation)
+      client:clients(id, name, whatsapp),
+      plan:plans(id, name, price)
     `)
     .eq('status', 'Pendente de ativação manual')
     .order('created_at', { ascending: false });
@@ -68,7 +65,7 @@ export async function getPendingManualPayments(): Promise<Payment[]> {
   return data || [];
 }
 
-export async function updatePaymentStatus(paymentId: string, status: string): Promise<{ success: boolean; error?: string }> {
+export async function updatePaymentStatus(paymentId: string, status: 'Pago' | 'Pendente' | 'Atrasado' | 'Aguardando' | 'Confirmado' | 'Recusado' | 'Pendente de ativação manual' | 'Ativado'): Promise<{ success: boolean; error?: string }> {
   const supabase = await createApiSupabaseClient();
   
   const { error } = await supabase
@@ -152,13 +149,13 @@ export async function createInAppNotification(notification: {
     .from('in_app_notifications')
     .insert({
       user_id: notification.userId,
-      type: notification.type,
+      type: notification.type as any,
       title: notification.title,
       message: notification.message,
       data: notification.data,
       read: false,
       created_at: new Date().toISOString()
-    });
+    } as any);
 
   if (error) {
     console.error('Erro ao criar notificação:', error);

@@ -24,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getClientUser, createClientSupabaseClient } from "@/lib/supabase-client";
+import { getBrowserUser, createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 import { InAppNotifications } from "./notifications/in-app-notifications";
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
@@ -55,13 +55,13 @@ export function ModernHeader({
   
   useEffect(() => {
     const loadUserData = async () => {
-      const currentUser = await getClientUser();
+      const currentUser = await getBrowserUser();
       if (currentUser) {
         setUserId(currentUser.id);
         setUser(currentUser);
         
         // Buscar dados do perfil do usuário
-        const supabase = createClientSupabaseClient();
+        const supabase = createBrowserSupabaseClient();
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -77,7 +77,7 @@ export function ModernHeader({
 
   const handleLogout = async () => {
     try {
-      const supabase = createClientSupabaseClient();
+      const supabase = createBrowserSupabaseClient();
       await supabase.auth.signOut();
       router.push('/login');
       toast({

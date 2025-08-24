@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste API de Atividades Recentes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .activity-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .activity-meta {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+        .status-info { background-color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste da API de Atividades Recentes</h1>
+        <p>Este teste verifica se a nova API <code>/api/activities/recent</code> está funcionando corretamente.</p>
+        
+        <div class="test-section">
+            <h2>🔧 Controles de Teste</h2>
+            <button onclick="testActivitiesAPI()">🚀 Testar API de Atividades</button>
+            <button onclick="testOldLogsAPI()">📊 Testar API Antiga (logs)</button>
+            <button onclick="clearResults()">🧹 Limpar Resultados</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let testCounter = 0;
+        
+        function addResult(title, content, type = 'info') {
+            testCounter++;
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-section ${type}`;
+            
+            const statusIcon = getStatusIcon(type);
+            const timestamp = new Date().toLocaleTimeString();
+            
+            resultDiv.innerHTML = `
+                <h3>${statusIcon} ${title} <small>(${timestamp})</small></h3>
+                <div>${content}</div>
+            `;
+            
+            resultsDiv.appendChild(resultDiv);
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function getStatusIcon(type) {
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            return icons[type] || 'ℹ️';
+        }
+        
+        async function testActivitiesAPI() {
+            addResult('Iniciando teste da API de atividades recentes...', 'Fazendo requisição para /api/activities/recent', 'info');
+            
+            try {
+                const response = await fetch('/api/activities/recent?limit=5&page=1');
+                
+                addResult(
+                    `Status da Resposta: ${response.status}`,
+                    `<strong>Status:</strong> ${response.status} ${response.statusText}<br>
+                     <strong>Headers:</strong> ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}`,
+                    response.ok ? 'success' : 'error'
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    addResult(
+                        'Dados recebidos com sucesso!',
+                        `<strong>Fonte dos dados:</strong> ${data.source || 'database'}<br>
+                         <strong>Total de atividades:</strong> ${data.activities?.length || 0}<br>
+                         <strong>Página:</strong> ${data.page || 1}<br>
+                         <strong>Limite:</strong> ${data.limit || 10}<br>
+                         <strong>Há mais páginas:</strong> ${data.hasMore ? 'Sim' : 'Não'}<br>
+                         ${data.warning ? `<strong>Aviso:</strong> ${data.warning}<br>` : ''}
+                         <pre>${JSON.stringify(data, null, 2)}</pre>`,
+                        data.source === 'mock' ? 'warning' : 'success'
+                    );
+                    
+                    if (data.activities && data.activities.length > 0) {
+                        const activitiesHtml = data.activities.map(activity => `
+                            <div class="activity-item">
+                                <strong>${activity.description || activity.action}</strong>
+                                <div class="activity-meta">
+                                    <span class="status-indicator status-${getSeverityClass(activity.severity)}"></span>
+                                    ${activity.severity} | ${new Date(activity.created_at).toLocaleString()}
+                                    ${activity.table_name ? ` | Tabela: ${activity.table_name}` : ''}
+                                </div>
+                            </div>
+                        `).join('');
+                        
+                        addResult(
+                            'Atividades encontradas:',
+                            activitiesHtml,
+                            'success'
+                        );
+                    }
+                } else {
+                    const errorText = await response.text();
+                    addResult(
+                        'Erro na requisição',
+                        `<strong>Erro:</strong> ${response.status} ${response.statusText}<br>
+                         <strong>Resposta:</strong><br>
+                         <pre>${errorText}</pre>`,
+                        'error'
+                    );
+                }
+                
+            } catch (error) {
+                addResult(
+                    'Erro de rede ou JavaScript',
+                    `<strong>Erro:</strong> ${error.message}<br>
+                     <strong>Stack:</strong><br>
+                     <pre>${error.stack}</pre>`,
+                    'error'
+                );
+            }
+        }
+        
+        async function testOldLogsAPI() {
+            addResult('Testando API antiga de logs...', 'Fazendo requisição para /api/logs (para comparação)', 'info');
+            
+            try {
+                const response = await fetch('/api/logs?limit=5&page=1');
+                
+                addResult(
+                    `API Antiga - Status: ${response.status}`,
+                    `<strong>Status:</strong> ${response.status} ${response.statusText}`,
+                    response.ok ? 'success' : 'error'
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(
+                        'API Antiga - Dados recebidos',
+                        `<pre>${JSON.stringify(data, null, 2)}</pre>`,
+                        'success'
+                    );
+                } else {
+                    const errorText = await response.text();
+                    addResult(
+                        'API Antiga - Erro esperado (requer admin)',
+                        `<pre>${errorText}</pre>`,
+                        'warning'
+                    );
+                }
+                
+            } catch (error) {
+                addResult(
+                    'API Antiga - Erro de rede',
+                    `<strong>Erro:</strong> ${error.message}`,
+                    'error'
+                );
+            }
+        }
+        
+        function getSeverityClass(severity) {
+            const severityMap = {
+                'CRITICAL': 'error',
+                'HIGH': 'error',
+                'MEDIUM': 'warning',
+                'LOW': 'info',
+                'INFO': 'info'
+            };
+            return severityMap[severity] || 'info';
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            testCounter = 0;
+            addResult('Resultados limpos', 'Pronto para novos testes!', 'info');
+        }
+        
+        // Teste automático ao carregar a página
+        window.addEventListener('load', () => {
+            addResult(
+                'Página carregada',
+                `Teste da API de atividades recentes carregado em ${new Date().toLocaleString()}<br>
+                 <strong>URL atual:</strong> ${window.location.href}<br>
+                 <strong>User Agent:</strong> ${navigator.userAgent}`,
+                'info'
+            );
+        });
+    </script>
+</body>
+</html>

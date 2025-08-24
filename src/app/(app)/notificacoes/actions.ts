@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 // Removido: import { db } from "@/lib/firebase";
 // Removido: import { collection, getDocs, doc, writeBatch } from "firebase/firestore";
 import type { Reminder, Instruction, OtherTemplate } from './types';
-import { createApiSupabaseClient } from "@/lib/supabase-api";
+import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 
 // --- as definições de collections removidas pois não são mais usadas ---
 
@@ -90,16 +90,23 @@ async function updateCollection(table: string, data: any[], schema: any): Promis
     try {
         const validatedData = schema.parse(data);
         const supabase = await createApiSupabaseClient();
-        // Como as tabelas de notificações são dinâmicas, usar insert direto
+        
+        // Para notificações do sistema, usar a tabela notification_templates em vez de notifications
+        // A tabela notifications é para notificações ativas do sistema de notificações
         for (const item of validatedData) {
-            const { data, error } = await supabase.from('notifications').upsert({
+            // Usar notification_templates para armazenar templates/configurações
+            const { data: templateData, error } = await (supabase as any).from('notification_templates').upsert({
                 id: item.id,
-                type: 'whatsapp',
-                event: 'expiration_reminder',
-                message: JSON.stringify(item),
-                active: true
+                name: `template_${item.id}`,
+                type: 'custom', // Usando enum válido do sistema
+                subject_template: item.title || 'Notificação',
+                content_template: JSON.stringify(item), // Serializar o item completo
+                variables: [],
+                enabled: true,
+                version: 1
             }, { onConflict: 'id' });
-            if (error) console.error('Error upserting notification:', error);
+            
+            if (error) console.error('Error upserting notification template:', error);
         }
         revalidatePath('/notificacoes');
         return { success: true };

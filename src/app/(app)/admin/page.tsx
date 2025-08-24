@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getClientUserRole } from '@/lib/supabase-client';
+import { getClientUserRole } from "@/lib/supabase/clients/browser";
 import { AdminPanel } from '@/components/app/admin-panel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
