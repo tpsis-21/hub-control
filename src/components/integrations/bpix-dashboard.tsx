@@ -55,7 +55,7 @@ export function BPIXDashboard() {
   const { 
     payments, 
     invoices, 
-    isLoading, 
+    loading, 
     error, 
     createPayment, 
     createInvoice, 
@@ -334,8 +334,8 @@ export function BPIXDashboard() {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleCreatePayment} disabled={isLoading} className="flex-1">
-                        {isLoading ? 'Criando...' : 'Criar Pagamento'}
+                      <Button onClick={handleCreatePayment} disabled={loading} className="flex-1">
+                        {loading ? 'Criando...' : 'Criar Pagamento'}
                       </Button>
                       <Button variant="outline" onClick={() => setIsCreatePaymentOpen(false)}>
                         Cancelar
@@ -411,8 +411,8 @@ export function BPIXDashboard() {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleCreateInvoice} disabled={isLoading} className="flex-1">
-                        {isLoading ? 'Criando...' : 'Criar Fatura'}
+                      <Button onClick={handleCreateInvoice} disabled={loading} className="flex-1">
+                        {loading ? 'Criando...' : 'Criar Fatura'}
                       </Button>
                       <Button variant="outline" onClick={() => setIsCreateInvoiceOpen(false)}>
                         Cancelar
@@ -434,7 +434,7 @@ export function BPIXDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {loading ? (
                 <div className="text-center py-8">
                   <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground">Carregando pagamentos...</p>
@@ -476,7 +476,7 @@ export function BPIXDashboard() {
                           {getStatusBadge(payment.status || 'pending')}
                         </TableCell>
                         <TableCell>
-                          {payment.createdAt ? new Date(payment.createdAt).toLocaleDateString('pt-BR') : '-'}
+                          {payment.created_at ? new Date(payment.created_at).toLocaleDateString('pt-BR') : '-'}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -490,11 +490,11 @@ export function BPIXDashboard() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {payment.qr_text && (
+                            {payment.qr_code && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => copyToClipboard(payment.qr_text)}
+                                onClick={() => copyToClipboard(payment.qr_code!)}
                               >
                                 <Copy className="h-4 w-4" />
                               </Button>
@@ -519,7 +519,7 @@ export function BPIXDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {loading ? (
                 <div className="text-center py-8">
                   <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground">Carregando faturas...</p>

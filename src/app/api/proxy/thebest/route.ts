@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
     const configResult = await getUserTheBestConfig(authResult.user.id);
     if (!configResult.success || !configResult.config) {
       const configError = ErrorService.createError(
-        ErrorType.CONFIGURATION,
+        ErrorType.VALIDATION,
         'Configuração The Best não encontrada. Configure sua chave API nas integrações.',
         'THEBEST_CONFIG_NOT_FOUND'
       );
@@ -271,8 +271,7 @@ export async function POST(request: NextRequest) {
           'X-API-Key': apiKey,
           'User-Agent': 'Hub-Control/1.0'
         },
-        body: JSON.stringify(theBestData),
-        timeout: 30000 // 30 segundos de timeout
+        body: JSON.stringify(theBestData)
       });
 
       if (!theBestResponse.ok) {
@@ -366,7 +365,7 @@ export async function POST(request: NextRequest) {
     console.error('Erro no proxy The Best:', error);
     
     const internalError = ErrorService.createError(
-      ErrorType.INTERNAL,
+      ErrorType.UNKNOWN,
       'Erro interno do servidor',
       'INTERNAL_SERVER_ERROR'
     );
@@ -476,7 +475,7 @@ export async function GET(request: NextRequest) {
 
     if (!configResult.success || !configResult.config) {
       const configError = ErrorService.createError(
-        ErrorType.CONFIGURATION,
+        ErrorType.VALIDATION,
         'Configuração The Best não encontrada. Configure sua chave API nas integrações.',
         'THEBEST_CONFIG_NOT_FOUND'
       );
@@ -500,8 +499,7 @@ export async function GET(request: NextRequest) {
           headers: {
             'X-API-Key': apiKey,
             'User-Agent': 'Hub-Control/1.0'
-          },
-          timeout: 10000 // 10 segundos
+          }
         });
 
         const success = testResponse.ok;
@@ -529,8 +527,7 @@ export async function GET(request: NextRequest) {
         headers: {
           'X-API-Key': apiKey,
           'User-Agent': 'Hub-Control/1.0'
-        },
-        timeout: 30000
+        }
       });
 
       if (!response.ok) {
@@ -581,7 +578,7 @@ export async function GET(request: NextRequest) {
     console.error('Erro no proxy The Best (GET):', error);
     
     const internalError = ErrorService.createError(
-      ErrorType.INTERNAL,
+      ErrorType.UNKNOWN,
       'Erro interno do servidor',
       'INTERNAL_SERVER_ERROR'
     );

@@ -32,7 +32,7 @@ async function syncRenewalWithPanel({
   
   try {
     // Obter configuração de identificação do painel
-    const panelConfig = PeriodCalculationService.getPanelIdentificationConfig(server);
+    const panelConfig = PeriodCalculationService.getPanelIdentificationConfig(server.name || 'generic', server.api_url);
     
     // Calcular período para o painel
     const renewalPeriod = PeriodCalculationService.calculateRenewalPeriod(
@@ -364,12 +364,12 @@ export async function renewCustomerAction(
         .single(),
       supabase
         .from('plans')
-        .select('id, name, validity, period_type, period_config, panel_plan_id')
+        .select('id, name, validity, panel_plan_id')
         .eq('id', planId)
         .single(),
       serverId ? supabase
         .from('servers')
-        .select('id, name, period_calculation_type, period_calculation_config, api_url, api_headers, api_body, response_username_path, response_expiration_path')
+        .select('id, name, url')
         .eq('id', serverId)
         .single() : { data: null, error: null }
     ]);
@@ -384,23 +384,24 @@ export async function renewCustomerAction(
     }
     
     const client = clientResult.data;
-    const plan = planResult.data;
+    const plan = planResult.data as { id: string; name: string; validity: number; panel_plan_id: string | null };
     const server = serverResult?.data;
     
     // 2. Calcular nova data de expiração usando o PeriodCalculationService
     const currentExpiration = new Date(client.expiration_date);
     const baseDate = currentExpiration > new Date() ? currentExpiration : new Date();
     
-    const serverConfig = server || { 
-      period_calculation_type: 'days', 
+    const serverConfig = { 
+      period_calculation_type: 'days' as const, 
       period_calculation_config: {} 
     };
     
-    const newExpirationDate = PeriodCalculationService.calculateExpirationDate(
+    const calculationResult = PeriodCalculationService.calculateExpirationDate(
       baseDate,
       plan.validity,
       serverConfig
     );
+    const newExpirationDate = calculationResult.expirationDate;
     
     // 3. Atualizar cliente no banco de dados
     const { error: updateError } = await supabase
@@ -416,7 +417,7 @@ export async function renewCustomerAction(
     }
     
     // 4. Se há servidor configurado, sincronizar com painel IPTV
-    if (server && server.api_url) {
+    if (server && server.url) {
       try {
         await syncRenewalWithPanel({
           server,

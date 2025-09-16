@@ -386,10 +386,34 @@ class PerformanceMonitor {
 }
 
 // ============================================
-// INSTÂNCIA GLOBAL
+// INSTÂNCIA GLOBAL COM LAZY INITIALIZATION
 // ============================================
 
-const performanceMonitor = new PerformanceMonitor();
+let _performanceMonitor: PerformanceMonitor | null = null;
+
+function getPerformanceMonitor(): PerformanceMonitor {
+  if (typeof window === 'undefined') {
+    // No servidor, retornar uma instância mock
+    return {
+      trackPageLoad: () => {},
+      trackAPICall: () => {},
+      trackError: () => {},
+      trackCustomMetric: () => {},
+      getMetrics: () => ({ performance: [], api: [], errors: [] }),
+      clearMetrics: () => {},
+      destroy: () => {}
+    } as any;
+  }
+  
+  if (!_performanceMonitor) {
+    _performanceMonitor = new PerformanceMonitor();
+  }
+  
+  return _performanceMonitor;
+}
+
+// Manter compatibilidade com código existente
+const performanceMonitor = getPerformanceMonitor();
 
 // ============================================
 // HOOKS E UTILITÁRIOS
@@ -508,7 +532,7 @@ export function generatePerformanceReport() {
 
 export default performanceMonitor;
 
-export { performanceMonitor };
+export { performanceMonitor, getPerformanceMonitor };
 export type {
   PerformanceMetric,
   APIPerformanceMetric,

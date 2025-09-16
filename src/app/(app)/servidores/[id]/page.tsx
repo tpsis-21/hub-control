@@ -61,10 +61,10 @@ export default function ServerDetailsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (params.id) {
+    if (params?.id) {
       loadServerData(params.id as string);
     }
-  }, [params.id]);
+  }, [params?.id]);
 
   const loadServerData = async (serverId: string) => {
     try {

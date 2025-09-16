@@ -117,7 +117,7 @@ export class PeriodCalculationService {
   }
   
   /**
-   * Calculate expiration using months (calendar-based calculation)
+   * Calculate expiration using months (calendar months - real month calculation)
    */
   private static calculateMonthsExpiration(
     baseDate: Date,
@@ -185,19 +185,22 @@ export class PeriodCalculationService {
   }
   
   /**
-   * Convert days to months using average month length
+   * Convert days to months using TheBest calendar month standard
    */
   static convertDaysToMonths(days: number): number {
-    // Using 30.44 days per month (365.25/12) for more accurate conversion
-    const averageDaysPerMonth = 365.25 / 12;
+    // Using TheBest calendar standard: real months (28-31 days)
+    // Average days per month considering leap years
+    const averageDaysPerMonth = 365.25 / 12; // ~30.44 days
     return Math.round(days / averageDaysPerMonth);
   }
   
   /**
-   * Convert months to approximate days
+   * Convert months to days using TheBest calendar month standard
    */
   static convertMonthsToDays(months: number): number {
-    const averageDaysPerMonth = 365.25 / 12;
+    // Using TheBest calendar standard: real months (28-31 days)
+    // Average days per month considering leap years
+    const averageDaysPerMonth = 365.25 / 12; // ~30.44 days
     return Math.round(months * averageDaysPerMonth);
   }
   
@@ -378,10 +381,4 @@ export class PeriodCalculationService {
   }
 }
 
-// Export types for use in other modules
-export type {
-  ServerPeriodConfig,
-  PlanPeriodConfig,
-  PeriodCalculationResult,
-  PanelIdentificationConfig
-};
+// Types are already exported above as interfaces

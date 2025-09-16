@@ -85,24 +85,11 @@ interface UsageMetrics {
   plan_usage: { plan_id: string; plan_name: string; credits_used: number; user_count: number }[];
 }
 
-interface MonitoringConfig {
-  auto_refresh: boolean;
-  refresh_interval: number;
-  alert_thresholds: {
-    low_credits: number;
-    high_usage: number;
-    critical_usage: number;
-  };
-  notification_settings: {
-    email_alerts: boolean;
-    webhook_alerts: boolean;
-    dashboard_alerts: boolean;
-  };
-}
+// MonitoringConfig é importado de @/lib/validations/period-config
 
 const defaultConfig: MonitoringConfig = {
   auto_refresh: false, // Desabilitado por padrão para evitar requisições desnecessárias
-  refresh_interval: 300, // 5 minutos quando habilitado
+  refresh_interval: 300, // 5 minutos quando habilitado (mínimo 60 segundos)
   alert_thresholds: {
     low_credits: 20,
     high_usage: 80,

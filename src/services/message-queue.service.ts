@@ -39,7 +39,7 @@ export class MessageQueueService {
   private readonly RETRY_DELAYS = [30000, 60000, 300000]; // 30s, 1min, 5min
 
   private constructor() {
-    this.startProcessing();
+    // Não inicia processamento automaticamente para otimizar startup
   }
 
   static getInstance(): MessageQueueService {

@@ -142,12 +142,12 @@ export default function PeriodConfigPage() {
       setValidationErrors([]);
       
       // Validar configuração antes de salvar
-      const validation = validateServerConfig(config as ServerConfigType);
-      if (!validation.isValid) {
-        setValidationErrors(validation.errors);
+      const validation = validateServerConfig(config as unknown as ServerConfigType);
+      if (!validation.success) {
+        setValidationErrors(validation.errors || ['Erro de validação']);
         toast({
           title: 'Erro de validação',
-          description: `${validation.errors.length} erro(s) encontrado(s)`,
+          description: 'Erro de validação encontrado',
           variant: 'destructive'
         });
         return;
@@ -190,12 +190,12 @@ export default function PeriodConfigPage() {
       setValidationErrors([]);
       
       // Validar configuração antes de salvar
-      const validation = validatePlanConfig(config as PlanConfigType);
-      if (!validation.isValid) {
-        setValidationErrors(validation.errors);
+      const validation = validatePlanConfig(config as unknown as PlanConfigType);
+      if (!validation.success) {
+        setValidationErrors(validation.errors || ['Erro de validação']);
         toast({
           title: 'Erro de validação',
-          description: `${validation.errors.length} erro(s) encontrado(s)`,
+          description: 'Erro de validação encontrado',
           variant: 'destructive'
         });
         return;

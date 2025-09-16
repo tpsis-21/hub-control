@@ -259,7 +259,7 @@ security-config.local.json
         files: {
           enabled: true,
           sensitive_extensions: ['.env', '.key', '.pem', '.p12', '.pfx'],
-          config_files: ['next.config.ts', 'firebase.json', 'apphosting.yaml'],
+          config_files: ['next.config.ts', 'vercel.json'],
           exclude_patterns: ['node_modules/**', '.git/**', 'dist/**', 'build/**']
         },
         database: {

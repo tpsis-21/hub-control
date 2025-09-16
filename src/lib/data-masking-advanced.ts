@@ -997,13 +997,3 @@ export function createAdvancedMaskingMiddleware(
 
 // Exportar instância para uso direto
 export { advancedDataMasking };
-
-// Exportar tipos
-export type {
-  AdvancedMaskingType,
-  MaskingLevel,
-  AdvancedMaskingRule,
-  AdvancedMaskingContext,
-  MaskingAccessLog,
-  UserMaskingPreferences
-};

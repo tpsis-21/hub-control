@@ -27,7 +27,7 @@ interface AlertsResponse {
 export default async function handler(req: AlertsApiRequest, res: NextApiResponse<AlertsResponse>) {
   const requestLogger = logger.withContext({
     requestId: Math.random().toString(36).substring(7),
-    ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+    ip: (Array.isArray(req.headers['x-forwarded-for']) ? req.headers['x-forwarded-for'][0] : req.headers['x-forwarded-for']) || req.connection.remoteAddress,
     userAgent: req.headers['user-agent'],
     url: req.url,
     method: req.method,
@@ -50,7 +50,7 @@ export default async function handler(req: AlertsApiRequest, res: NextApiRespons
         });
     }
   } catch (error) {
-    requestLogger.error('Erro na API de alertas', error);
+    requestLogger.error('Erro na API de alertas', error as Error);
     return res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',

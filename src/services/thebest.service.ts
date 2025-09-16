@@ -99,7 +99,7 @@ export class TheBestService {
     try {
       const supabase = await createApiSupabaseClient();
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('thebest_configs')
         .select('*')
         .eq('user_id', userId)
@@ -150,7 +150,7 @@ export class TheBestService {
       
       if (existingConfig) {
         // Atualizar configuração existente
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('thebest_configs')
           .update(configPayload)
           .eq('id', existingConfig.id)
@@ -163,7 +163,7 @@ export class TheBestService {
         LoggerService.info('Configuração The Best atualizada', 'TheBestService', { userId, configId: existingConfig.id });
       } else {
         // Criar nova configuração
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('thebest_configs')
           .insert({
             ...configPayload,
@@ -192,7 +192,7 @@ export class TheBestService {
     try {
       const supabase = await createApiSupabaseClient();
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('thebest_configs')
         .update({ 
           is_active: false,
@@ -216,7 +216,7 @@ export class TheBestService {
     try {
       const supabase = await createApiSupabaseClient();
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('thebest_configs')
         .update({ 
           last_used_at: new Date().toISOString(),
@@ -240,7 +240,7 @@ export class TheBestService {
     try {
       const supabase = await createApiSupabaseClient();
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('thebest_packages')
         .select('*')
         .eq('is_active', true)
@@ -267,7 +267,7 @@ export class TheBestService {
       let errors = 0;
       
       // Desativar todos os pacotes existentes
-      await supabase
+      await (supabase as any)
         .from('thebest_packages')
         .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq('is_active', true);
@@ -276,7 +276,7 @@ export class TheBestService {
       for (const packageData of packagesData) {
         try {
           // Verificar se o pacote já existe
-          const { data: existing } = await supabase
+          const { data: existing } = await (supabase as any)
             .from('thebest_packages')
             .select('id')
             .eq('classificacao', packageData.classificacao)
@@ -294,7 +294,7 @@ export class TheBestService {
           
           if (existing) {
             // Atualizar pacote existente
-            const { error } = await supabase
+            const { error } = await (supabase as any)
               .from('thebest_packages')
               .update(packagePayload)
               .eq('id', existing.id);
@@ -302,7 +302,7 @@ export class TheBestService {
             if (error) throw error;
           } else {
             // Criar novo pacote
-            const { error } = await supabase
+            const { error } = await (supabase as any)
               .from('thebest_packages')
               .insert({
                 ...packagePayload,
@@ -339,7 +339,7 @@ export class TheBestService {
       const supabase = await createApiSupabaseClient();
       
       // Verificar se o pacote existe
-      const { data: packageExists, error: packageError } = await supabase
+      const { data: packageExists, error: packageError } = await (supabase as any)
         .from('thebest_packages')
         .select('id')
         .eq('id', renewalData.package_id)
@@ -364,7 +364,7 @@ export class TheBestService {
         created_by: createdBy
       };
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('thebest_renewals')
         .insert(renewal)
         .select()
@@ -395,7 +395,7 @@ export class TheBestService {
     try {
       const supabase = await createApiSupabaseClient();
       
-      let query = supabase
+      let query = (supabase as any)
         .from('thebest_renewals')
         .select(`
           *,
@@ -451,7 +451,7 @@ export class TheBestService {
         ...additionalData
       };
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('thebest_renewals')
         .update(updateData)
         .eq('id', renewalId);
@@ -501,7 +501,7 @@ export class TheBestService {
         created_at: new Date().toISOString()
       };
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('thebest_api_logs')
         .insert(logData);
       
@@ -536,7 +536,7 @@ export class TheBestService {
     try {
       const supabase = await createApiSupabaseClient();
       
-      let query = supabase
+      let query = (supabase as any)
         .from('thebest_api_logs')
         .select('*')
         .eq('config_id', configId)
@@ -659,7 +659,7 @@ export class TheBestService {
       const supabase = await createApiSupabaseClient();
       
       // Obter estatísticas de logs de API
-      const { data: logs, error: logsError } = await supabase
+      const { data: logs, error: logsError } = await (supabase as any)
         .from('thebest_api_logs')
         .select('success, duration_ms')
         .eq('config_id', configId);
@@ -667,7 +667,7 @@ export class TheBestService {
       if (logsError) throw logsError;
       
       // Obter estatísticas de renovações
-      const { data: renewals, error: renewalsError } = await supabase
+      const { data: renewals, error: renewalsError } = await (supabase as any)
         .from('thebest_renewals')
         .select('status')
         .eq('config_id', configId);
@@ -675,7 +675,7 @@ export class TheBestService {
       if (renewalsError) throw renewalsError;
       
       // Obter informações da configuração
-      const { data: config, error: configError } = await supabase
+      const { data: config, error: configError } = await (supabase as any)
         .from('thebest_configs')
         .select('last_used_at')
         .eq('id', configId)
@@ -684,14 +684,14 @@ export class TheBestService {
       if (configError) throw configError;
       
       const totalApiCalls = logs?.length || 0;
-      const successfulCalls = logs?.filter(log => log.success).length || 0;
+      const successfulCalls = logs?.filter((log: any) => log.success).length || 0;
       const failedCalls = totalApiCalls - successfulCalls;
       const averageLatency = logs?.length 
-        ? logs.reduce((sum, log) => sum + (log.duration_ms || 0), 0) / logs.length 
+        ? logs.reduce((sum: number, log: any) => sum + (log.duration_ms || 0), 0) / logs.length 
         : 0;
       
       const totalRenewals = renewals?.length || 0;
-      const activeRenewals = renewals?.filter(renewal => renewal.status === 'active').length || 0;
+      const activeRenewals = renewals?.filter((renewal: any) => renewal.status === 'active').length || 0;
       
       return {
         totalApiCalls,

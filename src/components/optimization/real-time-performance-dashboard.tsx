@@ -372,6 +372,7 @@ export default function RealTimePerformanceDashboard() {
   const [selectedPreset, setSelectedPreset] = useState('balanced');
   const [showAdvancedConfig, setShowAdvancedConfig] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Dados para gráficos
   const [chartData, setChartData] = useState<any[]>([]);
@@ -464,9 +465,14 @@ export default function RealTimePerformanceDashboard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
+            onClick={async () => {
+              setLoading(true);
               setAutoRefresh(false);
-              getAllMetrics();
+              try {
+                getAllMetrics();
+              } finally {
+                setLoading(false);
+              }
             }}
             disabled={loading}
           >
@@ -751,27 +757,37 @@ export default function RealTimePerformanceDashboard() {
                   </SelectContent>
                 </Select>
                 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Taxa de Aprendizado</label>
-                  <Slider
-                    value={[config.learningRate * 100]}
-                    onValueChange={([value]) => updateConfig({ learningRate: value / 100 })}
-                    max={50}
-                    step={1}
-                  />
-                  <span className="text-xs text-gray-500">{(config.learningRate * 100).toFixed(1)}%</span>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Limite de Adaptação</label>
-                  <Slider
-                    value={[config.adaptationThreshold * 100]}
-                    onValueChange={([value]) => updateConfig({ adaptationThreshold: value / 100 })}
-                    max={100}
-                    step={5}
-                  />
-                  <span className="text-xs text-gray-500">{(config.adaptationThreshold * 100).toFixed(0)}%</span>
-                </div>
+{config && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Taxa de Aprendizado</label>
+                      <Slider
+                        value={[config.learningRate * 100]}
+                        onValueChange={([value]) => updateConfig({
+                          learningRate: value / 100
+                        })}
+                        min={1}
+                        max={50}
+                        step={1}
+                      />
+                      <span className="text-xs text-gray-500">{(config.learningRate * 100).toFixed(1)}%</span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Limite de Adaptação</label>
+                      <Slider
+                        value={[config.adaptationThreshold * 100]}
+                        onValueChange={([value]) => updateConfig({
+                          adaptationThreshold: value / 100
+                        })}
+                        min={10}
+                        max={90}
+                        step={5}
+                      />
+                      <span className="text-xs text-gray-500">{(config.adaptationThreshold * 100).toFixed(0)}%</span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -784,47 +800,51 @@ export default function RealTimePerformanceDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">FPS Target</label>
-                  <Slider
-                    value={[config.performanceTarget.targetFPS]}
-                    onValueChange={([value]) => updateConfig({
-                      performanceTarget: { ...config.performanceTarget, targetFPS: value }
-                    })}
-                    min={30}
-                    max={120}
-                    step={10}
-                  />
-                  <span className="text-xs text-gray-500">{config.performanceTarget.targetFPS} FPS</span>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Máximo Uso de Memória</label>
-                  <Slider
-                    value={[config.performanceTarget.maxMemoryUsage]}
-                    onValueChange={([value]) => updateConfig({
-                      performanceTarget: { ...config.performanceTarget, maxMemoryUsage: value }
-                    })}
-                    min={50}
-                    max={95}
-                    step={5}
-                  />
-                  <span className="text-xs text-gray-500">{config.performanceTarget.maxMemoryUsage}%</span>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Máximo Tempo de Carregamento</label>
-                  <Slider
-                    value={[config.performanceTarget.maxLoadTime]}
-                    onValueChange={([value]) => updateConfig({
-                      performanceTarget: { ...config.performanceTarget, maxLoadTime: value }
-                    })}
-                    min={1000}
-                    max={10000}
-                    step={500}
-                  />
-                  <span className="text-xs text-gray-500">{config.performanceTarget.maxLoadTime}ms</span>
-                </div>
+                {config && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">FPS Target</label>
+                      <Slider
+                        value={[config.performanceTarget.targetFPS]}
+                        onValueChange={([value]) => updateConfig({
+                          performanceTarget: { ...config.performanceTarget, targetFPS: value }
+                        })}
+                        min={30}
+                        max={120}
+                        step={10}
+                      />
+                      <span className="text-xs text-gray-500">{config.performanceTarget.targetFPS} FPS</span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Máximo Uso de Memória</label>
+                      <Slider
+                        value={[config.performanceTarget.maxMemoryUsage]}
+                        onValueChange={([value]) => updateConfig({
+                          performanceTarget: { ...config.performanceTarget, maxMemoryUsage: value }
+                        })}
+                        min={50}
+                        max={95}
+                        step={5}
+                      />
+                      <span className="text-xs text-gray-500">{config.performanceTarget.maxMemoryUsage}%</span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Máximo Tempo de Carregamento</label>
+                      <Slider
+                        value={[config.performanceTarget.maxLoadTime]}
+                        onValueChange={([value]) => updateConfig({
+                          performanceTarget: { ...config.performanceTarget, maxLoadTime: value }
+                        })}
+                        min={1000}
+                        max={10000}
+                        step={500}
+                      />
+                      <span className="text-xs text-gray-500">{config.performanceTarget.maxLoadTime}ms</span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

@@ -145,7 +145,7 @@ class AlertManager {
 
       logger.debug('Métricas coletadas', { metrics: this.metrics });
     } catch (error) {
-      logger.error('Erro ao coletar métricas', error);
+      logger.error('Erro ao coletar métricas', error as Error);
     }
   }
 
@@ -166,7 +166,7 @@ class AlertManager {
           this.lastTriggered.set(rule.id, now);
         }
       } catch (error) {
-        logger.error(`Erro ao avaliar regra ${rule.id}`, error);
+        logger.error(`Erro ao avaliar regra ${rule.id}`, error as Error);
       }
     }
   }
@@ -221,7 +221,7 @@ class AlertManager {
     try {
       await Promise.allSettled(promises);
     } catch (error) {
-      logger.error('Erro ao enviar notificações', error);
+      logger.error('Erro ao enviar notificações', error as Error);
     }
   }
 
@@ -233,7 +233,7 @@ class AlertManager {
       // Implementar envio de email (usar nodemailer ou similar)
       logger.info('Email de alerta enviado', { alertId: alert.id });
     } catch (error) {
-      logger.error('Erro ao enviar email de alerta', error);
+      logger.error('Erro ao enviar email de alerta', error as Error);
     }
   }
 
@@ -287,7 +287,7 @@ class AlertManager {
 
       logger.info('Alerta Slack enviado', { alertId: alert.id });
     } catch (error) {
-      logger.error('Erro ao enviar alerta Slack', error);
+      logger.error('Erro ao enviar alerta Slack', error as Error);
     }
   }
 
@@ -312,7 +312,7 @@ class AlertManager {
 
       logger.info('Webhook de alerta enviado', { alertId: alert.id });
     } catch (error) {
-      logger.error('Erro ao enviar webhook de alerta', error);
+      logger.error('Erro ao enviar webhook de alerta', error as Error);
     }
   }
 
@@ -324,7 +324,7 @@ class AlertManager {
       // Implementar envio de SMS baseado no provider
       logger.info('SMS de alerta enviado', { alertId: alert.id });
     } catch (error) {
-      logger.error('Erro ao enviar SMS de alerta', error);
+      logger.error('Erro ao enviar SMS de alerta', error as Error);
     }
   }
 

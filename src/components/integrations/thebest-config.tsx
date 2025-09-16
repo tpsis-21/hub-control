@@ -115,19 +115,21 @@ export function TheBestConfig() {
       const supabase = createClientSupabaseClient()
       
       const { data, error } = await supabase
-        .from('thebest_configs')
+        .from('integration_configs')
         .select('*')
-        .eq('user_id', userId)
+        .eq('provider', 'thebest')
+        .eq('created_by', userId)
         .eq('is_active', true)
         .single()
       
       if (data && !error) {
+        const configData = data.config_data as any
         setConfig({
-          apiUrl: data.api_url || '',
-          apiKey: data.api_key || '',
-          username: data.username || '',
-          password: data.password || '',
-          timeout: data.config_data?.timeout || 30000
+          apiUrl: data.base_url || '',
+          apiKey: data.auth_token || '',
+          username: configData?.username || '',
+          password: configData?.password || '',
+          timeout: configData?.timeout || 30000
         })
         setIsConfigured(true)
         
@@ -163,29 +165,34 @@ export function TheBestConfig() {
       
       // Verificar se já existe configuração
       const { data: existingConfig } = await supabase
-        .from('thebest_configs')
+        .from('integration_configs')
         .select('id')
-        .eq('user_id', currentUser.id)
+        .eq('provider', 'thebest')
+        .eq('created_by', currentUser.id)
         .eq('is_active', true)
         .single()
       
       const configData = {
-        user_id: currentUser.id,
-        api_url: config.apiUrl,
-        api_key: config.apiKey,
-        username: config.username,
-        password: config.password,
+        provider: 'thebest',
+        name: 'The Best API',
+        base_url: config.apiUrl,
+        auth_token: config.apiKey,
+        auth_type: 'bearer',
         config_data: {
+          username: config.username,
+          password: config.password,
           timeout: config.timeout
         },
         is_active: true,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        created_by: currentUser.id,
+        updated_by: currentUser.id
       }
       
       if (existingConfig) {
         // Atualizar configuração existente
         const { error } = await supabase
-          .from('thebest_configs')
+          .from('integration_configs')
           .update(configData)
           .eq('id', existingConfig.id)
         
@@ -193,7 +200,7 @@ export function TheBestConfig() {
       } else {
         // Criar nova configuração
         const { error } = await supabase
-          .from('thebest_configs')
+          .from('integration_configs')
           .insert(configData)
         
         if (error) throw error
@@ -268,17 +275,19 @@ export function TheBestConfig() {
     
     try {
       setIsLoadingPackages(true)
-      const supabase = createClientSupabaseClient()
-      
-      const { data, error } = await supabase
-        .from('thebest_packages')
-        .select('*')
-        .order('classificacao', { ascending: true })
-        .order('duracao', { ascending: true })
-      
-      if (error) throw error
-      
-      setPackages(data || [])
+      // TODO: Implementar carregamento de pacotes quando a tabela thebest_packages estiver disponível
+      // const supabase = createClientSupabaseClient()
+      // 
+      // const { data, error } = await supabase
+      //   .from('thebest_packages')
+      //   .select('*')
+      //   .order('classificacao', { ascending: true })
+      //   .order('duracao', { ascending: true })
+      // 
+      // if (error) throw error
+      // 
+      // setPackages(data || [])
+      setPackages([])
     } catch (error) {
       console.error('Erro ao carregar pacotes:', error)
       toast.error('Erro ao carregar pacotes')
@@ -371,24 +380,26 @@ export function TheBestConfig() {
       setIsLoadingRenewals(true)
       const supabase = createClientSupabaseClient()
       
-      const { data, error } = await supabase
-        .from('thebest_renewals')
-        .select(`
-          *,
-          thebest_packages (
-            classificacao,
-            duracao,
-            telas,
-            creditos
-          )
-        `)
-        .eq('created_by', currentUser?.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-      
-      if (error) throw error
-      
-      setUserRenewals(data || [])
+      // TODO: Implementar carregamento de renovações quando a tabela thebest_renewals estiver disponível
+      // const { data, error } = await supabase
+      //   .from('thebest_renewals')
+      //   .select(`
+      //     *,
+      //     thebest_packages (
+      //       classificacao,
+      //       duracao,
+      //       telas,
+      //       creditos
+      //     )
+      //   `)
+      //   .eq('created_by', currentUser?.id)
+      //   .order('created_at', { ascending: false })
+      //   .limit(10)
+      // 
+      // if (error) throw error
+      // 
+      // setUserRenewals(data || [])
+      setUserRenewals([])
     } catch (error) {
       console.error('Erro ao carregar renovações:', error)
       toast.error('Erro ao carregar renovações')
@@ -408,9 +419,10 @@ export function TheBestConfig() {
       const supabase = createClientSupabaseClient()
       
       const { error } = await supabase
-        .from('thebest_configs')
+        .from('integration_configs')
         .update({ is_active: false })
-        .eq('user_id', currentUser.id)
+        .eq('created_by', currentUser.id)
+        .eq('provider', 'thebest')
       
       if (error) throw error
       
@@ -531,7 +543,7 @@ export function TheBestConfig() {
               </div>
               
               {/* Validação local em tempo real */}
-              <ValidationFeedback validation={localValidation} />
+              <ValidationFeedback result={localValidation} />
               
               <Separator />
               

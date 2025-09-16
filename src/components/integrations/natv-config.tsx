@@ -131,8 +131,7 @@ export function NATVConfig() {
         if (configInfo) {
           setConfig(prev => ({
             ...prev,
-            baseUrl: configInfo.baseUrl || 'https://revenda.pixbot.link',
-            timeout: configInfo.timeout || 30000
+            baseUrl: configInfo.baseUrl || 'https://revenda.pixbot.link'
           }))
           setIsConfigured(true)
         }
@@ -362,7 +361,7 @@ export function NATVConfig() {
             </div>
             
             {/* Validação local em tempo real */}
-            <ValidationFeedback validation={localValidation} />
+            <ValidationFeedback result={localValidation} />
             
             <Separator />
             

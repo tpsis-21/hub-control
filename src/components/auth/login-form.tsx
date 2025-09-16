@@ -117,7 +117,7 @@ export function LoginForm() {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       debugError('Erro capturado no handleLogin', {
         error: error,
         message: error?.message,

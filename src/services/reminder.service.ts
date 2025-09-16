@@ -23,14 +23,18 @@ export class ReminderService {
     this.isRunning = true;
     console.log('Iniciando serviço de lembretes automáticos...');
 
-    // Executa imediatamente e depois a cada hora
-    this.checkExpiringClients();
+    // Executa após 30 segundos (para não bloquear o startup) e depois a cada hora
+    setTimeout(() => {
+      this.checkExpiringClients();
+    }, 30000); // 30 segundos de delay
+    
     this.intervalId = setInterval(() => {
       this.checkExpiringClients();
     }, 60 * 60 * 1000); // 1 hora
 
     LoggerService.info('Serviço de lembretes iniciado', 'system', {
       interval: '1 hora',
+      initialDelay: '30 segundos',
       timestamp: new Date().toISOString()
     });
   }

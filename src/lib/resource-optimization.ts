@@ -162,10 +162,16 @@ class ResourceMonitor {
   private isMonitoring = false;
 
   constructor() {
-    this.setupObservers();
+    // Só configurar observers no cliente
+    if (typeof window !== 'undefined') {
+      this.setupObservers();
+    }
   }
 
   private setupObservers(): void {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined') return;
+    
     // Performance Observer para métricas de performance
     if ('PerformanceObserver' in window) {
       const perfObserver = new PerformanceObserver((list) => {
@@ -264,6 +270,9 @@ class ResourceMonitor {
       percentage: 0
     };
 
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined') return memory;
+
     // Tentar obter informações de memória do navegador
     if ('memory' in performance) {
       const perfMemory = (performance as any).memory;
@@ -285,9 +294,12 @@ class ResourceMonitor {
   private async collectCpuMetrics(): Promise<CpuMetrics> {
     const cpu: CpuMetrics = {
       usage: 0,
-      cores: navigator.hardwareConcurrency || 4,
+      cores: typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency || 4) : 4,
       processes: []
     };
+
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined') return cpu;
 
     // Estimar uso de CPU baseado em performance
     const cpuUsage = await this.estimateCpuUsage();
@@ -307,6 +319,9 @@ class ResourceMonitor {
       activeConnections: 0,
       requestsPerSecond: 0
     };
+
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined') return network;
 
     // Obter informações de conexão
     const connection = (navigator as any).connection;
@@ -339,6 +354,9 @@ class ResourceMonitor {
       writeSpeed: 0,
       cacheHitRatio: 0
     };
+
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined') return storage;
 
     // Obter informações de armazenamento
     if ('storage' in navigator && 'estimate' in navigator.storage) {
@@ -374,6 +392,9 @@ class ResourceMonitor {
       renderTime: 0,
       layoutShifts: 0
     };
+
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined' || typeof document === 'undefined') return dom;
 
     // Contar nós do DOM
     const walker = document.createTreeWalker(
@@ -411,6 +432,9 @@ class ResourceMonitor {
       totalBlockingTime: 0
     };
 
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined' || typeof performance === 'undefined') return perf;
+
     // Calcular FPS
     perf.fps = this.calculateFPS();
 
@@ -424,6 +448,9 @@ class ResourceMonitor {
   }
 
   private estimateDOMMemoryUsage(): number {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined' || typeof document === 'undefined') return 0;
+    
     // Estimativa baseada no número de elementos e seu conteúdo
     const elements = document.querySelectorAll('*');
     let totalSize = 0;
@@ -439,6 +466,9 @@ class ResourceMonitor {
   }
 
   private async estimateCpuUsage(): Promise<number> {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined' || typeof performance === 'undefined') return 0;
+    
     return new Promise((resolve) => {
       const start = performance.now();
       const iterations = 100000;
@@ -458,6 +488,9 @@ class ResourceMonitor {
   }
 
   private async measureLatency(): Promise<number> {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined' || typeof performance === 'undefined') return 0;
+    
     return new Promise((resolve, reject) => {
       const start = performance.now();
       
@@ -480,6 +513,11 @@ class ResourceMonitor {
   }
 
   private async measureIOSpeed(): Promise<{ read: number; write: number }> {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined' || typeof performance === 'undefined' || typeof localStorage === 'undefined') {
+      return { read: 0, write: 0 };
+    }
+    
     const testData = 'x'.repeat(1024 * 10); // 10KB de dados de teste
     
     // Medir velocidade de escrita
@@ -505,6 +543,9 @@ class ResourceMonitor {
   }
 
   private estimateEventListeners(): number {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined' || typeof document === 'undefined') return 0;
+    
     // Estimativa baseada em elementos comuns que têm listeners
     const interactiveElements = document.querySelectorAll(
       'button, a, input, select, textarea, [onclick], [onchange], [onsubmit]'
@@ -514,6 +555,9 @@ class ResourceMonitor {
   }
 
   private calculateFPS(): number {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined') return 60;
+    
     // Implementação simplificada de cálculo de FPS
     let fps = 60; // Assumir 60 FPS como padrão
     
@@ -966,6 +1010,9 @@ export class ResourceOptimizer {
   }
 
   private async executeMemoryCleanup(params: any): Promise<boolean> {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined') return false;
+    
     // Forçar garbage collection se disponível
     if ('gc' in window && typeof (window as any).gc === 'function') {
       (window as any).gc();
@@ -982,20 +1029,22 @@ export class ResourceOptimizer {
     }
     
     // Limpar localStorage de itens antigos
-    const now = Date.now();
-    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 dias
-    
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('temp_')) {
-        try {
-          const item = JSON.parse(localStorage.getItem(key) || '{}');
-          if (item.timestamp && now - item.timestamp > maxAge) {
+    if (typeof localStorage !== 'undefined') {
+      const now = Date.now();
+      const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 dias
+      
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('temp_')) {
+          try {
+            const item = JSON.parse(localStorage.getItem(key) || '{}');
+            if (item.timestamp && now - item.timestamp > maxAge) {
+              localStorage.removeItem(key);
+            }
+          } catch {
+            // Se não conseguir parsear, remover
             localStorage.removeItem(key);
           }
-        } catch {
-          // Se não conseguir parsear, remover
-          localStorage.removeItem(key);
         }
       }
     }
@@ -1004,6 +1053,9 @@ export class ResourceOptimizer {
   }
 
   private async executeCacheOptimization(params: any): Promise<boolean> {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined') return false;
+    
     // Implementar otimização de cache
     if ('caches' in window) {
       const cache = await caches.open('optimized-cache');
@@ -1030,6 +1082,9 @@ export class ResourceOptimizer {
   }
 
   private async executeDOMCleanup(params: any): Promise<boolean> {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+    
     let cleaned = 0;
     
     // Remover elementos ocultos desnecessários
@@ -1061,6 +1116,9 @@ export class ResourceOptimizer {
   }
 
   private async executeImageOptimization(params: any): Promise<boolean> {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+    
     const images = document.querySelectorAll('img');
     let optimized = 0;
     
@@ -1084,6 +1142,9 @@ export class ResourceOptimizer {
   }
 
   private async executeLazyLoading(params: any): Promise<boolean> {
+    // Verificar se estamos no cliente
+    if (typeof window === 'undefined' || typeof document === 'undefined' || !('IntersectionObserver' in window)) return false;
+    
     // Implementar lazy loading para elementos fora da viewport
     const elements = document.querySelectorAll('img, iframe, video');
     let processed = 0;
@@ -1178,7 +1239,52 @@ export class ResourceOptimizer {
 // INSTÂNCIA GLOBAL E HOOKS
 // ============================================
 
-export const resourceOptimizer = new ResourceOptimizer();
+// Lazy initialization para evitar problemas no SSR
+let _resourceOptimizer: ResourceOptimizer | null = null;
+
+export function getResourceOptimizer(): ResourceOptimizer {
+  if (typeof window === 'undefined') {
+    // No servidor, retornar uma instância mock
+    return {
+      getMetrics: () => null,
+      getMetricsHistory: () => [],
+      getOptimizationHistory: () => [],
+      getConfig: () => ({
+        enabled: false,
+        aggressiveness: 'moderate' as const,
+        thresholds: [
+          { metric: 'memory', warning: 70, critical: 85, unit: '%', direction: 'above' },
+          { metric: 'cpu', warning: 70, critical: 85, unit: '%', direction: 'above' },
+          { metric: 'network', warning: 1000, critical: 2000, unit: 'ms', direction: 'above' },
+          { metric: 'storage', warning: 80, critical: 90, unit: '%', direction: 'above' },
+          { metric: 'dom', warning: 1000, critical: 2000, unit: 'nodes', direction: 'above' },
+          { metric: 'performance', warning: 30, critical: 15, unit: 'fps', direction: 'below' }
+        ],
+        rules: [],
+        monitoringInterval: 5000,
+        optimizationInterval: 30000,
+        maxActionsPerMinute: 10,
+        enablePredictiveOptimization: false
+      }),
+      getRules: () => [],
+      start: () => {},
+      stop: () => {},
+      updateConfig: () => {},
+      addRule: () => {},
+      removeRule: () => {}
+    } as any;
+  }
+  
+  if (!_resourceOptimizer) {
+    _resourceOptimizer = new ResourceOptimizer();
+  }
+  return _resourceOptimizer;
+}
+
+// Manter compatibilidade com código existente
+// REMOVIDO: export const resourceOptimizer = getResourceOptimizer();
+// Esta linha causava problemas no SSR pois criava uma instância durante a importação
+// Use getResourceOptimizer() diretamente quando necessário
 
 // Hook React para usar otimização de recursos
 import { useState, useEffect } from 'react';
@@ -1187,13 +1293,19 @@ export function useResourceOptimization() {
   const [metrics, setMetrics] = useState<ResourceMetrics | null>(null);
   const [optimizationHistory, setOptimizationHistory] = useState<OptimizationResult[]>([]);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [config, setConfig] = useState<OptimizationConfig>(resourceOptimizer.getConfig());
+  const [config, setConfig] = useState<OptimizationConfig | null>(null);
 
   useEffect(() => {
+    // Só executar no cliente
+    if (typeof window === 'undefined') return;
+    
+    const optimizer = getResourceOptimizer();
+    setConfig(optimizer.getConfig());
+    
     // Atualizar métricas periodicamente
     const updateMetrics = () => {
-      setMetrics(resourceOptimizer.getMetrics());
-      setOptimizationHistory(resourceOptimizer.getOptimizationHistory());
+      setMetrics(optimizer.getMetrics());
+      setOptimizationHistory(optimizer.getOptimizationHistory());
     };
 
     updateMetrics();
@@ -1203,38 +1315,60 @@ export function useResourceOptimization() {
   }, []);
 
   const startOptimization = () => {
+    if (typeof window === 'undefined') return;
     setIsOptimizing(true);
-    resourceOptimizer.start();
+    getResourceOptimizer().start();
   };
 
   const stopOptimization = () => {
+    if (typeof window === 'undefined') return;
     setIsOptimizing(false);
-    resourceOptimizer.stop();
+    getResourceOptimizer().stop();
   };
 
   const updateConfig = (newConfig: Partial<OptimizationConfig>) => {
-    resourceOptimizer.updateConfig(newConfig);
-    setConfig(resourceOptimizer.getConfig());
+    if (typeof window === 'undefined') return;
+    const optimizer = getResourceOptimizer();
+    optimizer.updateConfig(newConfig);
+    setConfig(optimizer.getConfig());
   };
 
   const addRule = (rule: OptimizationRule) => {
-    resourceOptimizer.addRule(rule);
+    if (typeof window === 'undefined') return;
+    getResourceOptimizer().addRule(rule);
   };
 
   const removeRule = (ruleId: string) => {
-    resourceOptimizer.removeRule(ruleId);
+    if (typeof window === 'undefined') return;
+    getResourceOptimizer().removeRule(ruleId);
   };
 
   return {
     metrics,
     optimizationHistory,
     isOptimizing,
-    config,
+    config: config || {
+      enabled: false,
+      aggressiveness: 'moderate' as const,
+      thresholds: [
+        { metric: 'memory', warning: 70, critical: 85, unit: '%', direction: 'above' },
+        { metric: 'cpu', warning: 70, critical: 85, unit: '%', direction: 'above' },
+        { metric: 'network', warning: 1000, critical: 2000, unit: 'ms', direction: 'above' },
+        { metric: 'storage', warning: 80, critical: 90, unit: '%', direction: 'above' },
+        { metric: 'dom', warning: 1000, critical: 2000, unit: 'nodes', direction: 'above' },
+        { metric: 'performance', warning: 30, critical: 15, unit: 'fps', direction: 'below' }
+      ],
+      rules: [],
+      monitoringInterval: 5000,
+      optimizationInterval: 30000,
+      maxActionsPerMinute: 10,
+      enablePredictiveOptimization: false
+    },
     startOptimization,
     stopOptimization,
     updateConfig,
     addRule,
     removeRule,
-    rules: resourceOptimizer.getRules()
+    rules: typeof window !== 'undefined' ? getResourceOptimizer().getRules() : []
   };
 }

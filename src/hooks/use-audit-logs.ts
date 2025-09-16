@@ -360,7 +360,7 @@ export function useAuditLogs(options: UseAuditLogsOptions = {}): UseAuditLogsRet
       Date.now() - log.timestamp.getTime() < 60 * 60 * 1000 // Última hora
     );
     
-    if (recentLogs.length > config.alertThresholds.maxAccessesPerMinute) {
+    if (recentLogs.length > (config.alertThresholds?.maxAccessesPerMinute || 10)) {
       baseRisk = 'critical';
     }
     
@@ -384,7 +384,7 @@ export function useAuditLogs(options: UseAuditLogsOptions = {}): UseAuditLogsRet
         now - log.timestamp.getTime() < 60 * 1000 // Último minuto
       );
       
-      if (recentLogs.length > config.alertThresholds.maxAccessesPerMinute) {
+      if (recentLogs.length > (config.alertThresholds?.maxAccessesPerMinute || 10)) {
         suspicious.push(...recentLogs.map(log => ({
           ...log,
           riskLevel: 'critical' as RiskLevel,
@@ -402,7 +402,7 @@ export function useAuditLogs(options: UseAuditLogsOptions = {}): UseAuditLogsRet
         now - log.timestamp.getTime() < 60 * 60 * 1000 // Última hora
       );
       
-      if (recentReveals.length > config.alertThresholds.maxRevealsPerHour) {
+      if (recentReveals.length > (config.alertThresholds?.maxRevealsPerHour || 5)) {
         suspicious.push(...recentReveals.map(log => ({
           ...log,
           riskLevel: 'high' as RiskLevel,
@@ -420,7 +420,7 @@ export function useAuditLogs(options: UseAuditLogsOptions = {}): UseAuditLogsRet
         now - log.timestamp.getTime() < 60 * 60 * 1000 // Última hora
       );
       
-      if (failedAttempts.length > config.alertThresholds.maxFailedAttemptsPerHour) {
+      if (failedAttempts.length > (config.alertThresholds?.maxFailedAttemptsPerHour || 3)) {
         suspicious.push(...failedAttempts.map(log => ({
           ...log,
           riskLevel: 'high' as RiskLevel,

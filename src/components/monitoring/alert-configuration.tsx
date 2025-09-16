@@ -67,7 +67,7 @@ interface AlertRuleForm {
   description: string;
   source: string;
   metric: string;
-  condition: 'greater_than' | 'less_than' | 'equals' | 'not_equals' | 'contains';
+  condition: 'gt' | 'lt' | 'eq' | 'gte' | 'lte' | 'contains';
   threshold: number | string;
   severity: 'low' | 'medium' | 'high' | 'critical';
   enabled: boolean;
@@ -214,7 +214,7 @@ export function AlertConfiguration({
     description: '',
     source: '',
     metric: '',
-    condition: 'greater_than',
+    condition: 'gt',
     threshold: 0,
     severity: 'medium',
     enabled: true,
@@ -261,21 +261,22 @@ export function AlertConfiguration({
       await createRule({
         name: ruleForm.name,
         description: ruleForm.description,
-        source: ruleForm.source as any,
+        enabled: ruleForm.enabled,
         conditions: [{
           metric: ruleForm.metric,
           operator: ruleForm.condition,
           value: ruleForm.threshold
         }],
         actions: ruleForm.channels.map(channelId => ({
-          type: 'notification',
-          channelId,
-          template: `Alerta: ${ruleForm.name}`
+          type: 'send_email' as const,
+          config: {
+            channelId,
+            template: `Alerta: ${ruleForm.name}`,
+            severity: ruleForm.severity
+          }
         })),
-        severity: ruleForm.severity as any,
-        enabled: ruleForm.enabled,
-        cooldownMinutes: ruleForm.cooldown,
-        tags: ruleForm.tags
+        cooldown: ruleForm.cooldown,
+        createdBy: userId || 'system'
       });
       
       setIsCreatingRule(false);
@@ -284,7 +285,7 @@ export function AlertConfiguration({
         description: '',
         source: '',
         metric: '',
-        condition: 'greater_than',
+        condition: 'gt',
         threshold: 0,
         severity: 'medium',
         enabled: true,
@@ -351,16 +352,12 @@ export function AlertConfiguration({
     setTestingChannels(prev => new Set(prev).add(channelId));
     
     try {
-      const result = await testChannel(channelId, {
-        title: 'Teste de Notificação',
-        message: 'Esta é uma mensagem de teste do sistema de alertas.',
-        severity: 'low'
-      });
+      const result = await testChannel(channelId);
       
       toast({
-        title: result.success ? 'Teste Bem-sucedido' : 'Teste Falhou',
-        description: result.message,
-        variant: result.success ? 'default' : 'destructive'
+        title: result ? 'Teste Bem-sucedido' : 'Teste Falhou',
+        description: result ? 'Canal testado com sucesso.' : 'Falha no teste do canal.',
+        variant: result ? 'default' : 'destructive'
       });
       
     } catch (error) {
@@ -563,13 +560,10 @@ export function AlertConfiguration({
                         <h3 className="font-semibold">{rule.name}</h3>
                         <p className="text-sm text-muted-foreground">{rule.description}</p>
                         <div className="flex items-center gap-2 mt-2">
-                          <Badge className={SEVERITY_COLORS[rule.severity]}>
-                            {rule.severity}
+                          <Badge className={SEVERITY_COLORS['medium']}>
+                            Ativo
                           </Badge>
-                          <Badge variant="outline">{rule.source}</Badge>
-                          {rule.tags.map((tag) => (
-                            <Badge key={tag} variant="secondary">{tag}</Badge>
-                          ))}
+                          <Badge variant="outline">{rule.enabled ? 'Ativo' : 'Inativo'}</Badge>
                         </div>
                       </div>
                     </div>
@@ -674,10 +668,11 @@ export function AlertConfiguration({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="greater_than">Maior que</SelectItem>
-                        <SelectItem value="less_than">Menor que</SelectItem>
-                        <SelectItem value="equals">Igual a</SelectItem>
-                        <SelectItem value="not_equals">Diferente de</SelectItem>
+                        <SelectItem value="gt">Maior que</SelectItem>
+                            <SelectItem value="lt">Menor que</SelectItem>
+                            <SelectItem value="eq">Igual a</SelectItem>
+                            <SelectItem value="gte">Maior ou igual a</SelectItem>
+                            <SelectItem value="lte">Menor ou igual a</SelectItem>
                         <SelectItem value="contains">Contém</SelectItem>
                       </SelectContent>
                     </Select>

@@ -43,7 +43,7 @@ const planConfigSchema = z.object({
 // Função para verificar se o usuário é admin
 async function isUserAdmin(userId: string): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Admin principal é sempre admin
     if (userId === '2f67bed8-9448-446f-8f38-9306f773620d') {
@@ -66,7 +66,7 @@ async function isUserAdmin(userId: string): Promise<boolean> {
 // GET - Buscar configurações de períodos
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'servers' ou 'plans'
     const id = searchParams.get('id');
@@ -74,13 +74,13 @@ export async function GET(request: NextRequest) {
     // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return createStandardErrorResponse('Não autorizado', 401);
+      return createStandardErrorResponse('UNAUTHORIZED', 'Não autorizado', 401);
     }
 
     // Verificar se é admin
     const isAdmin = await isUserAdmin(user.id);
     if (!isAdmin) {
-      return createStandardErrorResponse('Acesso negado', 403);
+      return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }
 
     if (type === 'servers') {
@@ -101,13 +101,13 @@ export async function GET(request: NextRequest) {
         query = query.eq('id', id);
         const { data, error } = await query.single();
         if (error) {
-          return createStandardErrorResponse('Servidor não encontrado', 404);
+          return createStandardErrorResponse('SERVER_NOT_FOUND', 'Servidor não encontrado', 404);
         }
         return createStandardSuccessResponse(data);
       } else {
         const { data, error } = await query;
         if (error) {
-          return createStandardErrorResponse('Erro ao buscar servidores', 500);
+          return createStandardErrorResponse('DATABASE', 'Erro ao buscar servidores', 500);
         }
         return createStandardSuccessResponse(data);
       }
@@ -127,29 +127,29 @@ export async function GET(request: NextRequest) {
         query = query.eq('id', id);
         const { data, error } = await query.single();
         if (error) {
-          return createStandardErrorResponse('Plano não encontrado', 404);
+          return createStandardErrorResponse('PLAN_NOT_FOUND', 'Plano não encontrado', 404);
         }
         return createStandardSuccessResponse(data);
       } else {
         const { data, error } = await query;
         if (error) {
-          return createStandardErrorResponse('Erro ao buscar planos', 500);
+          return createStandardErrorResponse('DATABASE', 'Erro ao buscar planos', 500);
         }
         return createStandardSuccessResponse(data);
       }
     }
 
-    return createStandardErrorResponse('Tipo inválido. Use "servers" ou "plans"', 400);
+    return createStandardErrorResponse('INVALID_TYPE', 'Tipo inválido. Use "servers" ou "plans"', 400);
   } catch (error) {
     console.error('Erro na API de configuração de períodos:', error);
-    return createStandardErrorResponse('Erro interno do servidor', 500);
+    return createStandardErrorResponse('INTERNAL_ERROR', 'Erro interno do servidor', 500);
   }
 }
 
 // PUT - Atualizar configuração de servidor
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
@@ -157,13 +157,13 @@ export async function PUT(request: NextRequest) {
     // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return createStandardErrorResponse('Não autorizado', 401);
+      return createStandardErrorResponse('UNAUTHORIZED', 'Não autorizado', 401);
     }
 
     // Verificar se é admin
     const isAdmin = await isUserAdmin(user.id);
     if (!isAdmin) {
-      return createStandardErrorResponse('Acesso negado', 403);
+      return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }
 
     if (type === 'servers') {
@@ -187,7 +187,7 @@ export async function PUT(request: NextRequest) {
 
       if (error) {
         console.error('Erro ao atualizar servidor:', error);
-        return createStandardErrorResponse('Erro ao atualizar configuração do servidor', 500);
+        return createStandardErrorResponse('DATABASE', 'Erro ao atualizar configuração do servidor', 500);
       }
 
       return createStandardSuccessResponse(data, 'Configuração do servidor atualizada com sucesso');
@@ -210,42 +210,43 @@ export async function PUT(request: NextRequest) {
 
       if (error) {
         console.error('Erro ao atualizar plano:', error);
-        return createStandardErrorResponse('Erro ao atualizar configuração do plano', 500);
+        return createStandardErrorResponse('DATABASE', 'Erro ao atualizar configuração do plano', 500);
       }
 
       return createStandardSuccessResponse(data, 'Configuração do plano atualizada com sucesso');
     }
 
-    return createStandardErrorResponse('Tipo inválido. Use "servers" ou "plans"', 400);
+    return createStandardErrorResponse('INVALID_TYPE', 'Tipo inválido. Use "servers" ou "plans"', 400);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return createStandardErrorResponse(
+        'VALIDATION_ERROR',
         'Dados inválidos: ' + error.errors.map(e => e.message).join(', '),
         400
       );
     }
     console.error('Erro na API de configuração de períodos:', error);
-    return createStandardErrorResponse('Erro interno do servidor', 500);
+    return createStandardErrorResponse('INTERNAL_ERROR', 'Erro interno do servidor', 500);
   }
 }
 
 // POST - Testar configuração de período
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
     const { serverId, planId, testData } = body;
 
     // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return createStandardErrorResponse('Não autorizado', 401);
+      return createStandardErrorResponse('UNAUTHORIZED', 'Não autorizado', 401);
     }
 
     // Verificar se é admin
     const isAdmin = await isUserAdmin(user.id);
     if (!isAdmin) {
-      return createStandardErrorResponse('Acesso negado', 403);
+      return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }
 
     // Buscar configurações do servidor
@@ -256,7 +257,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (serverError || !server) {
-      return createStandardErrorResponse('Servidor não encontrado', 404);
+      return createStandardErrorResponse('SERVER_NOT_FOUND', 'Servidor não encontrado', 404);
     }
 
     // Buscar configurações do plano (se fornecido)
@@ -285,32 +286,35 @@ export async function POST(request: NextRequest) {
 
     // Simular cálculo baseado no tipo
     if (calculationType === 'days') {
-      const days = config?.defaultDays || config?.overrideDays || 30;
+      const configObj = config as any;
+      const days = configObj?.defaultDays || configObj?.overrideDays || 30;
       result.testResult = {
         type: 'days',
         value: days,
         description: `Período fixo de ${days} dias`
       };
     } else if (calculationType === 'months') {
-      const months = config?.defaultMonths || config?.overrideMonths || 1;
+      const configObj = config as any;
+      const months = configObj?.defaultMonths || configObj?.overrideMonths || 1;
       result.testResult = {
         type: 'months',
         value: months,
         description: `Período fixo de ${months} mês(es)`
       };
     } else if (calculationType === 'flexible') {
-      const rules = config?.flexibleRules || config?.customRules || [];
+      const configObj = config as any;
+      const rules = configObj?.flexibleRules || configObj?.customRules || [];
       result.testResult = {
         type: 'flexible',
-        rules: rules.length,
-        description: `Período flexível com ${rules.length} regra(s) configurada(s)`
+        rules: Array.isArray(rules) ? rules.length : 0,
+        description: `Período flexível com ${Array.isArray(rules) ? rules.length : 0} regra(s) configurada(s)`
       };
     }
 
     return createStandardSuccessResponse(result, 'Teste de configuração executado com sucesso');
   } catch (error) {
     console.error('Erro no teste de configuração:', error);
-    return createStandardErrorResponse('Erro interno do servidor', 500);
+    return createStandardErrorResponse('INTERNAL_ERROR', 'Erro interno do servidor', 500);
   }
 }
 

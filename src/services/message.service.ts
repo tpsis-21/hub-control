@@ -1,6 +1,7 @@
 // src/services/message.service.ts
 import { getSettings } from '@/app/(app)/configuracoes/actions';
 import { LoggerService } from './logger.service';
+import type { Transporter } from 'nodemailer';
 
 // Importação dinâmica do nodemailer para evitar problemas no lado cliente
 let nodemailer: any = null;
@@ -32,7 +33,7 @@ export interface MessageResult {
  * Suporta e-mail (SMTP) e WhatsApp (via BotConversa)
  */
 export class MessageService {
-  private static emailTransporter: nodemailer.Transporter | null = null;
+  private static emailTransporter: Transporter | null = null;
   private static settings: any = null;
   private static settingsLastFetch = 0;
   private static readonly SETTINGS_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
@@ -52,7 +53,7 @@ export class MessageService {
   /**
    * Configura o transporter de e-mail
    */
-  private static async getEmailTransporter(): Promise<nodemailer.Transporter | null> {
+  private static async getEmailTransporter(): Promise<Transporter | null> {
     try {
       const settings = await this.getSystemSettings();
       
@@ -77,8 +78,10 @@ export class MessageService {
         });
 
         // Verifica a conexão
-        await this.emailTransporter.verify();
-        LoggerService.info('Transporter SMTP configurado com sucesso', 'MessageService');
+        if (this.emailTransporter) {
+          await this.emailTransporter.verify();
+          LoggerService.info('Transporter SMTP configurado com sucesso', 'MessageService');
+        }
       }
 
       return this.emailTransporter;

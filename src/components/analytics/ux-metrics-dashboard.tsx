@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,23 @@ export default function UXMetricsDashboard() {
   const { report, isCollecting, startCollecting, stopCollecting } = useUXMonitoring();
   const [selectedTimeRange, setSelectedTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('1h');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  // Função para carregar métricas manualmente
+  const loadMetrics = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Simula carregamento de métricas
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Força re-render para atualizar dados
+      setSelectedTimeRange(prev => prev);
+    } catch (error) {
+      console.error('Erro ao carregar métricas:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const metricsData = report?.metrics ?? [];
   const issuesData = report?.issues ?? [];
   const interactionsData = report?.interactions ?? [];

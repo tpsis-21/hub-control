@@ -46,7 +46,8 @@ export function useAutoOptimization(config?: Partial<OptimizationConfig>) {
     const interval = setInterval(async () => {
       try {
         setIsOptimizing(true);
-        const result = await autoOptimizer.optimize();
+        const optimizer = getAutoOptimizer();
+        const result = await optimizer.optimize();
         setResults(result);
         setError(null);
       } catch (err) {
@@ -115,8 +116,42 @@ class AutoOptimizer {
 // EXPORTAÇÕES
 // ============================================
 
-export const autoOptimizer = new AutoOptimizer();
+// Lazy initialization para evitar problemas no SSR
+let _autoOptimizer: AutoOptimizer | null = null;
+
+export function getAutoOptimizer(): AutoOptimizer {
+  if (typeof window === 'undefined') {
+    // No servidor, retornar uma instância mock
+    const mockConfig = {
+      enabled: false,
+      threshold: 0.8,
+      interval: 30000
+    };
+    
+    return {
+      optimize: async () => ({
+        success: true,
+        improvements: [],
+        metrics: {}
+      }),
+      updateConfig: () => {},
+      getConfig: () => mockConfig
+    } as any;
+  }
+  
+  if (!_autoOptimizer) {
+    _autoOptimizer = new AutoOptimizer();
+  }
+  
+  return _autoOptimizer;
+}
+
 export type { OptimizationConfig, OptimizationResult };
+
+// Manter compatibilidade com código existente
+// REMOVIDO: export const autoOptimizer = new AutoOptimizer();
+// Esta linha causava problemas no SSR pois criava uma instância durante a importação
+// Use getAutoOptimizer() diretamente quando necessário
 
 // Hook adicional para métricas
 export function useOptimizationMetrics() {

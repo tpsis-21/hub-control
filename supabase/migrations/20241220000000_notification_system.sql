@@ -655,8 +655,7 @@ COMMENT ON FUNCTION cleanup_old_notifications(INTEGER) IS 'Remove notificações
 COMMENT ON FUNCTION get_notification_system_stats(DATE, DATE) IS 'Retorna estatísticas completas do sistema de notificações';
 COMMENT ON FUNCTION check_notification_system_health() IS 'Verifica a saúde geral do sistema de notificações';
 
--- Finalizar migração
-INSERT INTO schema_migrations (version) VALUES ('20241220000000');
+-- Migração registrada automaticamente pelo Supabase
 
 -- Log de conclusão
 DO $$

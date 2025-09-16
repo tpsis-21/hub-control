@@ -1191,11 +1191,71 @@ export class BehaviorAnalyzer {
 }
 
 // ============================================
-// INSTÂNCIA GLOBAL E HOOKS
+// INSTÂNCIA GLOBAL COM LAZY INITIALIZATION
 // ============================================
 
-export const sessionTracker = new SessionTracker();
-export const behaviorAnalyzer = new BehaviorAnalyzer();
+let _sessionTracker: SessionTracker | null = null;
+let _behaviorAnalyzer: BehaviorAnalyzer | null = null;
+
+export function getSessionTracker(): SessionTracker {
+  if (typeof window === 'undefined') {
+    // No servidor, retornar uma instância mock
+    return {
+      startSession: () => {},
+      endSession: () => {},
+      trackPageView: () => {},
+      trackEvent: () => {},
+      trackError: () => {},
+      trackConversion: () => {},
+      getCurrentSession: () => null,
+      getAllSessions: () => [],
+      getSessionById: () => null,
+      clearOldSessions: () => {}
+    } as any;
+  }
+  
+  if (!_sessionTracker) {
+    _sessionTracker = new SessionTracker();
+  }
+  
+  return _sessionTracker;
+}
+
+export function getBehaviorAnalyzer(): BehaviorAnalyzer {
+  if (typeof window === 'undefined') {
+    // No servidor, retornar uma instância mock
+    return {
+      addSession: () => {},
+      addSessions: () => {},
+      generateReport: () => ({
+        summary: {
+          totalSessions: 0,
+          totalUsers: 0,
+          averageSessionDuration: 0,
+          bounceRate: 0,
+          conversionRate: 0,
+          topPages: [],
+          deviceBreakdown: {},
+          timeRange: { start: 0, end: 0 }
+        },
+        patterns: [],
+        recommendations: []
+      }),
+      getInsights: () => [],
+      clearData: () => {}
+    } as any;
+  }
+  
+  if (!_behaviorAnalyzer) {
+    _behaviorAnalyzer = new BehaviorAnalyzer();
+  }
+  
+  return _behaviorAnalyzer;
+}
+
+// Manter compatibilidade com código existente
+export const sessionTracker = getSessionTracker();
+export const behaviorAnalyzer = getBehaviorAnalyzer();
 
 import { useState, useEffect } from 'react';
 import { SecuritySeverity } from './security-monitoring';

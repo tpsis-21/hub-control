@@ -133,7 +133,7 @@ export async function getMiddlewareUserRole(request: NextRequest) {
     const userManager = new UserManager(supabase);
     return await userManager.getUserRole();
   } catch (error) {
-    supabaseLogger.error('Erro ao obter role do usuário no middleware', error);
+      supabaseLogger.error('Erro ao obter role do usuário no middleware', error as Error);
     return null;
   }
 }
@@ -145,7 +145,7 @@ export async function isMiddlewareUserAdmin(request: NextRequest): Promise<boole
     const userManager = new UserManager(supabase);
     return await userManager.isUserAdmin();
   } catch (error) {
-    supabaseLogger.error('Erro ao verificar se usuário é admin no middleware', error);
+      supabaseLogger.error('Erro ao verificar se usuário é admin no middleware', error as Error);
     return false;
   }
 }
@@ -157,7 +157,7 @@ export async function isMiddlewareUserApproved(request: NextRequest): Promise<bo
     const userManager = new UserManager(supabase);
     return await userManager.isUserApproved();
   } catch (error) {
-    supabaseLogger.error('Erro ao verificar aprovação do usuário no middleware', error);
+      supabaseLogger.error('Erro ao verificar aprovação do usuário no middleware', error as Error);
     return false;
   }
 }

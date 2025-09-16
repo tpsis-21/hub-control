@@ -3,20 +3,40 @@ import { NextRequest, NextResponse } from 'next/server'
 import { bpixService, BPIXConfig } from '@/services/bpix.service'
 import { ErrorService, ErrorType } from '@/services/error.service'
 import { LoggerService } from '@/services/logger.service'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 // Função auxiliar para obter o usuário autenticado
 async function getAuthenticatedUser() {
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
             return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: any) {
+            cookieStore.set({
+              name,
+              value,
+              ...options,
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax',
+              path: '/'
+            })
+          },
+          remove(name: string, options: any) {
+            cookieStore.set({
+              name,
+              value: '',
+              ...options,
+              maxAge: 0,
+              path: '/'
+            })
           },
         },
       }
@@ -26,7 +46,7 @@ async function getAuthenticatedUser() {
     
     if (error || !user) {
       throw ErrorService.createError(
-        ErrorType.AUTHENTICATION_ERROR,
+        ErrorType.AUTHENTICATION,
         'Usuário não autenticado',
         'USER_NOT_AUTHENTICATED'
       )
@@ -107,11 +127,18 @@ export async function POST(request: NextRequest) {
     const appError = ErrorService.fromNativeError(error)
     ErrorService.logError(appError, 'BPIX Config API - POST')
     
+    // Mapeia tipo de erro para status HTTP
+    let statusCode = 500
+    if (appError.type === 'AUTHENTICATION') statusCode = 401
+    else if (appError.type === 'AUTHORIZATION') statusCode = 403
+    else if (appError.type === 'VALIDATION') statusCode = 400
+    else if (appError.type === 'NOT_FOUND') statusCode = 404
+    
     return NextResponse.json({
       success: false,
       message: appError.message,
       error: appError.code
-    }, { status: appError.statusCode || 500 })
+    }, { status: statusCode })
   }
 }
 
@@ -144,11 +171,18 @@ export async function GET(request: NextRequest) {
     const appError = ErrorService.fromNativeError(error)
     ErrorService.logError(appError, 'BPIX Config API - GET')
     
+    // Mapeia tipo de erro para status HTTP
+    let statusCode = 500
+    if (appError.type === 'AUTHENTICATION') statusCode = 401
+    else if (appError.type === 'AUTHORIZATION') statusCode = 403
+    else if (appError.type === 'VALIDATION') statusCode = 400
+    else if (appError.type === 'NOT_FOUND') statusCode = 404
+    
     return NextResponse.json({
       success: false,
       message: appError.message,
       error: appError.code
-    }, { status: appError.statusCode || 500 })
+    }, { status: statusCode })
   }
 }
 
@@ -234,11 +268,18 @@ export async function PUT(request: NextRequest) {
     const appError = ErrorService.fromNativeError(error)
     ErrorService.logError(appError, 'BPIX Config API - PUT')
     
+    // Mapeia tipo de erro para status HTTP
+    let statusCode = 500
+    if (appError.type === 'AUTHENTICATION') statusCode = 401
+    else if (appError.type === 'AUTHORIZATION') statusCode = 403
+    else if (appError.type === 'VALIDATION') statusCode = 400
+    else if (appError.type === 'NOT_FOUND') statusCode = 404
+    
     return NextResponse.json({
       success: false,
       message: appError.message,
       error: appError.code
-    }, { status: appError.statusCode || 500 })
+    }, { status: statusCode })
   }
 }
 
@@ -262,7 +303,7 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       throw ErrorService.createError(
-        ErrorType.DATABASE_ERROR,
+        ErrorType.DATABASE,
         'Erro ao remover configuração BPIX',
         'DELETE_CONFIG_ERROR',
         { supabaseError: error }
@@ -281,10 +322,17 @@ export async function DELETE(request: NextRequest) {
     const appError = ErrorService.fromNativeError(error)
     ErrorService.logError(appError, 'BPIX Config API - DELETE')
     
+    // Mapeia tipo de erro para status HTTP
+    let statusCode = 500
+    if (appError.type === 'AUTHENTICATION') statusCode = 401
+    else if (appError.type === 'AUTHORIZATION') statusCode = 403
+    else if (appError.type === 'VALIDATION') statusCode = 400
+    else if (appError.type === 'NOT_FOUND') statusCode = 404
+    
     return NextResponse.json({
       success: false,
       message: appError.message,
       error: appError.code
-    }, { status: appError.statusCode || 500 })
+    }, { status: statusCode })
   }
 }

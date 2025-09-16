@@ -1,4 +1,4 @@
-import { createApiSupabaseClient } from '@/lib/supabase/api';
+import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -116,9 +116,9 @@ export class CreditMonitoringService {
       }
 
       // Verificar se já foi notificado recentemente
-      if (shouldNotify) {
-        const lastNotification = await this.getLastNotification(userId, server.id, status);
-        if (lastNotification && this.isRecentNotification(lastNotification.createdAt, status)) {
+      if (shouldNotify && status !== 'ok') {
+        const lastNotification = await this.getLastNotification(userId, server.id, status as 'warning' | 'critical');
+        if (lastNotification && this.isRecentNotification(lastNotification.createdAt, status as 'warning' | 'critical')) {
           shouldNotify = false;
         }
       }

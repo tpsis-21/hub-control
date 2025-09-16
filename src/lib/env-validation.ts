@@ -342,8 +342,8 @@ if (typeof window === 'undefined') {
     validateEnvironment()
   } catch (error) {
     console.error('Falha na validação de ambiente:', error)
-    // Em desenvolvimento, apenas avisar
-    if (process.env.NODE_ENV !== 'development') {
+    // Não falhar durante o build - apenas em runtime de produção real
+    if (process.env.NODE_ENV === 'production' && process.env.VERCEL) {
       process.exit(1)
     }
   }

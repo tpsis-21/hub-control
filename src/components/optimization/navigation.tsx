@@ -61,7 +61,7 @@ const ICON_MAP = {
  * Componente de Breadcrumb
  */
 export function OptimizationBreadcrumb() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '/';
   const { breadcrumbs } = useOptimizationNavigation(pathname);
   
   return (
@@ -90,7 +90,7 @@ export function OptimizationBreadcrumb() {
  * Menu dropdown de navegação
  */
 export function OptimizationNavigationMenu() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '/';
   const { navigationMenu } = useOptimizationNavigation(pathname);
   
   return (
@@ -138,7 +138,7 @@ export function OptimizationNavigationMenu() {
  * Navegação sequencial (anterior/próximo)
  */
 export function OptimizationSequentialNavigation() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '/';
   const { adjacentRoutes } = useOptimizationNavigation(pathname);
   
   if (!adjacentRoutes.previous && !adjacentRoutes.next) {
@@ -182,7 +182,7 @@ export function OptimizationSequentialNavigation() {
  * Barra de navegação completa
  */
 export function OptimizationNavigationBar() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '/';
   const { currentRoute } = useOptimizationNavigation(pathname);
   
   return (
@@ -218,7 +218,7 @@ export function OptimizationNavigationBar() {
  * Sidebar de navegação (para layouts mais complexos)
  */
 export function OptimizationSidebar() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '/';
   const { navigationMenu } = useOptimizationNavigation(pathname);
   
   return (

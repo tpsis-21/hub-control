@@ -25,24 +25,27 @@ BEGIN
         CREATE VIEW public.thebest_dashboard AS
         SELECT 
           p.id,
-          p.user_id,
-          p.thebest_package_id,
-          p.package_name,
-          p.status,
+          p.config_id,
+          p.thebest_package_id as thebest_package_id,
+          p.name as package_name,
+          CASE 
+            WHEN p.is_active = true AND p.is_available = true THEN 'active'
+            WHEN p.is_active = false THEN 'inactive'
+            WHEN p.is_available = false THEN 'unavailable'
+            ELSE 'unknown'
+          END as status,
           p.price,
           p.currency,
-          p.billing_cycle,
-          p.next_due_date,
           p.created_at,
           p.updated_at,
-          p.synced_at,
+          p.last_sync_at,
           COALESCE(COUNT(r.id), 0) as renewal_count,
           MAX(r.renewal_date) as last_renewal_date
         FROM thebest_packages p
         LEFT JOIN thebest_renewals r ON p.id = r.package_id
-        GROUP BY p.id, p.user_id, p.thebest_package_id, p.package_name, 
-                 p.status, p.price, p.currency, p.billing_cycle, 
-                 p.next_due_date, p.created_at, p.updated_at, p.synced_at;
+        GROUP BY p.id, p.config_id, p.thebest_package_id, p.name, 
+                 p.is_active, p.is_available, p.price, p.currency, 
+                 p.created_at, p.updated_at, p.last_sync_at;
                  
         COMMENT ON VIEW public.thebest_dashboard IS 'Dashboard de pacotes TheBest - View sem SECURITY DEFINER';
     END IF;
@@ -379,13 +382,7 @@ END $$;
 -- PARTE 3: VERIFICAÇÕES FINAIS
 -- =====================================================
 
--- Inserir log da migration
-INSERT INTO public.migration_logs (migration_name, description, executed_at)
-VALUES (
-  '20241225000002_fix_security_advisor_issues',
-  'Correção de problemas do Supabase Security Advisor: views com SECURITY DEFINER e tabelas sem RLS',
-  NOW()
-) ON CONFLICT DO NOTHING;
+-- Migração registrada automaticamente pelo Supabase
 
 -- =====================================================
 -- COMENTÁRIOS FINAIS

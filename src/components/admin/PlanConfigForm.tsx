@@ -27,38 +27,41 @@ const defaultPlanConfig: PlanConfig = {
   plan_type: 'basic',
   description: '',
   status: 'active',
-  period_calculation_type: 'fixed',
-  period_duration_days: 30,
-  grace_period_days: 3,
-  auto_renewal: true,
+  period_calculation_config: {
+    calculation_type: 'fixed',
+    billing_cycle: 'monthly',
+    trial_period_days: 0,
+    grace_period_days: 3
+  },
   pricing: {
     base_price: 0,
+    setup_fee: 0,
     currency: 'BRL',
-    billing_cycle: 'monthly',
     discount_percentage: 0,
-    promotional_price: 0,
-    promotional_end_date: ''
+    promotional_price: 0
   },
   features: {
+    max_servers: 1,
     max_users: 1,
     storage_gb: 1,
     bandwidth_gb: 10,
-    api_calls_per_month: 1000,
+    backup_retention_days: 7,
     support_level: 'basic',
-    custom_features: []
+    api_calls_per_month: 1000
   },
   limits: {
-    max_projects: 1,
-    max_integrations: 5,
-    max_concurrent_sessions: 1,
-    rate_limit_per_minute: 60
+    max_concurrent_connections: 10,
+    max_file_size_mb: 100,
+    rate_limit_per_minute: 60,
+    custom_domain_allowed: false,
+    ssl_certificate_included: false,
+    priority_support: false
   },
   notification_settings: {
-    usage_alerts: true,
     billing_notifications: true,
-    feature_updates: false,
-    maintenance_notices: true,
-    threshold_percentage: 80
+    usage_notifications: true,
+    maintenance_notifications: true,
+    security_notifications: true
   }
 };
 
@@ -77,7 +80,7 @@ export function PlanConfigForm({ planId, onSave, onCancel }: PlanConfigFormProps
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [newCustomFeature, setNewCustomFeature] = useState('');
+  // Estado newCustomFeature removido - não existe no schema
   const { toast } = useToast();
 
   // Carregar configuração existente se planId for fornecido
@@ -266,34 +269,7 @@ export function PlanConfigForm({ planId, onSave, onCancel }: PlanConfigFormProps
     }
   };
 
-  const addCustomFeature = () => {
-    if (newCustomFeature.trim()) {
-      updateConfig('features.custom_features', [...config.features.custom_features, newCustomFeature.trim()]);
-      setNewCustomFeature('');
-    }
-  };
-
-  const removeCustomFeature = (index: number) => {
-    const newFeatures = config.features.custom_features.filter((_, i) => i !== index);
-    updateConfig('features.custom_features', newFeatures);
-  };
-
-  const updateArrayValue = (path: string, index: number, value: number) => {
-    const currentArray = path.split('.').reduce((obj, key) => obj[key], config) as number[];
-    const newArray = [...currentArray];
-    newArray[index] = value;
-    updateConfig(path, newArray);
-  };
-
-  const addArrayValue = (path: string, value: number) => {
-    const currentArray = path.split('.').reduce((obj, key) => obj[key], config) as number[];
-    updateConfig(path, [...currentArray, value]);
-  };
-
-  const removeArrayValue = (path: string, index: number) => {
-    const currentArray = path.split('.').reduce((obj, key) => obj[key], config) as number[];
-    updateConfig(path, currentArray.filter((_, i) => i !== index));
-  };
+  // Funções de array removidas - não são mais necessárias
 
   if (loading && planId) {
     return (
@@ -354,8 +330,8 @@ export function PlanConfigForm({ planId, onSave, onCancel }: PlanConfigFormProps
                   <Label htmlFor="name">Nome do Plano *</Label>
                   <Input
                     id="name"
-                    value={config.name}
-                    onChange={(e) => updateConfig('name', e.target.value)}
+                    value={config.plan_name}
+                    onChange={(e) => updateConfig('plan_name', e.target.value)}
                     placeholder="Ex: Plano Premium"
                     className={errors.name ? 'border-red-500' : ''}
                   />
@@ -380,32 +356,28 @@ export function PlanConfigForm({ planId, onSave, onCancel }: PlanConfigFormProps
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="base_period">Período Base (dias) *</Label>
+                  <Label htmlFor="trial_period">Período de Teste (dias)</Label>
                   <Input
-                    id="base_period"
+                    id="trial_period"
                     type="number"
-                    value={config.period_calculation_config.base_period_days}
-                    onChange={(e) => updateConfig('period_calculation_config.base_period_days', parseInt(e.target.value) || 0)}
-                    className={errors.base_period_days ? 'border-red-500' : ''}
+                    value={config.period_calculation_config.trial_period_days}
+                    onChange={(e) => updateConfig('period_calculation_config.trial_period_days', parseInt(e.target.value) || 0)}
                   />
-                  {errors.base_period_days && (
-                    <p className="text-sm text-red-500">{errors.base_period_days}</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="renewal_type">Tipo de Renovação</Label>
+                  <Label htmlFor="calculation_type">Tipo de Cálculo</Label>
                   <Select 
-                    value={config.period_calculation_config.renewal_type} 
-                    onValueChange={(value: 'automatic' | 'manual' | 'hybrid') => updateConfig('period_calculation_config.renewal_type', value)}
+                    value={config.period_calculation_config.calculation_type} 
+                    onValueChange={(value: 'fixed' | 'usage_based' | 'hybrid') => updateConfig('period_calculation_config.calculation_type', value)}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="automatic">Automática</SelectItem>
-                      <SelectItem value="manual">Manual</SelectItem>
-                      <SelectItem value="hybrid">Híbrida</SelectItem>
+                      <SelectItem value="fixed">Fixo</SelectItem>
+                      <SelectItem value="usage_based">Baseado em Uso</SelectItem>
+                      <SelectItem value="hybrid">Híbrido</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -435,17 +407,7 @@ export function PlanConfigForm({ planId, onSave, onCancel }: PlanConfigFormProps
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="early_renewal_discount">Desconto Renovação Antecipada (%)</Label>
-                <Input
-                  id="early_renewal_discount"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={config.period_calculation_config.early_renewal_discount}
-                  onChange={(e) => updateConfig('period_calculation_config.early_renewal_discount', parseInt(e.target.value) || 0)}
-                />
-              </div>
+
             </TabsContent>
 
             <TabsContent value="pricing" className="space-y-4">
@@ -487,8 +449,8 @@ export function PlanConfigForm({ planId, onSave, onCancel }: PlanConfigFormProps
                 <div className="space-y-2">
                   <Label htmlFor="billing_cycle">Ciclo de Cobrança</Label>
                   <Select 
-                    value={config.pricing.billing_cycle} 
-                    onValueChange={(value: 'monthly' | 'quarterly' | 'annual') => updateConfig('pricing.billing_cycle', value)}
+                    value={config.period_calculation_config.billing_cycle} 
+                    onValueChange={(value: 'monthly' | 'quarterly' | 'annual') => updateConfig('period_calculation_config.billing_cycle', value)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -513,35 +475,26 @@ export function PlanConfigForm({ planId, onSave, onCancel }: PlanConfigFormProps
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="early_payment_discount">Desconto Pagamento Antecipado (%)</Label>
+                  <Label htmlFor="discount_percentage">Desconto (%)</Label>
                   <Input
-                    id="early_payment_discount"
+                    id="discount_percentage"
                     type="number"
                     min="0"
                     max="100"
-                    value={config.pricing.discount_rules.early_payment_discount}
-                    onChange={(e) => updateConfig('pricing.discount_rules.early_payment_discount', parseInt(e.target.value) || 0)}
+                    value={config.pricing.discount_percentage}
+                    onChange={(e) => updateConfig('pricing.discount_percentage', parseInt(e.target.value) || 0)}
                   />
                 </div>
-              </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="volume_discount"
-                    checked={config.pricing.discount_rules.volume_discount}
-                    onCheckedChange={(checked) => updateConfig('pricing.discount_rules.volume_discount', checked)}
+                <div className="space-y-2">
+                  <Label htmlFor="promotional_price">Preço Promocional</Label>
+                  <Input
+                    id="promotional_price"
+                    type="number"
+                    step="0.01"
+                    value={config.pricing.promotional_price}
+                    onChange={(e) => updateConfig('pricing.promotional_price', parseFloat(e.target.value) || 0)}
                   />
-                  <Label htmlFor="volume_discount">Desconto por Volume</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="loyalty_discount"
-                    checked={config.pricing.discount_rules.loyalty_discount}
-                    onCheckedChange={(checked) => updateConfig('pricing.discount_rules.loyalty_discount', checked)}
-                  />
-                  <Label htmlFor="loyalty_discount">Desconto por Fidelidade</Label>
                 </div>
               </div>
             </TabsContent>
@@ -614,89 +567,66 @@ export function PlanConfigForm({ planId, onSave, onCancel }: PlanConfigFormProps
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <Label>Recursos Personalizados</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    value={newCustomFeature}
-                    onChange={(e) => setNewCustomFeature(e.target.value)}
-                    placeholder="Adicionar recurso personalizado"
-                    onKeyPress={(e) => e.key === 'Enter' && addCustomFeature()}
-                  />
-                  <Button type="button" onClick={addCustomFeature} size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {config.features.custom_features.map((feature, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                      {feature}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0"
-                        onClick={() => removeCustomFeature(index)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+              {/* Seção de recursos personalizados removida - não existe no schema */}
             </TabsContent>
 
             <TabsContent value="limits" className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="api_calls">Chamadas API por Mês *</Label>
+                  <Label htmlFor="max_concurrent_connections">Conexões Simultâneas Máximas</Label>
                   <Input
-                    id="api_calls"
+                    id="max_concurrent_connections"
                     type="number"
-                    value={config.limits.api_calls_per_month}
-                    onChange={(e) => updateConfig('limits.api_calls_per_month', parseInt(e.target.value) || 0)}
-                    className={errors.api_calls_per_month ? 'border-red-500' : ''}
-                  />
-                  {errors.api_calls_per_month && (
-                    <p className="text-sm text-red-500">{errors.api_calls_per_month}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="concurrent_connections">Conexões Simultâneas</Label>
-                  <Input
-                    id="concurrent_connections"
-                    type="number"
-                    value={config.limits.concurrent_connections}
-                    onChange={(e) => updateConfig('limits.concurrent_connections', parseInt(e.target.value) || 0)}
+                    value={config.limits.max_concurrent_connections}
+                    onChange={(e) => updateConfig('limits.max_concurrent_connections', parseInt(e.target.value) || 0)}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="data_retention">Retenção de Dados (dias)</Label>
+                  <Label htmlFor="max_file_size_mb">Tamanho Máximo de Arquivo (MB)</Label>
                   <Input
-                    id="data_retention"
+                    id="max_file_size_mb"
                     type="number"
-                    value={config.limits.data_retention_days}
-                    onChange={(e) => updateConfig('limits.data_retention_days', parseInt(e.target.value) || 0)}
+                    value={config.limits.max_file_size_mb}
+                    onChange={(e) => updateConfig('limits.max_file_size_mb', parseInt(e.target.value) || 0)}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="backup_frequency">Frequência de Backup</Label>
-                  <Select 
-                    value={config.limits.backup_frequency} 
-                    onValueChange={(value: 'daily' | 'weekly' | 'monthly') => updateConfig('limits.backup_frequency', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Diário</SelectItem>
-                      <SelectItem value="weekly">Semanal</SelectItem>
-                      <SelectItem value="monthly">Mensal</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="rate_limit_per_minute">Limite de Taxa por Minuto</Label>
+                  <Input
+                    id="rate_limit_per_minute"
+                    type="number"
+                    value={config.limits.rate_limit_per_minute}
+                    onChange={(e) => updateConfig('limits.rate_limit_per_minute', parseInt(e.target.value) || 0)}
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="custom_domain_allowed"
+                    checked={config.limits.custom_domain_allowed}
+                    onCheckedChange={(checked) => updateConfig('limits.custom_domain_allowed', checked)}
+                  />
+                  <Label htmlFor="custom_domain_allowed">Domínio Personalizado Permitido</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="ssl_certificate_included"
+                    checked={config.limits.ssl_certificate_included}
+                    onCheckedChange={(checked) => updateConfig('limits.ssl_certificate_included', checked)}
+                  />
+                  <Label htmlFor="ssl_certificate_included">Certificado SSL Incluído</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="priority_support"
+                    checked={config.limits.priority_support}
+                    onCheckedChange={(checked) => updateConfig('limits.priority_support', checked)}
+                  />
+                  <Label htmlFor="priority_support">Suporte Prioritário</Label>
                 </div>
               </div>
             </TabsContent>
@@ -705,110 +635,60 @@ export function PlanConfigForm({ planId, onSave, onCancel }: PlanConfigFormProps
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <Switch
-                    id="admin_notifications"
-                    checked={config.notification_settings.admin_notifications}
-                    onCheckedChange={(checked) => updateConfig('notification_settings.admin_notifications', checked)}
+                    id="billing_notifications"
+                    checked={config.notification_settings.billing_notifications}
+                    onCheckedChange={(checked) => updateConfig('notification_settings.billing_notifications', checked)}
                   />
-                  <Label htmlFor="admin_notifications">Notificações para Administradores</Label>
+                  <Label htmlFor="billing_notifications">Notificações de Cobrança</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="usage_notifications"
+                    checked={config.notification_settings.usage_notifications}
+                    onCheckedChange={(checked) => updateConfig('notification_settings.usage_notifications', checked)}
+                  />
+                  <Label htmlFor="usage_notifications">Notificações de Uso</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="maintenance_notifications"
+                    checked={config.notification_settings.maintenance_notifications}
+                    onCheckedChange={(checked) => updateConfig('notification_settings.maintenance_notifications', checked)}
+                  />
+                  <Label htmlFor="maintenance_notifications">Notificações de Manutenção</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="security_notifications"
+                    checked={config.notification_settings.security_notifications}
+                    onCheckedChange={(checked) => updateConfig('notification_settings.security_notifications', checked)}
+                  />
+                  <Label htmlFor="security_notifications">Notificações de Segurança</Label>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Lembretes de Renovação (dias antes)</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {config.notification_settings.renewal_reminder_days.map((days, index) => (
-                      <div key={index} className="flex items-center space-x-1">
-                        <Input
-                          type="number"
-                          value={days}
-                          onChange={(e) => updateArrayValue('notification_settings.renewal_reminder_days', index, parseInt(e.target.value) || 0)}
-                          className="w-20"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeArrayValue('notification_settings.renewal_reminder_days', index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addArrayValue('notification_settings.renewal_reminder_days', 7)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Label htmlFor="webhook_url">URL do Webhook (opcional)</Label>
+                  <Input
+                    id="webhook_url"
+                    type="url"
+                    value={config.notification_settings.webhook_url || ''}
+                    onChange={(e) => updateConfig('notification_settings.webhook_url', e.target.value || undefined)}
+                    placeholder="https://exemplo.com/webhook"
+                  />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Retry de Pagamento Falhado (dias)</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {config.notification_settings.payment_failure_retry_days.map((days, index) => (
-                      <div key={index} className="flex items-center space-x-1">
-                        <Input
-                          type="number"
-                          value={days}
-                          onChange={(e) => updateArrayValue('notification_settings.payment_failure_retry_days', index, parseInt(e.target.value) || 0)}
-                          className="w-20"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeArrayValue('notification_settings.payment_failure_retry_days', index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addArrayValue('notification_settings.payment_failure_retry_days', 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Alertas de Uso (% do limite)</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {config.notification_settings.usage_alert_thresholds.map((threshold, index) => (
-                      <div key={index} className="flex items-center space-x-1">
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={threshold}
-                          onChange={(e) => updateArrayValue('notification_settings.usage_alert_thresholds', index, parseInt(e.target.value) || 0)}
-                          className="w-20"
-                        />
-                        <span className="text-sm">%</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeArrayValue('notification_settings.usage_alert_thresholds', index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addArrayValue('notification_settings.usage_alert_thresholds', 80)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Label htmlFor="notification_email">Email de Notificação (opcional)</Label>
+                  <Input
+                    id="notification_email"
+                    type="email"
+                    value={config.notification_settings.notification_email || ''}
+                    onChange={(e) => updateConfig('notification_settings.notification_email', e.target.value || undefined)}
+                    placeholder="admin@exemplo.com"
+                  />
                 </div>
               </div>
             </TabsContent>

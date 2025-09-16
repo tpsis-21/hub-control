@@ -402,7 +402,7 @@ function NavPrincipal({ items }: { items: typeof navigationData.navPrincipal }) 
             // Se o item tem subitens, renderiza como collapsible
             if ('items' in item && item.items) {
               return (
-                <Collapsible key={item.title} asChild defaultOpen={pathname.startsWith(item.url)}>
+                <Collapsible key={item.title} asChild defaultOpen={pathname?.startsWith(item.url) || false}>
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton tooltip={item.title}>

@@ -35,7 +35,7 @@ import {
 
 // Importar hooks e utilitários do sistema
 import { useOptimizationConfig } from '@/lib/optimization-config';
-import { useAutoOptimization, autoOptimizer } from '@/lib/auto-optimization';
+import { useAutoOptimization, getAutoOptimizer } from '@/lib/auto-optimization';
 import { useResourceOptimization } from '@/lib/resource-optimization';
 import { useRealTimeOptimization } from '@/lib/real-time-performance-optimizer';
 import { useUserBehaviorAnalytics } from '@/lib/user-behavior-analytics';

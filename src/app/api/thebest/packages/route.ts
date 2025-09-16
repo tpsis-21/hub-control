@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     // Filtrar por classificação se especificado
     if (classification) {
       packages = packages.filter(pkg => 
-        pkg.classification.toLowerCase().includes(classification.toLowerCase())
+        pkg.classificacao.toLowerCase().includes(classification.toLowerCase())
       );
     }
     
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     
     // Agrupar por classificação para melhor organização
     const groupedPackages = packages.reduce((acc, pkg) => {
-      const classification = pkg.classification;
+      const classification = pkg.classificacao;
       if (!acc[classification]) {
         acc[classification] = [];
       }
@@ -56,16 +56,16 @@ export async function GET(request: NextRequest) {
       active_packages: packages.filter(p => p.is_active).length,
       classifications: Object.keys(groupedPackages),
       duration_range: {
-        min: Math.min(...packages.map(p => p.duration_months)),
-        max: Math.max(...packages.map(p => p.duration_months))
+        min: Math.min(...packages.map(p => parseInt(p.duracao.split('_')[0]))),
+        max: Math.max(...packages.map(p => parseInt(p.duracao.split('_')[0])))
       },
       screens_range: {
-        min: Math.min(...packages.map(p => p.screens)),
-        max: Math.max(...packages.map(p => p.screens))
+        min: Math.min(...packages.map(p => p.telas)),
+        max: Math.max(...packages.map(p => p.telas))
       },
       credits_range: {
-        min: Math.min(...packages.map(p => p.credits)),
-        max: Math.max(...packages.map(p => p.credits))
+        min: Math.min(...packages.map(p => p.creditos)),
+        max: Math.max(...packages.map(p => p.creditos))
       }
     };
     
@@ -102,8 +102,8 @@ export async function POST(request: NextRequest) {
       
       // Validar estrutura dos pacotes
       const validPackages = packages.filter((pkg: any) => {
-        return pkg.package_id && pkg.name && pkg.classification && 
-               pkg.duration_months && pkg.screens && pkg.credits;
+        return pkg.package_id && pkg.name && pkg.classificacao && 
+               pkg.duracao && pkg.telas && pkg.creditos;
       });
       
       if (validPackages.length === 0) {
@@ -119,10 +119,10 @@ export async function POST(request: NextRequest) {
         .upsert(validPackages.map((pkg: any) => ({
           package_id: pkg.package_id,
           name: pkg.name,
-          classification: pkg.classification,
-          duration_months: pkg.duration_months,
-          screens: pkg.screens,
-          credits: pkg.credits,
+          classificacao: pkg.classificacao,
+          duracao: pkg.duracao,
+          telas: pkg.telas,
+          creditos: pkg.creditos,
           is_active: pkg.is_active ?? true,
           metadata: {
             ...pkg.metadata,

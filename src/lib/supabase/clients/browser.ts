@@ -23,11 +23,19 @@ let browserClient: ReturnType<typeof createBrowserClient<Database>> | null = nul
 
 export function createClientSupabaseClient() {
   if (!browserClient) {
+    console.log('🔧 createClientSupabaseClient: Criando novo cliente browser...');
+    console.log('🔧 createClientSupabaseClient: URL:', supabaseConfig.url);
+    console.log('🔧 createClientSupabaseClient: AnonKey:', supabaseConfig.anonKey ? 'Configurada' : 'Não configurada');
+    
     browserClient = createBrowserClient<Database>(
       supabaseConfig.url,
       supabaseConfig.anonKey
     );
+    
+    console.log('✅ createClientSupabaseClient: Cliente criado com sucesso');
     supabaseLogger.clientCreated('browser-ssr');
+  } else {
+    console.log('♻️ createClientSupabaseClient: Reutilizando cliente existente');
   }
   return browserClient;
 }
@@ -55,15 +63,40 @@ export function createGenericSupabaseClient() {
 // Instância padrão (compatibilidade com supabase.ts)
 export const supabase = createGenericSupabaseClient();
 
-// Manager de usuário para cliente browser
+// === INSTÂNCIAS DOS GERENCIADORES DE USUÁRIO ===
+
+// Instância do gerenciador para cliente browser
+console.log('🔧 Inicializando browserUserManager...');
 const browserUserManager = new UserManager(createClientSupabaseClient());
+console.log('✅ browserUserManager inicializado');
+
+console.log('🔧 Inicializando genericUserManager...');
 const genericUserManager = new UserManager(createGenericSupabaseClient());
+console.log('✅ genericUserManager inicializado');
 
 // === FUNÇÕES DO CLIENTE BROWSER (supabase-client.ts) ===
 
 // Função para obter o usuário atual no lado do cliente
 export async function getClientUser() {
-  return await browserUserManager.getCurrentUser();
+  try {
+    console.log('🔍 getClientUser: Iniciando obtenção do usuário...');
+    const user = await browserUserManager.getCurrentUser();
+    console.log('👤 getClientUser: Usuário obtido:', user ? { id: user.id, email: user.email } : 'null');
+    return user;
+  } catch (error) {
+    console.error('❌ getClientUser: Erro ao obter usuário:', error);
+    console.error('🔍 getClientUser: Detalhes completos do erro:', {
+      name: (error as Error)?.name,
+      message: (error as Error)?.message,
+      stack: (error as Error)?.stack,
+      cause: (error as Error)?.cause,
+      code: (error as any)?.code,
+      details: (error as any)?.details,
+      hint: (error as any)?.hint,
+      toString: (error as any)?.toString()
+    });
+    throw error;
+  }
 }
 
 // Função para verificar se o usuário está autenticado no lado do cliente

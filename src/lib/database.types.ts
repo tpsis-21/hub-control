@@ -102,6 +102,8 @@ export interface Database {
           send_welcome_message: boolean
           is_public: boolean
           group_id: string | null
+          period_calculation_override: string | null
+          period_calculation_config: Json | null
           created_at: string
           updated_at: string
         }
@@ -117,6 +119,8 @@ export interface Database {
           send_welcome_message?: boolean
           is_public?: boolean
           group_id?: string | null
+          period_calculation_override?: string | null
+          period_calculation_config?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -132,6 +136,8 @@ export interface Database {
           send_welcome_message?: boolean
           is_public?: boolean
           group_id?: string | null
+          period_calculation_override?: string | null
+          period_calculation_config?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -184,6 +190,13 @@ export interface Database {
           send_usage_instructions: boolean
           credits: number | null
           last_credits_sync: string | null
+          credit_monitoring_enabled: boolean
+          credit_warning_threshold: number | null
+          credit_critical_threshold: number | null
+          credit_notification_enabled: boolean
+          user_id: string | null
+          period_calculation_type: string | null
+          period_calculation_config: Json | null
           created_at: string
           updated_at: string
         }
@@ -202,6 +215,13 @@ export interface Database {
           send_usage_instructions?: boolean
           credits?: number | null
           last_credits_sync?: string | null
+          credit_monitoring_enabled?: boolean
+          credit_warning_threshold?: number | null
+          credit_critical_threshold?: number | null
+          credit_notification_enabled?: boolean
+          user_id?: string | null
+          period_calculation_type?: string | null
+          period_calculation_config?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -220,10 +240,64 @@ export interface Database {
           send_usage_instructions?: boolean
           credits?: number | null
           last_credits_sync?: string | null
+          credit_monitoring_enabled?: boolean
+          credit_warning_threshold?: number | null
+          credit_critical_threshold?: number | null
+          credit_notification_enabled?: boolean
+          user_id?: string | null
+          period_calculation_type?: string | null
+          period_calculation_config?: Json | null
           created_at?: string
           updated_at?: string
         }
         Relationships: []
+      },
+      server_credit_notifications: {
+        Row: {
+          id: string
+          user_id: string
+          server_id: string
+          warning_threshold: number | null
+          critical_threshold: number | null
+          notification_enabled: boolean | null
+          last_warning_sent: string | null
+          last_critical_sent: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string
+          server_id: string
+          warning_threshold?: number | null
+          critical_threshold?: number | null
+          notification_enabled?: boolean | null
+          last_warning_sent?: string | null
+          last_critical_sent?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          server_id?: string
+          warning_threshold?: number | null
+          critical_threshold?: number | null
+          notification_enabled?: boolean | null
+          last_warning_sent?: string | null
+          last_critical_sent?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_credit_notifications_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          }
+        ]
       },
       financial_transactions: {
         Row: {

@@ -356,8 +356,42 @@ export class SecurityMonitor {
   }
 }
 
-// Funções de conveniência
-export const securityMonitor = SecurityMonitor.getInstance();
+// Funções de conveniência com lazy initialization
+let _securityMonitor: SecurityMonitor | null = null;
+
+export function getSecurityMonitor(): SecurityMonitor {
+  if (typeof window === 'undefined') {
+    // No servidor, retornar uma instância mock
+    return {
+      recordEvent: () => {},
+      isIPBlocked: () => false,
+      isUserBlocked: () => false,
+      unblockIP: () => {},
+      unblockUser: () => {},
+      onAlert: () => {},
+      offAlert: () => {},
+      getSecurityStats: () => ({
+        totalEvents: 0,
+        eventsByType: {} as any,
+        blockedIPs: 0,
+        blockedUsers: 0,
+        recentAlerts: []
+      }),
+      setEnabled: () => {},
+      getDetectionRules: () => [],
+      updateDetectionRule: () => false
+    } as any;
+  }
+  
+  if (!_securityMonitor) {
+    _securityMonitor = SecurityMonitor.getInstance();
+  }
+  
+  return _securityMonitor;
+}
+
+// Manter compatibilidade com código existente
+export const securityMonitor = getSecurityMonitor();
 
 // Detectores específicos
 export const SecurityDetectors = {

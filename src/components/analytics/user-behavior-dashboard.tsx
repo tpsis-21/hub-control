@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -353,6 +353,22 @@ export const UserBehaviorDashboard: React.FC = () => {
   } = useUserBehaviorAnalytics();
 
   const [selectedTimeRange, setSelectedTimeRange] = useState('7d');
+  const [loading, setLoading] = useState(false);
+
+  // Função para recarregar dados de analytics
+  const loadAnalytics = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Força a regeneração do relatório
+      const newReport = generateCustomReport();
+      // Simula um pequeno delay para mostrar o loading
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setLoading(false);
+    } catch (error) {
+      console.error('Erro ao carregar analytics:', error);
+      setLoading(false);
+    }
+  }, [generateCustomReport]);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(30000); // 30 segundos
 

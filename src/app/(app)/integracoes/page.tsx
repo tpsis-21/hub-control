@@ -21,6 +21,7 @@ import { BPIXConfig } from '@/components/integrations/bpix-config'
 import { BPIXMetrics } from '@/components/integrations/bpix-metrics'
 import { TheBestConfig } from '@/components/integrations/thebest-config'
 import { TheBestPackageManager } from '@/components/integrations/thebest-package-manager'
+import { TheBestPlanMappingManager } from '@/components/integrations/thebest-plan-mapping'
 
 export default function IntegracoesPage() {
   const [activeTab, setActiveTab] = useState('natv')
@@ -216,6 +217,7 @@ export default function IntegracoesPage() {
         <TabsContent value="thebest" className="space-y-4">
           <TheBestConfig />
           <TheBestPackageManager />
+          <TheBestPlanMappingManager />
         </TabsContent>
 
         <TabsContent value="whatsapp" className="space-y-4">

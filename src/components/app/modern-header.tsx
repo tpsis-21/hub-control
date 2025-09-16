@@ -124,7 +124,7 @@ export function ModernHeader({
       '/admin': 'Painel Admin'
     };
     
-    return routeTitles[pathname] || 'Hub Control';
+    return (pathname && routeTitles[pathname]) || 'Hub Control';
   };
 
   const pageTitle = getPageTitle();

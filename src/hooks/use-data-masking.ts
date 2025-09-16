@@ -16,11 +16,10 @@ import {
   MaskingLevel,
   AdvancedMaskingRule,
   UserMaskingPreferences,
-  MaskingContext,
+  AdvancedMaskingContext,
   MaskingAccessLog,
   maskDataAdvanced,
   setUserMaskingPreferences,
-  getUserMaskingPreferences,
   getMaskingAccessLogs,
   clearOldMaskingLogs
 } from '@/lib/data-masking-advanced';
@@ -48,8 +47,8 @@ interface MaskingState {
 
 interface MaskingActions {
   // Mascaramento de dados
-  maskData: (data: Record<string, any>, context?: Partial<MaskingContext>) => Record<string, any>;
-  maskField: (fieldName: string, value: any, context?: Partial<MaskingContext>) => any;
+  maskData: (data: Record<string, any>, context?: Partial<AdvancedMaskingContext>) => Record<string, any>;
+  maskField: (fieldName: string, value: any, context?: Partial<AdvancedMaskingContext>) => any;
   
   // Gerenciamento de preferências
   updatePreferences: (preferences: Partial<UserMaskingPreferences>) => Promise<void>;
@@ -195,7 +194,9 @@ export function useDataMasking(options: UseMaskingOptions): UseMaskingReturn {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
-      const preferences = getUserMaskingPreferences(userId) || {
+      // Carregar preferências do localStorage
+      const stored = localStorage.getItem(`masking_preferences_${userId}`);
+      const preferences = stored ? JSON.parse(stored) : {
         ...DEFAULT_PREFERENCES,
         userId
       };
@@ -236,7 +237,7 @@ export function useDataMasking(options: UseMaskingOptions): UseMaskingReturn {
   // AÇÕES DE MASCARAMENTO
   // ============================================
 
-  const maskData = useCallback((data: Record<string, any>, context: Partial<MaskingContext> = {}) => {
+  const maskData = useCallback((data: Record<string, any>, context: Partial<AdvancedMaskingContext> = {}) => {
     if (!state.preferences) {
       return data;
     }
@@ -247,10 +248,12 @@ export function useDataMasking(options: UseMaskingOptions): UseMaskingReturn {
       return cached;
     }
 
-    const fullContext: MaskingContext = {
+    const fullContext: AdvancedMaskingContext = {
+      userRole,
+      userPermissions,
       purpose: 'display',
       dataClassification: 'internal',
-      environment: process.env.NODE_ENV as 'development' | 'production' | 'test',
+      environment: (process.env.NODE_ENV === 'test' ? 'development' : process.env.NODE_ENV) as 'development' | 'production' | 'staging',
       ...context
     };
 
@@ -259,8 +262,12 @@ export function useDataMasking(options: UseMaskingOptions): UseMaskingReturn {
         data,
         userRole,
         userPermissions,
-        fullContext,
-        state.preferences
+        {
+          userId,
+          purpose: fullContext.purpose,
+          dataClassification: fullContext.dataClassification,
+          complianceLevel: fullContext.complianceLevel
+        }
       );
 
       setToCache(cacheKey, maskedData);
@@ -271,7 +278,7 @@ export function useDataMasking(options: UseMaskingOptions): UseMaskingReturn {
     }
   }, [state.preferences, userRole, userPermissions, cache, cacheTimeout]);
 
-  const maskField = useCallback((fieldName: string, value: any, context: Partial<MaskingContext> = {}) => {
+  const maskField = useCallback((fieldName: string, value: any, context: Partial<AdvancedMaskingContext> = {}) => {
     const data = { [fieldName]: value };
     const maskedData = maskData(data, context);
     return maskedData[fieldName];
@@ -501,8 +508,11 @@ export function useDataMasking(options: UseMaskingOptions): UseMaskingReturn {
         data,
         userRole,
         userPermissions,
-        { purpose: 'display', dataClassification: 'internal' },
-        tempPreferences
+        { 
+          userId: 'preview',
+          purpose: 'display', 
+          dataClassification: 'internal' 
+        }
       );
       
       return masked[type] || value;

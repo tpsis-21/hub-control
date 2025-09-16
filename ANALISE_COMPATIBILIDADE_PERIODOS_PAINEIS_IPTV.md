@@ -192,8 +192,8 @@ export class PeriodCalculationService {
    * Converte validade em dias para meses (quando necessário)
    */
   static convertDaysToMonths(days: number): number {
-    // Conversão aproximada: 30.44 dias por mês (365.25/12)
-    return Math.round(days / 30.44);
+    // Usando padrão comercial TheBest: 30 dias por mês (fixo)
+    return Math.round(days / 30);
   }
   
   /**

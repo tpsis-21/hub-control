@@ -27,19 +27,34 @@ export class UserManager {
   // Obter usuário atual
   async getCurrentUser(): Promise<User | null> {
     try {
+      console.log('🔍 UserManager.getCurrentUser: Iniciando obtenção da sessão...');
       const { data: { session }, error } = await this.supabase.auth.getSession();
       
+      console.log('📊 UserManager.getCurrentUser: Resultado da sessão:', {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        error: error ? { message: error.message, name: error.name } : null
+      });
+      
       if (error) {
+        console.error('❌ UserManager.getCurrentUser: Erro na sessão:', error);
         supabaseLogger.authError('getCurrentUser', error);
         return null;
       }
 
       if (session?.user) {
+        console.log('✅ UserManager.getCurrentUser: Usuário encontrado na sessão:', {
+          id: session.user.id,
+          email: session.user.email
+        });
         supabaseLogger.userOperation('getCurrentUser', session.user.id, session.user.email || undefined);
+      } else {
+        console.log('❌ UserManager.getCurrentUser: Nenhum usuário na sessão');
       }
 
       return session?.user || null;
     } catch (error) {
+      console.error('❌ UserManager.getCurrentUser: Exceção capturada:', error);
       supabaseLogger.authError('getCurrentUser', error);
       return null;
     }
@@ -78,7 +93,7 @@ export class UserManager {
       supabaseLogger.userOperation('getUserProfile', targetUserId);
       return data as UserProfile;
     } catch (error) {
-      supabaseLogger.error('Erro na função getUserProfile', error);
+      supabaseLogger.error('Erro na função getUserProfile', error as Error);
       return null;
     }
   }
@@ -105,7 +120,7 @@ export class UserManager {
       supabaseLogger.userOperation('getUserRole', user.id, userEmail || undefined);
       return role;
     } catch (error) {
-      supabaseLogger.error('Erro ao obter role do usuário', error);
+      supabaseLogger.error('Erro ao obter role do usuário', error as Error);
       return null;
     }
   }
@@ -119,7 +134,7 @@ export class UserManager {
       supabaseLogger.userOperation('isUserAdmin', userId, undefined);
       return isAdmin;
     } catch (error) {
-      supabaseLogger.error('Erro ao verificar se usuário é admin', error);
+      supabaseLogger.error('Erro ao verificar se usuário é admin', error as Error);
       return false;
     }
   }
@@ -164,7 +179,7 @@ export class UserManager {
       supabaseLogger.userOperation('isUserApproved', user.id, user.email || undefined);
       return isApproved;
     } catch (error) {
-      supabaseLogger.error('Erro ao verificar aprovação do usuário', error);
+      supabaseLogger.error('Erro ao verificar aprovação do usuário', error as Error);
       return false;
     }
   }

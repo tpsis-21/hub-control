@@ -8,7 +8,7 @@ import { headers } from 'next/headers'
 // POST /api/bpix/webhook - Recebe webhooks do BPIX
 export async function POST(request: NextRequest) {
   try {
-    const headersList = headers()
+    const headersList = await headers()
     const userAgent = headersList.get('user-agent') || ''
     const contentType = headersList.get('content-type') || ''
     const signature = headersList.get('x-bpix-signature') || headersList.get('signature')
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       user_agent: userAgent,
       content_type: contentType,
       has_signature: !!signature,
-      ip: request.ip || 'unknown'
+      ip: headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'unknown'
     })
 
     // Validação do Content-Type
@@ -188,11 +188,18 @@ export async function GET(request: NextRequest) {
     const appError = ErrorService.fromNativeError(error)
     ErrorService.logError(appError, 'BPIX Webhook - GET')
     
+    // Mapeia tipo de erro para status HTTP
+    let statusCode = 500
+    if (appError.type === 'AUTHENTICATION') statusCode = 401
+    else if (appError.type === 'AUTHORIZATION') statusCode = 403
+    else if (appError.type === 'VALIDATION') statusCode = 400
+    else if (appError.type === 'NOT_FOUND') statusCode = 404
+    
     return NextResponse.json({
       success: false,
       message: appError.message,
       error: appError.code
-    }, { status: appError.statusCode || 500 })
+    }, { status: statusCode })
   }
 }
 

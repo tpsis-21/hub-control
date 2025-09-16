@@ -15,6 +15,16 @@ const creditAlertSchema = z.object({
   notificationChannels: z.array(z.enum(['email', 'webhook', 'in_app'])).optional()
 });
 
+// Interface para o servidor com status de créditos
+interface ServerWithCredits {
+  id: string;
+  name: string;
+  credit_monitoring_enabled: boolean;
+  credit_warning_threshold: number | null;
+  credit_critical_threshold: number | null;
+  credit_notification_enabled: boolean;
+}
+
 // Schema para filtros de relatório
 const reportFiltersSchema = z.object({
   serverId: z.string().uuid().optional(),
@@ -27,7 +37,7 @@ const reportFiltersSchema = z.object({
 // Função para verificar se o usuário é admin
 async function isUserAdmin(userId: string): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Admin principal é sempre admin
     if (userId === '2f67bed8-9448-446f-8f38-9306f773620d') {
@@ -50,7 +60,7 @@ async function isUserAdmin(userId: string): Promise<boolean> {
 // GET - Buscar status de créditos e alertas
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action'); // 'status', 'alerts', 'history'
     const serverId = searchParams.get('serverId');
@@ -58,13 +68,13 @@ export async function GET(request: NextRequest) {
     // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return createStandardErrorResponse('Não autorizado', 401);
+      return createStandardErrorResponse('UNAUTHORIZED', 'Não autorizado', 401);
     }
 
     // Verificar se é admin
     const isAdmin = await isUserAdmin(user.id);
     if (!isAdmin) {
-      return createStandardErrorResponse('Acesso negado', 403);
+      return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }
 
     if (action === 'status') {
@@ -87,17 +97,17 @@ export async function GET(request: NextRequest) {
 
       const { data: servers, error } = await query;
       if (error) {
-        return createStandardErrorResponse('Erro ao buscar status de créditos', 500);
+        return createStandardErrorResponse('DATABASE', 'Erro ao buscar status de créditos', 500);
       }
 
       // Para cada servidor, simular verificação de créditos
       // Em uma implementação real, isso consultaria a API do servidor
-      const serversWithStatus = servers?.map(server => ({
+      const serversWithStatus = (servers || []).map((server: any) => ({
         ...server,
         currentCredits: Math.floor(Math.random() * 100), // Simulado
         lastCheck: new Date().toISOString(),
-        alertStatus: 'normal' // 'normal', 'warning', 'critical'
-      })) || [];
+        alertStatus: 'normal' as const // 'normal', 'warning', 'critical'
+      }));
 
       return createStandardSuccessResponse(serversWithStatus);
     }
@@ -119,7 +129,7 @@ export async function GET(request: NextRequest) {
 
       const { data: alerts, error } = await query;
       if (error) {
-        return createStandardErrorResponse('Erro ao buscar alertas', 500);
+        return createStandardErrorResponse('DATABASE_ERROR', 'Erro ao buscar alertas', 500);
       }
 
       return createStandardSuccessResponse(alerts);
@@ -159,35 +169,35 @@ export async function GET(request: NextRequest) {
 
       const { data: history, error } = await query.limit(100);
       if (error) {
-        return createStandardErrorResponse('Erro ao buscar histórico', 500);
+        return createStandardErrorResponse('DATABASE_ERROR', 'Erro ao buscar histórico', 500);
       }
 
       return createStandardSuccessResponse(history);
     }
 
-    return createStandardErrorResponse('Ação inválida. Use "status", "alerts" ou "history"', 400);
+    return createStandardErrorResponse('INVALID_ACTION', 'Ação inválida. Use "status", "alerts" ou "history"', 400);
   } catch (error) {
     console.error('Erro na API de monitoramento de créditos:', error);
-    return createStandardErrorResponse('Erro interno do servidor', 500);
+    return createStandardErrorResponse('INTERNAL_ERROR', 'Erro interno do servidor', 500);
   }
 }
 
 // PUT - Atualizar configurações de alerta
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
 
     // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return createStandardErrorResponse('Não autorizado', 401);
+      return createStandardErrorResponse('UNAUTHORIZED', 'Não autorizado', 401);
     }
 
     // Verificar se é admin
     const isAdmin = await isUserAdmin(user.id);
     if (!isAdmin) {
-      return createStandardErrorResponse('Acesso negado', 403);
+      return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }
 
     // Validar dados
@@ -196,6 +206,7 @@ export async function PUT(request: NextRequest) {
     // Validar que o threshold crítico é menor que o de warning
     if (validatedData.criticalThreshold >= validatedData.warningThreshold) {
       return createStandardErrorResponse(
+        'INVALID_THRESHOLD',
         'O threshold crítico deve ser menor que o threshold de aviso',
         400
       );
@@ -216,39 +227,40 @@ export async function PUT(request: NextRequest) {
 
     if (error) {
       console.error('Erro ao atualizar configurações de alerta:', error);
-      return createStandardErrorResponse('Erro ao atualizar configurações de alerta', 500);
+      return createStandardErrorResponse('DATABASE_ERROR', 'Erro ao atualizar configurações de alerta', 500);
     }
 
     return createStandardSuccessResponse(data, 'Configurações de alerta atualizadas com sucesso');
   } catch (error) {
     if (error instanceof z.ZodError) {
       return createStandardErrorResponse(
+        'VALIDATION_ERROR',
         'Dados inválidos: ' + error.errors.map(e => e.message).join(', '),
         400
       );
     }
     console.error('Erro na API de monitoramento de créditos:', error);
-    return createStandardErrorResponse('Erro interno do servidor', 500);
+    return createStandardErrorResponse('INTERNAL_ERROR', 'Erro interno do servidor', 500);
   }
 }
 
 // POST - Executar verificação manual de créditos
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
     const { serverId, forceCheck } = body;
 
     // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return createStandardErrorResponse('Não autorizado', 401);
+      return createStandardErrorResponse('UNAUTHORIZED', 'Não autorizado', 401);
     }
 
     // Verificar se é admin
     const isAdmin = await isUserAdmin(user.id);
     if (!isAdmin) {
-      return createStandardErrorResponse('Acesso negado', 403);
+      return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }
 
     // Buscar configurações do servidor
@@ -260,17 +272,18 @@ export async function POST(request: NextRequest) {
         credit_monitoring_enabled,
         credit_warning_threshold,
         credit_critical_threshold,
-        credit_notification_enabled
+        credit_notification_enabled,
+        user_id
       `)
       .eq('id', serverId)
       .single();
 
     if (serverError || !server) {
-      return createStandardErrorResponse('Servidor não encontrado', 404);
+      return createStandardErrorResponse('SERVER_NOT_FOUND', 'Servidor não encontrado', 404);
     }
 
     if (!server.credit_monitoring_enabled) {
-      return createStandardErrorResponse('Monitoramento de créditos não está habilitado para este servidor', 400);
+      return createStandardErrorResponse('MONITORING_DISABLED', 'Monitoramento de créditos não está habilitado para este servidor', 400);
     }
 
     // Simular verificação de créditos
@@ -288,30 +301,31 @@ export async function POST(request: NextRequest) {
     };
 
     // Verificar se deve disparar alerta
-    if (currentCredits <= server.credit_critical_threshold) {
+    if (server.credit_critical_threshold !== null && currentCredits <= server.credit_critical_threshold) {
       checkResult.alertTriggered = true;
       checkResult.alertType = 'critical';
-    } else if (currentCredits <= server.credit_warning_threshold) {
+    } else if (server.credit_warning_threshold !== null && currentCredits <= server.credit_warning_threshold) {
       checkResult.alertTriggered = true;
       checkResult.alertType = 'warning';
     }
 
     // Se alerta foi disparado e notificações estão habilitadas, registrar
     if (checkResult.alertTriggered && server.credit_notification_enabled) {
+      // Atualizar timestamp da última notificação
+      const updateField = checkResult.alertType === 'critical' 
+        ? 'last_critical_sent' 
+        : 'last_warning_sent';
+      
       const { error: notificationError } = await supabase
         .from('server_credit_notifications')
-        .insert({
+        .upsert({
           server_id: serverId,
-          alert_type: checkResult.alertType,
-          credit_level: currentCredits,
-          threshold_value: checkResult.alertType === 'critical' 
-            ? server.credit_critical_threshold 
-            : server.credit_warning_threshold,
-          message: `Créditos baixos detectados: ${currentCredits}% (threshold: ${checkResult.alertType === 'critical' 
-            ? server.credit_critical_threshold 
-            : server.credit_warning_threshold}%)`,
-          status: 'active',
-          notification_sent: false
+          warning_threshold: server.credit_warning_threshold,
+          critical_threshold: server.credit_critical_threshold,
+          notification_enabled: server.credit_notification_enabled,
+          [updateField]: new Date().toISOString()
+        }, {
+          onConflict: 'server_id'
         });
 
       if (notificationError) {
@@ -322,39 +336,37 @@ export async function POST(request: NextRequest) {
     return createStandardSuccessResponse(checkResult, 'Verificação de créditos executada com sucesso');
   } catch (error) {
     console.error('Erro na verificação de créditos:', error);
-    return createStandardErrorResponse('Erro interno do servidor', 500);
+    return createStandardErrorResponse('INTERNAL_ERROR', 'Erro interno do servidor', 500);
   }
 }
 
 // DELETE - Marcar alerta como resolvido
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { searchParams } = new URL(request.url);
     const alertId = searchParams.get('alertId');
 
     // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return createStandardErrorResponse('Não autorizado', 401);
+      return createStandardErrorResponse('UNAUTHORIZED', 'Não autorizado', 401);
     }
 
     // Verificar se é admin
     const isAdmin = await isUserAdmin(user.id);
     if (!isAdmin) {
-      return createStandardErrorResponse('Acesso negado', 403);
+      return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }
 
     if (!alertId) {
-      return createStandardErrorResponse('ID do alerta é obrigatório', 400);
+      return createStandardErrorResponse('MISSING_ALERT_ID', 'ID do alerta é obrigatório', 400);
     }
 
     const { data, error } = await supabase
       .from('server_credit_notifications')
       .update({
-        status: 'resolved',
-        resolved_at: new Date().toISOString(),
-        resolved_by: user.id
+        updated_at: new Date().toISOString()
       })
       .eq('id', alertId)
       .select()
@@ -362,13 +374,13 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       console.error('Erro ao resolver alerta:', error);
-      return createStandardErrorResponse('Erro ao resolver alerta', 500);
+      return createStandardErrorResponse('DATABASE_ERROR', 'Erro ao resolver alerta', 500);
     }
 
     return createStandardSuccessResponse(data, 'Alerta marcado como resolvido');
   } catch (error) {
     console.error('Erro ao resolver alerta:', error);
-    return createStandardErrorResponse('Erro interno do servidor', 500);
+    return createStandardErrorResponse('INTERNAL_ERROR', 'Erro interno do servidor', 500);
   }
 }
 

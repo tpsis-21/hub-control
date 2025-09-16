@@ -794,6 +794,18 @@ export class RealTimePerformanceOptimizer {
   }
 
   private detectDeviceProfile(): DeviceProfile {
+    // Verificar se estamos no servidor
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return {
+        type: 'desktop',
+        performance: 'medium',
+        memory: 4,
+        cores: 4,
+        gpu: 'integrated',
+        connection: 'wifi'
+      };
+    }
+    
     const memory = (navigator as any).deviceMemory || 4;
     const cores = navigator.hardwareConcurrency || 4;
     const connection = (navigator as any).connection;
@@ -1522,10 +1534,42 @@ export class RealTimePerformanceOptimizer {
 }
 
 // ============================================
-// INSTÂNCIA GLOBAL E HOOKS
+// INSTÂNCIA GLOBAL COM LAZY INITIALIZATION
 // ============================================
 
-export const realTimeOptimizer = new RealTimePerformanceOptimizer();
+let _realTimeOptimizer: RealTimePerformanceOptimizer | null = null;
+
+export function getRealTimeOptimizer(): RealTimePerformanceOptimizer {
+  if (typeof window === 'undefined') {
+    // No servidor, retornar uma instância mock
+    return {
+      start: () => {},
+      stop: () => {},
+      addRule: () => {},
+      removeRule: () => {},
+      updateRule: () => {},
+      getRules: () => [],
+      getLatestMetrics: () => null,
+      getMetrics: () => [],
+      getAverageMetrics: () => null,
+      getConfig: () => ({} as any),
+      updateConfig: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      resetRuleExecutions: () => {},
+      getPerformanceScore: () => 0
+    } as any;
+  }
+  
+  if (!_realTimeOptimizer) {
+    _realTimeOptimizer = new RealTimePerformanceOptimizer();
+  }
+  
+  return _realTimeOptimizer;
+}
+
+// Manter compatibilidade com código existente
+export const realTimeOptimizer = getRealTimeOptimizer();
 
 // Hook React para usar otimização em tempo real
 import { useState, useEffect } from 'react';
@@ -1535,75 +1579,108 @@ export function useRealTimeOptimization() {
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
   const [results, setResults] = useState<OptimizationResult[]>([]);
   const [rules, setRules] = useState<OptimizationRule[]>([]);
-  const [config, setConfig] = useState<AdaptiveConfig>(realTimeOptimizer.getConfig());
+  const [config, setConfig] = useState<AdaptiveConfig | null>(null);
   const [performanceScore, setPerformanceScore] = useState(0);
 
   useEffect(() => {
-    // Listener para resultados de otimização
-    const handleOptimizationResult = (result: OptimizationResult) => {
-      setResults(prev => [...prev.slice(-99), result]);
-    };
+    // Inicializar config no cliente
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      setConfig(optimizer.getConfig());
+      setRules(optimizer.getRules());
 
-    realTimeOptimizer.addListener(handleOptimizationResult);
+      // Listener para resultados de otimização
+      const handleOptimizationResult = (result: OptimizationResult) => {
+        setResults(prev => [...prev.slice(-99), result]);
+      };
 
-    // Atualizar métricas periodicamente
-    const metricsInterval = setInterval(() => {
-      const latestMetrics = realTimeOptimizer.getLatestMetrics();
-      if (latestMetrics) {
-        setMetrics(latestMetrics);
-        setPerformanceScore(realTimeOptimizer.getPerformanceScore());
-      }
-    }, 1000);
+      optimizer.addListener(handleOptimizationResult);
 
-    // Atualizar regras
-    setRules(realTimeOptimizer.getRules());
+      // Atualizar métricas periodicamente
+      const metricsInterval = setInterval(() => {
+        const latestMetrics = optimizer.getLatestMetrics();
+        if (latestMetrics) {
+          setMetrics(latestMetrics);
+          setPerformanceScore(optimizer.getPerformanceScore());
+        }
+      }, 1000);
 
-    return () => {
-      realTimeOptimizer.removeListener(handleOptimizationResult);
-      clearInterval(metricsInterval);
-    };
+      return () => {
+        optimizer.removeListener(handleOptimizationResult);
+        clearInterval(metricsInterval);
+      };
+    }
   }, []);
 
   const start = () => {
-    realTimeOptimizer.start();
-    setIsRunning(true);
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.start();
+      setIsRunning(true);
+    }
   };
 
   const stop = () => {
-    realTimeOptimizer.stop();
-    setIsRunning(false);
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.stop();
+      setIsRunning(false);
+    }
   };
 
   const addRule = (rule: OptimizationRule) => {
-    realTimeOptimizer.addRule(rule);
-    setRules(realTimeOptimizer.getRules());
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.addRule(rule);
+      setRules(optimizer.getRules());
+    }
   };
 
   const removeRule = (ruleId: string) => {
-    realTimeOptimizer.removeRule(ruleId);
-    setRules(realTimeOptimizer.getRules());
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.removeRule(ruleId);
+      setRules(optimizer.getRules());
+    }
   };
 
   const updateRule = (ruleId: string, updates: Partial<OptimizationRule>) => {
-    realTimeOptimizer.updateRule(ruleId, updates);
-    setRules(realTimeOptimizer.getRules());
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.updateRule(ruleId, updates);
+      setRules(optimizer.getRules());
+    }
   };
 
   const updateConfig = (newConfig: Partial<AdaptiveConfig>) => {
-    realTimeOptimizer.updateConfig(newConfig);
-    setConfig(realTimeOptimizer.getConfig());
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.updateConfig(newConfig);
+      setConfig(optimizer.getConfig());
+    }
   };
 
   const resetExecutions = () => {
-    realTimeOptimizer.resetRuleExecutions();
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.resetRuleExecutions();
+    }
   };
 
   const getAverageMetrics = (timeWindow?: number) => {
-    return realTimeOptimizer.getAverageMetrics(timeWindow);
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      return optimizer.getAverageMetrics(timeWindow);
+    }
+    return null;
   };
 
   const getAllMetrics = () => {
-    return realTimeOptimizer.getMetrics();
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      return optimizer.getMetrics();
+    }
+    return [];
   };
 
   return {
@@ -1637,10 +1714,11 @@ export function usePerformanceMetrics(refreshInterval: number = 1000) {
   const [isCollecting, setIsCollecting] = useState(false);
 
   useEffect(() => {
-    if (!isCollecting) return;
+    if (!isCollecting || typeof window === 'undefined') return;
 
+    const optimizer = getRealTimeOptimizer();
     const interval = setInterval(() => {
-      const latestMetrics = realTimeOptimizer.getLatestMetrics();
+      const latestMetrics = optimizer.getLatestMetrics();
       if (latestMetrics) {
         setMetrics(latestMetrics);
         setHistory(prev => {
@@ -1656,12 +1734,18 @@ export function usePerformanceMetrics(refreshInterval: number = 1000) {
 
   const startCollecting = () => {
     setIsCollecting(true);
-    realTimeOptimizer.start();
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.start();
+    }
   };
 
   const stopCollecting = () => {
     setIsCollecting(false);
-    realTimeOptimizer.stop();
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.stop();
+    }
   };
 
   const clearHistory = () => {
@@ -1685,30 +1769,42 @@ export function useOptimizationRules() {
   const [lastExecutions, setLastExecutions] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
-    setRules(realTimeOptimizer.getRules());
-    
-    // Atualizar execuções periodicamente
-    const interval = setInterval(() => {
-      // Aqui você poderia acessar as execuções do otimizador
-      // Por simplicidade, vamos simular
-    }, 5000);
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      setRules(optimizer.getRules());
+      
+      // Atualizar execuções periodicamente
+      const interval = setInterval(() => {
+        // Aqui você poderia acessar as execuções do otimizador
+        // Por simplicidade, vamos simular
+      }, 5000);
 
-    return () => clearInterval(interval);
+      return () => clearInterval(interval);
+    }
   }, []);
 
   const addRule = (rule: OptimizationRule) => {
-    realTimeOptimizer.addRule(rule);
-    setRules(realTimeOptimizer.getRules());
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.addRule(rule);
+      setRules(optimizer.getRules());
+    }
   };
 
   const removeRule = (ruleId: string) => {
-    realTimeOptimizer.removeRule(ruleId);
-    setRules(realTimeOptimizer.getRules());
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.removeRule(ruleId);
+      setRules(optimizer.getRules());
+    }
   };
 
   const updateRule = (ruleId: string, updates: Partial<OptimizationRule>) => {
-    realTimeOptimizer.updateRule(ruleId, updates);
-    setRules(realTimeOptimizer.getRules());
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.updateRule(ruleId, updates);
+      setRules(optimizer.getRules());
+    }
   };
 
   const toggleRule = (ruleId: string) => {
@@ -1719,7 +1815,10 @@ export function useOptimizationRules() {
   };
 
   const resetExecutions = () => {
-    realTimeOptimizer.resetRuleExecutions();
+    if (typeof window !== 'undefined') {
+      const optimizer = getRealTimeOptimizer();
+      optimizer.resetRuleExecutions();
+    }
     setExecutions(new Map());
     setLastExecutions(new Map());
   };

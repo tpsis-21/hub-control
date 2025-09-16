@@ -36,10 +36,15 @@ export default function PerfilPage() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        console.log('🔄 Carregando dados do usuário...');
+        console.log('🔄 Iniciando carregamento dos dados do usuário...');
+        
+        // Obter usuário autenticado
+        console.log('🔍 Chamando getBrowserUser...');
         const currentUser = await getBrowserUser();
+        console.log('👤 Usuário obtido:', currentUser ? { id: currentUser.id, email: currentUser.email } : 'null');
         
         if (!currentUser) {
+          console.log('❌ Usuário não encontrado - redirecionando para login');
           console.error('❌ Usuário não autenticado');
           toast({
             title: "Erro de Autenticação",
@@ -53,41 +58,71 @@ export default function PerfilPage() {
         setUser(currentUser);
         
         const supabase = createBrowserSupabaseClient();
+        console.log('🔗 Cliente Supabase:', supabase ? 'Inicializado' : 'Não inicializado');
         
         // Tentar buscar perfil por user_id primeiro
-        console.log('🔍 Buscando perfil por user_id...');
+        console.log('🔍 Buscando perfil por user_id:', currentUser.id);
         let { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', currentUser.id)
           .single();
         
+        console.log('📊 Resultado da busca por user_id:', { 
+          profile: profile ? { id: profile.id, user_id: profile.user_id } : null, 
+          profileError: profileError ? { code: profileError.code, message: profileError.message } : null 
+        });
+        
         // Se não encontrar por user_id, tentar por id
         if (profileError && profileError.code === 'PGRST116') {
-          console.log('🔍 Perfil não encontrado por user_id, tentando por id...');
+          console.log('🔍 Perfil não encontrado por user_id, tentando por id:', currentUser.id);
           const { data: profileById, error: profileByIdError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', currentUser.id)
             .single();
           
+          console.log('📊 Resultado da busca por id:', { 
+            profileById: profileById ? { id: profileById.id, user_id: profileById.user_id } : null, 
+            profileByIdError: profileByIdError ? { code: profileByIdError.code, message: profileByIdError.message } : null 
+          });
+          
           if (!profileByIdError) {
+            console.log('✅ Perfil encontrado por id');
             profile = profileById;
             profileError = null;
           } else {
             console.log('⚠️ Perfil não encontrado, criando novo...');
+            console.log('🆕 Criando novo perfil para o usuário:', currentUser.id);
+            console.log('📝 Dados do usuário para criação:', {
+              id: currentUser.id,
+              email: currentUser.email,
+              metadata: currentUser.user_metadata
+            });
+            
             // Criar perfil se não existir
+            const newProfileData = {
+              id: currentUser.id,
+              user_id: currentUser.id,
+              full_name: currentUser.user_metadata?.full_name || '',
+              role: (currentUser.email === 'topplaytv7@gmail.com' ? 'admin' : 'user') as 'admin' | 'user',
+              approved: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            
+            console.log('📝 Perfil a ser criado:', newProfileData);
+            
             const { data: newProfile, error: createError } = await supabase
               .from('profiles')
-              .insert({
-                id: currentUser.id,
-                user_id: currentUser.id,
-                full_name: currentUser.user_metadata?.full_name || '',
-                role: currentUser.email === 'topplaytv7@gmail.com' ? 'admin' : 'user',
-                approved: true
-              })
+              .insert(newProfileData)
               .select()
               .single();
+            
+            console.log('📊 Resultado da criação do perfil:', { 
+              newProfile: newProfile ? { id: newProfile.id, user_id: newProfile.user_id } : null, 
+              createError: createError ? { code: createError.code, message: createError.message } : null 
+            });
             
             if (createError) {
               console.error('❌ Erro ao criar perfil:', createError);
@@ -101,6 +136,13 @@ export default function PerfilPage() {
         
         if (profileError && profileError.code !== 'PGRST116') {
           console.error('❌ Erro ao buscar perfil:', profileError);
+          console.error('🔍 Detalhes completos do erro de perfil:', {
+            code: profileError?.code,
+            message: profileError?.message,
+            details: profileError?.details,
+            hint: profileError?.hint,
+            stack: profileError?.stack
+          });
           throw profileError;
         }
         
@@ -116,14 +158,35 @@ export default function PerfilPage() {
           });
         }
         
-      } catch (error) {
-        console.error('🚨 Erro ao carregar dados do usuário:', error);
+      } catch (error: any) {
+        console.error('🚨 Erro ao carregar dados do usuário:', {
+        message: error?.message || 'Erro desconhecido',
+        stack: error?.stack,
+        name: error?.name,
+        cause: error?.cause,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
+      });
+        console.error('🔍 Detalhes completos do erro:', {
+          name: error?.name,
+          message: error?.message,
+          stack: error?.stack,
+          cause: error?.cause,
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+          toString: error?.toString(),
+          valueOf: error?.valueOf()
+        });
         toast({
           title: "Erro",
           description: "Não foi possível carregar os dados do perfil.",
           variant: "destructive",
         });
       } finally {
+        console.log('🏁 Finalizando carregamento dos dados');
         setLoading(false);
       }
     };
@@ -144,26 +207,78 @@ export default function PerfilPage() {
         });
         return;
       }
-
-      console.log('Dados do usuário:', user);
-      console.log('Dados do formulário:', formData);
+      
+      // Verificar se o user_id é válido (não vazio e é um UUID válido)
+      if (!user.id || typeof user.id !== 'string' || user.id.trim() === '') {
+        console.error('🚨 [DEBUG] User ID inválido:', user.id);
+        toast({
+          title: "Erro",
+          description: "ID do usuário inválido. Faça login novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Verificar se o UUID tem formato válido
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(user.id)) {
+        console.error('🚨 [DEBUG] Formato de UUID inválido:', user.id);
+        toast({
+          title: "Erro",
+          description: "Formato do ID do usuário inválido. Faça login novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       const supabase = createBrowserSupabaseClient();
 
-      // Preparar dados para upsert
-      const profileData = {
-        id: user.id,
+      // Verificar se existe um perfil para este usuário
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id, user_id, full_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (checkError) {
+        // Se o erro for de foreign key, significa que o user_id não existe
+        if (checkError.message?.includes('foreign key') || checkError.message?.includes('violates')) {
+          toast({
+            title: "Erro de Autenticação",
+            description: "Sua sessão expirou ou é inválida. Faça login novamente.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        toast({
+          title: "Erro",
+          description: `Erro ao verificar perfil existente: ${checkError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Preparar dados para upsert (sem incluir id se não existir perfil)
+      const profileData = existingProfile ? {
+        id: existingProfile.id,
         user_id: user.id,
         full_name: formData.full_name || '',
         phone: formData.phone || '',
         company: formData.company || '',
         avatar_url: formData.avatar_url || '',
         updated_at: new Date().toISOString()
+      } : {
+        user_id: user.id,
+        full_name: formData.full_name || '',
+        phone: formData.phone || '',
+        company: formData.company || '',
+        avatar_url: formData.avatar_url || '',
+        role: (user.email === 'topplaytv7@gmail.com' ? 'admin' : 'user'),
+        approved: true,
+        updated_at: new Date().toISOString()
       };
 
-      console.log('Dados para upsert:', profileData);
-
-      // Usar upsert com user_id como chave de conflito
       const { data, error } = await supabase
         .from('profiles')
         .upsert(profileData, {
@@ -174,11 +289,23 @@ export default function PerfilPage() {
 
       if (error) {
         console.error('Erro detalhado do Supabase:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
+          message: error?.message || 'Mensagem não disponível',
+          details: error?.details || 'Detalhes não disponíveis',
+          hint: error?.hint || 'Dica não disponível',
+          code: error?.code || 'Código não disponível',
+          fullError: error ? JSON.stringify(error, Object.getOwnPropertyNames(error), 2) : 'Erro é null/undefined'
         });
+        
+        // Se o erro for de foreign key, significa que o user_id não existe
+        if (error.message?.includes('foreign key') || error.message?.includes('violates')) {
+          toast({
+            title: "Erro de Autenticação",
+            description: "Sua sessão expirou ou é inválida. Faça login novamente.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         throw error;
       }
 
@@ -203,7 +330,16 @@ export default function PerfilPage() {
       }
       
     } catch (error: any) {
-      console.error('Erro ao salvar perfil:', error);
+      console.error('Erro ao salvar perfil:', error ? {
+        message: error?.message || 'Erro desconhecido',
+        stack: error?.stack || 'Stack não disponível',
+        name: error?.name || 'Nome não disponível',
+        cause: error?.cause || 'Causa não disponível',
+        details: error?.details || 'Detalhes não disponíveis',
+        hint: error?.hint || 'Dica não disponível',
+        code: error?.code || 'Código não disponível',
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
+      } : 'Erro é null ou undefined - verifique o fluxo de execução');
       toast({
         title: "Erro",
         description: error.message || "Erro ao salvar perfil",
@@ -240,7 +376,16 @@ export default function PerfilPage() {
 
       setSecurityData(prev => ({ ...prev, newEmail: "" }));
     } catch (error: any) {
-      console.error('Erro ao alterar e-mail:', error);
+      console.error('Erro ao alterar e-mail:', error ? {
+        message: error?.message || 'Erro desconhecido',
+        stack: error?.stack || 'Stack não disponível',
+        name: error?.name || 'Nome não disponível',
+        cause: error?.cause || 'Causa não disponível',
+        details: error?.details || 'Detalhes não disponíveis',
+        hint: error?.hint || 'Dica não disponível',
+        code: error?.code || 'Código não disponível',
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
+      } : 'Erro é null ou undefined - verifique o fluxo de execução');
       toast({
         title: "Erro",
         description: error.message || "Erro ao alterar e-mail",
@@ -299,7 +444,16 @@ export default function PerfilPage() {
         confirmPassword: "" 
       }));
     } catch (error: any) {
-      console.error('Erro ao alterar senha:', error);
+      console.error('Erro ao alterar senha:', error ? {
+        message: error?.message || 'Erro desconhecido',
+        stack: error?.stack || 'Stack não disponível',
+        name: error?.name || 'Nome não disponível',
+        cause: error?.cause || 'Causa não disponível',
+        details: error?.details || 'Detalhes não disponíveis',
+        hint: error?.hint || 'Dica não disponível',
+        code: error?.code || 'Código não disponível',
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
+      } : 'Erro é null ou undefined - verifique o fluxo de execução');
       toast({
         title: "Erro",
         description: error.message || "Erro ao alterar senha",
@@ -578,7 +732,7 @@ export default function PerfilPage() {
                     {securityLoading ? "Processando..." : "Alterar Senha"}
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    Use uma senha forte com pelo menos 8 caracteres
+                    Use uma senha forte com pelo menos 6 caracteres
                   </p>
                 </CardContent>
               </Card>

@@ -213,7 +213,7 @@ class BPIXService {
   ): Promise<BPIXApiResponse<T>> {
     if (!this.config) {
       throw ErrorService.createError(
-        ErrorType.CONFIGURATION_ERROR,
+        ErrorType.VALIDATION,
         'Serviço BPIX não configurado',
         'BPIX_NOT_CONFIGURED'
       )
@@ -259,7 +259,7 @@ class BPIXService {
       if (!response.ok) {
         const errorMessage = responseData.message || responseData.error || `HTTP ${response.status}`
         throw ErrorService.createError(
-          ErrorType.EXTERNAL_API_ERROR,
+          ErrorType.NETWORK,
           `Erro na API BPIX: ${errorMessage}`,
           'BPIX_API_ERROR',
           { status: response.status, response: responseData }
@@ -283,7 +283,7 @@ class BPIXService {
 
       if (error instanceof Error && error.name === 'AbortError') {
         throw ErrorService.createError(
-          ErrorType.TIMEOUT_ERROR,
+          ErrorType.NETWORK,
           'Timeout na requisição para API BPIX',
           'BPIX_TIMEOUT'
         )
@@ -330,7 +330,7 @@ class BPIXService {
     try {
       if (!this.isConfigured()) {
         throw ErrorService.createError(
-          ErrorType.CONFIGURATION_ERROR,
+          ErrorType.VALIDATION,
           'Serviço BPIX não configurado',
           'BPIX_NOT_CONFIGURED'
         )
@@ -339,7 +339,7 @@ class BPIXService {
       // Validações básicas
       if (!request.amount || request.amount <= 0) {
         throw ErrorService.createError(
-          ErrorType.VALIDATION_ERROR,
+          ErrorType.VALIDATION,
           'Valor do pagamento deve ser maior que zero',
           'INVALID_AMOUNT'
         )
@@ -347,7 +347,7 @@ class BPIXService {
 
       if (!request.description || request.description.trim().length === 0) {
         throw ErrorService.createError(
-          ErrorType.VALIDATION_ERROR,
+          ErrorType.VALIDATION,
           'Descrição do pagamento é obrigatória',
           'MISSING_DESCRIPTION'
         )
@@ -378,7 +378,7 @@ class BPIXService {
     try {
       if (!this.isConfigured()) {
         throw ErrorService.createError(
-          ErrorType.CONFIGURATION_ERROR,
+          ErrorType.VALIDATION,
           'Serviço BPIX não configurado',
           'BPIX_NOT_CONFIGURED'
         )
@@ -387,7 +387,7 @@ class BPIXService {
       // Validações básicas
       if (!request.amount || request.amount <= 0) {
         throw ErrorService.createError(
-          ErrorType.VALIDATION_ERROR,
+          ErrorType.VALIDATION,
           'Valor da fatura deve ser maior que zero',
           'INVALID_AMOUNT'
         )
@@ -395,7 +395,7 @@ class BPIXService {
 
       if (!request.description || request.description.trim().length === 0) {
         throw ErrorService.createError(
-          ErrorType.VALIDATION_ERROR,
+          ErrorType.VALIDATION,
           'Descrição da fatura é obrigatória',
           'MISSING_DESCRIPTION'
         )
@@ -426,7 +426,7 @@ class BPIXService {
     try {
       if (!this.isConfigured()) {
         throw ErrorService.createError(
-          ErrorType.CONFIGURATION_ERROR,
+          ErrorType.VALIDATION,
           'Serviço BPIX não configurado',
           'BPIX_NOT_CONFIGURED'
         )
@@ -434,7 +434,7 @@ class BPIXService {
 
       if (!paymentId || paymentId.trim().length === 0) {
         throw ErrorService.createError(
-          ErrorType.VALIDATION_ERROR,
+          ErrorType.VALIDATION,
           'ID do pagamento é obrigatório',
           'MISSING_PAYMENT_ID'
         )
@@ -463,7 +463,7 @@ class BPIXService {
     try {
       if (!this.isConfigured()) {
         throw ErrorService.createError(
-          ErrorType.CONFIGURATION_ERROR,
+          ErrorType.VALIDATION,
           'Serviço BPIX não configurado',
           'BPIX_NOT_CONFIGURED'
         )
@@ -568,7 +568,7 @@ class BPIXService {
     try {
       if (!this.isConfigured()) {
         throw ErrorService.createError(
-          ErrorType.CONFIGURATION_ERROR,
+          ErrorType.VALIDATION,
           'Serviço BPIX não configurado',
           'BPIX_NOT_CONFIGURED'
         )

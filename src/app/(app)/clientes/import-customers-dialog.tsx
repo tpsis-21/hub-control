@@ -3,7 +3,7 @@
 
 import { useState, useTransition } from "react";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import * as ExcelJS from "exceljs";
 import { UploadCloud, File, Loader2, AlertTriangle, CheckCircle, Info, Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -95,10 +95,16 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
   };
 
   // Função para gerar e baixar arquivo de exemplo Excel
-  const downloadExampleExcel = () => {
-    const exampleData = [
-      expectedHeaders,
-      [
+  const downloadExampleExcel = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Clientes');
+      
+      // Adicionar cabeçalhos
+      worksheet.addRow(expectedHeaders);
+      
+      // Adicionar dados de exemplo
+      worksheet.addRow([
         "João Silva",
         "joao123",
         "senha123",
@@ -107,8 +113,9 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
         allPlans[0]?.panel_plan_id || "10",
         allServers[0]?.panelServerId || "none",
         "Cliente VIP - Renovação automática"
-      ],
-      [
+      ]);
+      
+      worksheet.addRow([
         "Maria Santos",
         "maria456",
         "senha456",
@@ -117,18 +124,35 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
         allPlans[1]?.panel_plan_id || "11",
         "none",
         "Cliente novo"
-      ]
-    ];
-    
-    const ws = XLSX.utils.aoa_to_sheet(exampleData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Clientes");
-    XLSX.writeFile(wb, "exemplo-importacao-clientes.xlsx");
-    
-    toast({
-      title: "Arquivo baixado!",
-      description: "Exemplo de Excel baixado com sucesso.",
-    });
+      ]);
+      
+      // Gerar buffer e baixar arquivo
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'exemplo-importacao-clientes.xlsx');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Arquivo baixado!",
+        description: "Exemplo de Excel baixado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao gerar arquivo",
+        description: "Não foi possível gerar o arquivo Excel de exemplo.",
+        variant: "destructive",
+      });
+    }
   };
 
   const resetState = () => {
@@ -138,7 +162,7 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
     setImportResult(null);
   };
   
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     resetState();
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
@@ -148,7 +172,7 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
         if (fileExtension === 'csv') {
             parseCsv(selectedFile);
         } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
-            parseExcel(selectedFile);
+            await parseExcel(selectedFile);
         } else {
             toast({
                 title: "Formato não suportado",
@@ -189,62 +213,76 @@ export function ImportCustomersDialog({ allPlans, allServers }: { allPlans: Plan
     });
   };
 
-  const parseExcel = (fileToParse: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        
-        if (jsonData.length === 0) {
-          toast({
-            title: "Arquivo vazio",
-            description: "O arquivo Excel não contém dados.",
-            variant: "destructive",
-          });
-          resetState();
-          return;
-        }
-        
-        const headers = jsonData[0] as string[];
-        const rows = jsonData.slice(1);
-        
-        if (JSON.stringify(headers.sort()) !== JSON.stringify([...expectedHeaders].sort())) {
-          toast({
-            title: "Erro no Cabeçalho do Excel",
-            description: `O cabeçalho do arquivo não corresponde ao esperado. Verifique o modelo. Esperado: ${expectedHeaders.join(', ')}`,
-            variant: "destructive",
-            duration: 8000
-          });
-          resetState();
-          return;
-        }
-        
-        // Converter dados para o formato esperado
-        const parsedRows = (rows as any[][])
-          .filter((row: any[]) => row.some((cell: any) => cell !== null && cell !== undefined && cell !== ''))
-          .map((row: any[]) => {
-            const obj: any = {};
-            headers.forEach((header, index) => {
-              obj[header] = row[index] || '';
-            });
-            return obj;
-          });
-        
-        setParsedData(parsedRows as ParsedData[]);
-      } catch (error) {
+  const parseExcel = async (fileToParse: File) => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const buffer = await fileToParse.arrayBuffer();
+      await workbook.xlsx.load(buffer);
+      
+      const worksheet = workbook.getWorksheet(1); // Primeira planilha
+      
+      if (!worksheet || worksheet.rowCount === 0) {
         toast({
-          title: "Erro ao ler o arquivo Excel",
-          description: "Não foi possível processar o arquivo Excel. Verifique se o arquivo não está corrompido.",
+          title: "Arquivo vazio",
+          description: "O arquivo Excel não contém dados.",
           variant: "destructive",
         });
         resetState();
+        return;
       }
-    };
-    reader.readAsArrayBuffer(fileToParse);
+      
+      // Extrair cabeçalhos da primeira linha
+      const headerRow = worksheet.getRow(1);
+      const headers: string[] = [];
+      headerRow.eachCell((cell, colNumber) => {
+        headers[colNumber - 1] = cell.text || '';
+      });
+      
+      // Filtrar cabeçalhos vazios
+      const filteredHeaders = headers.filter(header => header.trim() !== '');
+      
+      if (JSON.stringify(filteredHeaders.sort()) !== JSON.stringify([...expectedHeaders].sort())) {
+        toast({
+          title: "Erro no Cabeçalho do Excel",
+          description: `O cabeçalho do arquivo não corresponde ao esperado. Verifique o modelo. Esperado: ${expectedHeaders.join(', ')}`,
+          variant: "destructive",
+          duration: 8000
+        });
+        resetState();
+        return;
+      }
+      
+      // Extrair dados das linhas subsequentes
+      const parsedRows: ParsedData[] = [];
+      
+      for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+        const row = worksheet.getRow(rowNumber);
+        const rowData: any = {};
+        let hasData = false;
+        
+        filteredHeaders.forEach((header, index) => {
+          const cell = row.getCell(index + 1);
+          const value = cell.text || cell.value || '';
+          rowData[header] = String(value).trim();
+          if (value) hasData = true;
+        });
+        
+        // Só adicionar linhas que tenham pelo menos um dado
+        if (hasData) {
+          parsedRows.push(rowData as ParsedData);
+        }
+      }
+      
+      setParsedData(parsedRows);
+    } catch (error) {
+      console.error('Erro ao processar Excel:', error);
+      toast({
+        title: "Erro ao ler o arquivo Excel",
+        description: "Não foi possível processar o arquivo Excel. Verifique se o arquivo não está corrompido.",
+        variant: "destructive",
+      });
+      resetState();
+    }
   };
 
   const handleImport = () => {

@@ -458,10 +458,10 @@ class NATVService {
 
       return {
         hasConfig: true,
-        baseUrl: data.base_url,
+        baseUrl: data.base_url ?? undefined,
         isActive: data.is_active,
-        lastUsed: data.last_used_at,
-        createdAt: data.created_at
+        lastUsed: data.last_used_at ?? undefined,
+        createdAt: data.created_at ?? undefined
       }
     } catch (error) {
       return { hasConfig: false }

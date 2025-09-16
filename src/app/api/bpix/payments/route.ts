@@ -3,14 +3,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { bpixService, BPIXCreatePaymentRequest } from '@/services/bpix.service'
 import { ErrorService, ErrorType } from '@/services/error.service'
 import { LoggerService } from '@/services/logger.service'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 // Função auxiliar para obter o usuário autenticado
 async function getAuthenticatedUser() {
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -26,7 +26,7 @@ async function getAuthenticatedUser() {
     
     if (error || !user) {
       throw ErrorService.createError(
-        ErrorType.AUTHENTICATION_ERROR,
+        ErrorType.AUTHENTICATION,
         'Usuário não autenticado',
         'USER_NOT_AUTHENTICATED'
       )
@@ -146,11 +146,18 @@ export async function POST(request: NextRequest) {
     const appError = ErrorService.fromNativeError(error)
     ErrorService.logError(appError, 'BPIX Payments API - POST')
     
+    // Mapeia tipo de erro para status HTTP
+    let statusCode = 500
+    if (appError.type === 'AUTHENTICATION') statusCode = 401
+    else if (appError.type === 'AUTHORIZATION') statusCode = 403
+    else if (appError.type === 'VALIDATION') statusCode = 400
+    else if (appError.type === 'NOT_FOUND') statusCode = 404
+    
     return NextResponse.json({
       success: false,
       message: appError.message,
       error: appError.code
-    }, { status: appError.statusCode || 500 })
+    }, { status: statusCode })
   }
 }
 
@@ -212,10 +219,17 @@ export async function GET(request: NextRequest) {
     const appError = ErrorService.fromNativeError(error)
     ErrorService.logError(appError, 'BPIX Payments API - GET')
     
+    // Mapeia tipo de erro para status HTTP
+    let statusCode = 500
+    if (appError.type === 'AUTHENTICATION') statusCode = 401
+    else if (appError.type === 'AUTHORIZATION') statusCode = 403
+    else if (appError.type === 'VALIDATION') statusCode = 400
+    else if (appError.type === 'NOT_FOUND') statusCode = 404
+    
     return NextResponse.json({
       success: false,
       message: appError.message,
       error: appError.code
-    }, { status: appError.statusCode || 500 })
+    }, { status: statusCode })
   }
 }

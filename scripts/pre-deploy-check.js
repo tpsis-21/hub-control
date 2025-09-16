@@ -164,21 +164,20 @@ function checkBuild() {
   return runCommand('npm run build:static', 'Build estático para produção');
 }
 
-function checkFirebaseConfig() {
-  logStep('7', 'Verificando configuração do Firebase');
+function checkVercelConfig() {
+  logStep('7', 'Verificando configuração do Vercel');
   
   let allConfigured = true;
   
-  allConfigured &= checkFile('firebase.json', 'Configuração do Firebase');
-  allConfigured &= checkFile('.firebaserc', 'Projeto do Firebase');
+  allConfigured &= checkFile('vercel.json', 'Configuração do Vercel');
   
-  // Verificar se Firebase CLI está instalado
+  // Verificar se Vercel CLI está instalado
   try {
-    execSync('firebase --version', { stdio: 'pipe' });
-    logSuccess('Firebase CLI instalado');
+    execSync('vercel --version', { stdio: 'pipe' });
+    logSuccess('Vercel CLI instalado');
   } catch (error) {
-    logError('Firebase CLI não instalado. Execute: npm install -g firebase-tools');
-    allConfigured = false;
+    logWarning('Vercel CLI não instalado. Execute: npm install -g vercel');
+    // Não falhar se CLI não estiver instalado, pois pode ser instalado durante deploy
   }
   
   return allConfigured;
@@ -196,7 +195,7 @@ function generateReport(results) {
     { name: 'Qualidade do Código', result: results.lint },
     { name: 'Segurança', result: results.security },
     { name: 'Build', result: results.build },
-    { name: 'Configuração Firebase', result: results.firebase }
+    { name: 'Configuração Vercel', result: results.vercel }
   ];
   
   checks.forEach(check => {
@@ -236,7 +235,7 @@ function main() {
     lint: runLint(),
     security: checkSecurity(),
     build: checkBuild(),
-    firebase: checkFirebaseConfig()
+    vercel: checkVercelConfig()
   };
   
   const success = generateReport(results);

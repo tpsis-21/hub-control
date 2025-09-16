@@ -235,7 +235,7 @@ export class SecurityAuditor {
 
       return result;
     } catch (error) {
-      logger.error('Erro durante auditoria de segurança', { auditId, error });
+      logger.error('Erro durante auditoria de segurança', error as Error);
       throw error;
     }
   }
@@ -315,7 +315,7 @@ export class SecurityAuditor {
 
     try {
       // Verificar conexão com Supabase
-      const { data, error } = await supabase.from('users').select('count').limit(1);
+      const { data, error } = await supabase.from('profiles').select('count').limit(1);
       
       if (error) {
         issues.push({
@@ -567,7 +567,7 @@ export class SecurityAuditor {
     const issues: SecurityIssue[] = [];
     
     // Lista de dependências conhecidas com vulnerabilidades (exemplo)
-    const knownVulnerable = {
+    const knownVulnerable: Record<string, [string, string]> = {
       'lodash': ['4.17.20', 'Prototype pollution vulnerability'],
       'axios': ['0.21.0', 'Server-Side Request Forgery']
     };
@@ -663,42 +663,15 @@ export class SecurityAuditor {
 
   private async saveAuditResult(result: SecurityAuditResult): Promise<void> {
     try {
-      // Salvar no Supabase
-      const { error } = await supabase
-        .from('security_audits')
-        .insert({
-          audit_id: result.audit_id,
-          started_at: result.started_at.toISOString(),
-          completed_at: result.completed_at.toISOString(),
-          duration_ms: result.duration_ms,
-          total_issues: result.total_issues,
-          issues_by_severity: result.issues_by_severity,
-          score: result.score,
-          status: result.status,
-          recommendations: result.recommendations
-        });
-
-      if (error) {
-        logger.error('Erro ao salvar resultado da auditoria', { error });
-      }
-
-      // Salvar issues individuais
-      if (result.issues.length > 0) {
-        const { error: issuesError } = await supabase
-          .from('security_issues')
-          .insert(result.issues.map(issue => ({
-            ...issue,
-            audit_id: result.audit_id,
-            detected_at: issue.detected_at.toISOString(),
-            resolved_at: issue.resolved_at?.toISOString()
-          })));
-
-        if (issuesError) {
-          logger.error('Erro ao salvar issues da auditoria', { error: issuesError });
-        }
-      }
+      // TODO: Implementar salvamento quando as tabelas security_audits e security_issues forem criadas
+      logger.info('Resultado da auditoria gerado', {
+        auditId: result.audit_id,
+        totalIssues: result.total_issues,
+        score: result.score,
+        status: result.status
+      });
     } catch (error) {
-      logger.error('Erro ao salvar auditoria no banco', { error });
+      logger.error('Erro ao salvar auditoria no banco', error as Error);
     }
   }
 

@@ -49,8 +49,7 @@ import {
   Download,
   Eye,
   AlertCircle,
-  Info,
-  Warning
+  Info
 } from 'lucide-react';
 import { usePerformanceMonitoring } from '@/hooks/use-performance-monitoring';
 import { useSystemAlerts } from '@/hooks/use-system-alerts';
@@ -305,8 +304,8 @@ export function SystemHealthDashboard({
         lastCheck: new Date(),
         metrics: service.metrics ? {
           ...service.metrics,
-          cpu: Math.max(0, Math.min(100, service.metrics.cpu + (Math.random() - 0.5) * 10)),
-          memory: Math.max(0, Math.min(100, service.metrics.memory + (Math.random() - 0.5) * 5))
+          cpu: service.metrics.cpu ? Math.max(0, Math.min(100, service.metrics.cpu + (Math.random() - 0.5) * 10)) : service.metrics.cpu,
+          memory: service.metrics.memory ? Math.max(0, Math.min(100, service.metrics.memory + (Math.random() - 0.5) * 5)) : service.metrics.memory
         } : undefined
       })));
       

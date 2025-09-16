@@ -547,11 +547,11 @@ export default function ResourceOptimizationDashboard() {
             size="sm"
             onClick={() => {
               setAutoRefresh(false);
-              loadMetrics();
+              // Força uma re-renderização para atualizar as métricas
+              window.location.reload();
             }}
-            disabled={loading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar Dados
           </Button>
           

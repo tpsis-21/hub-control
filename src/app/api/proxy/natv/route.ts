@@ -203,8 +203,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar autenticação do usuário
-    const authResult = await isAuthenticated(request);
+    // Verificar se o usuário está autenticado (já verificado anteriormente)
     if (!authResult.authenticated || !authResult.user) {
       const authError = ErrorService.createError(
         ErrorType.AUTHENTICATION,
@@ -225,7 +224,7 @@ export async function POST(request: NextRequest) {
     const configResult = await getUserNATVConfig(authResult.user.id);
     if (!configResult.success || !configResult.config) {
       const configError = ErrorService.createError(
-        ErrorType.CONFIGURATION,
+        ErrorType.VALIDATION,
         'Configuração NATV não encontrada. Configure sua chave API nas integrações.',
         'NATV_CONFIG_NOT_FOUND'
       );
@@ -449,7 +448,7 @@ export async function GET(request: NextRequest) {
     const configResult = await getUserNATVConfig(authResult.user!.id);
     if (!configResult.success || !configResult.config) {
       const configError = ErrorService.createError(
-        ErrorType.CONFIGURATION,
+        ErrorType.VALIDATION,
         'Configuração NATV não encontrada. Configure sua chave API nas integrações.',
         'NATV_CONFIG_NOT_FOUND'
       );

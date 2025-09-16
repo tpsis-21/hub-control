@@ -333,8 +333,8 @@ export function usePerformanceMonitoring({
         updateMetrics({
           ttfb: nav.responseStart - nav.requestStart,
           navigationTiming: {
-            domContentLoaded: nav.domContentLoadedEventEnd - nav.navigationStart,
-            loadComplete: nav.loadEventEnd - nav.navigationStart,
+            domContentLoaded: nav.domContentLoadedEventEnd - nav.startTime,
+            loadComplete: nav.loadEventEnd - nav.startTime,
             firstPaint: 0, // Será coletado via paint timing
             firstContentfulPaint: 0
           }

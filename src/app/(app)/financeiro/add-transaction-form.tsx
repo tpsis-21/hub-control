@@ -1,7 +1,8 @@
 // @/app/(app)/financeiro/add-transaction-form.tsx
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect } from "react";
+import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,9 +31,23 @@ type AddTransactionFormProps = {
   type: 'receita' | 'despesa';
 };
 
+// Componente interno para controlar o estado do formulário
+function SubmitButton({ type, bgColorClass }: { type: 'receita' | 'despesa', bgColorClass: string }) {
+  const { pending } = useFormStatus();
+  
+  return (
+    <Button 
+      type="submit" 
+      disabled={pending}
+      className={bgColorClass}
+    >
+      {pending ? "Salvando..." : "Salvar"}
+    </Button>
+  );
+}
+
 export function AddTransactionForm({ type }: AddTransactionFormProps) {
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   
   const categories = {
@@ -54,27 +69,30 @@ export function AddTransactionForm({ type }: AddTransactionFormProps) {
     ]
   };
 
-  const handleSubmit = async (formData: FormData) => {
-    startTransition(async () => {
-      try {
-        await addFinancialTransaction(formData);
-        setOpen(false);
-        toast({
-          title: "Sucesso",
-          description: `${type === 'receita' ? 'Receita' : 'Despesa'} adicionada com sucesso`,
-        });
-        
-        // Reset form
-        const form = document.getElementById(`add-${type}-form`) as HTMLFormElement;
-        if (form) form.reset();
-      } catch (error) {
-        toast({
-          title: "Erro",
-          description: error instanceof Error ? error.message : "Erro ao adicionar transação",
-          variant: "destructive",
-        });
-      }
-    });
+  // Função para lidar com o sucesso/erro da Server Action
+  const handleFormAction = async (formData: FormData) => {
+    try {
+      const result = await addFinancialTransaction(formData);
+      setOpen(false);
+      toast({
+        title: "Sucesso",
+        description: `${type === 'receita' ? 'Receita' : 'Despesa'} adicionada com sucesso`,
+      });
+      
+      // Reset form
+      const form = document.getElementById(`add-${type}-form`) as HTMLFormElement;
+      if (form) form.reset();
+      
+      // Recarregar a página para atualizar os dados
+      window.location.reload();
+    } catch (error) {
+      console.error('Erro ao adicionar transação:', error);
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao adicionar transação",
+        variant: "destructive",
+      });
+    }
   };
 
   const Icon = type === 'receita' ? TrendingUp : TrendingDown;
@@ -100,7 +118,7 @@ export function AddTransactionForm({ type }: AddTransactionFormProps) {
           </DialogDescription>
         </DialogHeader>
         
-        <form id={`add-${type}-form`} action={handleSubmit} className="space-y-4">
+        <form id={`add-${type}-form`} action={handleFormAction} className="space-y-4">
           <input type="hidden" name="type" value={type} />
           
           <div className="space-y-2">
@@ -170,14 +188,7 @@ export function AddTransactionForm({ type }: AddTransactionFormProps) {
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
-          <Button 
-            type="submit" 
-            form={`add-${type}-form`}
-            disabled={isPending}
-            className={bgColorClass}
-          >
-            {isPending ? "Salvando..." : "Salvar"}
-          </Button>
+          <SubmitButton type={type} bgColorClass={bgColorClass} />
         </DialogFooter>
       </DialogContent>
     </Dialog>

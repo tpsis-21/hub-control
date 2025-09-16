@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     console.log('🔔 Webhook de pagamento recebido');
     
     // Validar assinatura do webhook (segurança)
-    const signature = headers().get('x-webhook-signature');
+    const headersList = await headers();
+    const signature = headersList.get('x-webhook-signature');
     const body = await request.text();
     
     if (!validateWebhookSignature(body, signature)) {

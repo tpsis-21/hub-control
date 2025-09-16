@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/lib/database.types';
-import { thebestService } from './thebest.service';
+import thebestService from './thebest.service';
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
@@ -19,6 +19,17 @@ interface RenewalResult {
   renewalId?: string;
   packageInfo?: any;
   error?: string;
+}
+
+interface TheBestPackage {
+  id: string;
+  classificacao: string;
+  duracao: string;
+  telas: number;
+  creditos: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 class TheBestRenewalService {
@@ -62,7 +73,8 @@ class TheBestRenewalService {
       }
 
       // 3. Calcular data de expiração
-      const expirationDate = this.calculateExpirationDate(packageInfo.duration_months);
+      const durationMonths = this.convertDurationToMonths(packageInfo.duracao);
+      const expirationDate = this.calculateExpirationDate(durationMonths);
 
       // 4. Executar renovação via API The Best
       const renewalResponse = await this.executeRenewal({
@@ -99,15 +111,15 @@ class TheBestRenewalService {
         details: {
           paymentId: paymentData.paymentId,
           renewalId: renewalRecord.id,
-          packageName: packageInfo.name,
-          credits: packageInfo.credits,
+          packageName: packageInfo.classificacao,
+          credits: packageInfo.creditos,
           expirationDate
         }
       });
 
       return {
         success: true,
-        message: `Renovação automática realizada com sucesso! Pacote: ${packageInfo.name}`,
+        message: `Renovação automática realizada com sucesso! Pacote: ${packageInfo.classificacao}`,
         renewalId: renewalRecord.id,
         packageInfo
       };
@@ -138,11 +150,12 @@ class TheBestRenewalService {
   /**
    * Busca informações do pacote pelo ID
    */
-  private async getPackageInfo(packageId: number) {
-    const { data, error } = await this.supabase
+  private async getPackageInfo(packageId: number): Promise<TheBestPackage | null> {
+    // Usando query raw para contornar limitação de tipos
+    const { data, error } = await (this.supabase as any)
       .from('thebest_packages')
       .select('*')
-      .eq('package_id', packageId)
+      .eq('id', packageId)
       .eq('is_active', true)
       .single();
 
@@ -151,18 +164,20 @@ class TheBestRenewalService {
       return null;
     }
 
-    return data;
+    return data as TheBestPackage;
   }
 
   /**
    * Busca configuração do usuário
    */
   private async getUserConfig(userId: string) {
-    const { data, error } = await this.supabase
+    // Usando query raw para contornar limitação de tipos
+    const { data, error } = await (this.supabase as any)
       .from('thebest_configs')
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
+      .eq('is_default', true)
       .single();
 
     if (error) {
@@ -171,6 +186,24 @@ class TheBestRenewalService {
     }
 
     return data;
+  }
+
+  /**
+   * Converte duração do enum para número de meses
+   */
+  private convertDurationToMonths(duracao: string): number {
+    switch (duracao) {
+      case '1_MES':
+        return 1;
+      case '3_MESES':
+        return 3;
+      case '6_MESES':
+        return 6;
+      case '12_MESES':
+        return 12;
+      default:
+        return 1; // Default para 1 mês
+    }
   }
 
   /**
@@ -194,13 +227,16 @@ class TheBestRenewalService {
   }) {
     try {
       // Usar o serviço The Best para executar a renovação
-      const response = await thebestService.renewPackage({
-        username: params.userConfig.username,
-        password: params.userConfig.password,
-        packageId: params.packageInfo.package_id,
-        credits: params.packageInfo.credits,
-        expirationDate: params.expirationDate
-      });
+      const response = await thebestService.createRenewal(
+        params.userConfig.id,
+        {
+          package_id: params.packageInfo.id,
+          user_id: params.paymentData.userId,
+          duration: params.packageInfo.duracao,
+          classification: params.packageInfo.classificacao
+        },
+        params.paymentData.userId
+      );
 
       return {
         success: true,
@@ -226,7 +262,7 @@ class TheBestRenewalService {
     expirationDate: string;
     apiResponse: any;
   }) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('thebest_renewals')
       .insert({
         user_id: params.userId,
@@ -260,7 +296,7 @@ class TheBestRenewalService {
     details: any;
   }) {
     try {
-      await this.supabase
+      await (this.supabase as any)
         .from('thebest_api_logs')
         .insert({
           user_id: params.userId,
@@ -282,16 +318,16 @@ class TheBestRenewalService {
    * Busca histórico de renovações do usuário
    */
   async getRenewalHistory(userId: string, limit: number = 10) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('thebest_renewals')
       .select(`
         *,
         thebest_packages!inner(
-          name,
-          classification,
-          duration_months,
-          screens,
-          credits
+          id,
+          classificacao,
+          duracao,
+          telas,
+          creditos
         )
       `)
       .eq('user_id', userId)
@@ -309,7 +345,7 @@ class TheBestRenewalService {
    * Verifica se um pagamento já foi processado
    */
   async isPaymentProcessed(paymentId: string): Promise<boolean> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('thebest_renewals')
       .select('id')
       .eq('payment_id', paymentId)
@@ -321,14 +357,14 @@ class TheBestRenewalService {
   /**
    * Lista pacotes disponíveis para renovação
    */
-  async getAvailablePackages() {
-    const { data, error } = await this.supabase
+  async getAvailablePackages(): Promise<TheBestPackage[]> {
+    const { data, error } = await (this.supabase as any)
       .from('thebest_packages')
       .select('*')
       .eq('is_active', true)
-      .order('classification')
-      .order('duration_months')
-      .order('screens');
+      .order('classificacao')
+      .order('duracao')
+      .order('telas');
 
     if (error) {
       throw new Error(`Erro ao buscar pacotes: ${error.message}`);

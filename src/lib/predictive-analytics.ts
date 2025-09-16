@@ -389,8 +389,48 @@ export class PredictiveAnalytics {
   }
 }
 
-// Instância única utilizada pela aplicação
-export const predictiveAnalytics = new PredictiveAnalytics();
+// ============================================
+// INSTÂNCIA GLOBAL COM LAZY INITIALIZATION
+// ============================================
+
+let _predictiveAnalytics: PredictiveAnalytics | null = null;
+
+export function getPredictiveAnalytics(): PredictiveAnalytics {
+  if (typeof window === 'undefined') {
+    // No servidor, retornar uma instância mock
+    return {
+      isRunning: false,
+      predictions: [],
+      anomalies: [],
+      models: [],
+      metrics: [],
+      start: () => {},
+      stop: () => {},
+      getPredictionsByType: () => [],
+      getModelAccuracy: () => 0,
+      getTrendAnalysis: () => ({
+        metric: '',
+        timeframe: '1h',
+        direction: 'stable',
+        slope: 0,
+        correlation: 0,
+        seasonality: false,
+        cyclicPattern: false,
+        forecastAccuracy: 0
+      }),
+      subscribe: () => () => {}
+    } as any;
+  }
+  
+  if (!_predictiveAnalytics) {
+    _predictiveAnalytics = new PredictiveAnalytics();
+  }
+  
+  return _predictiveAnalytics;
+}
+
+// Manter compatibilidade com código existente
+export const predictiveAnalytics = getPredictiveAnalytics();
 
 // Hook de conveniência para componentes React
 export function usePredictiveAnalytics() {

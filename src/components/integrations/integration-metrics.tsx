@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, Activity, Zap, Clock, AlertTriangle, CreditCard } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { NATVService } from '@/services/natv.service';
-import { BPIXService } from '@/services/bpix.service';
+import BPIXService from '@/services/bpix.service';
 
 interface IntegrationMetric {
   id: string;
@@ -89,7 +89,7 @@ export function IntegrationMetrics({ className }: IntegrationMetricsProps) {
           // Obter estatísticas BPIX
           if (testResponse.success) {
             try {
-              const statsResponse = await bpixService.getStats();
+              const statsResponse = await bpixService.getPaymentStats();
               if (statsResponse.success && statsResponse.data) {
                 newMetrics.push({
                   id: 'bpix-payments',

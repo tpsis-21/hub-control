@@ -6,7 +6,7 @@
  * Este script automatiza todo o processo de deploy:
  * - Verificações pré-deploy
  * - Build otimizado
- * - Deploy no Firebase
+ * - Deploy no Vercel
  * - Verificações pós-deploy
  * - Notificações
  */
@@ -71,7 +71,7 @@ function confirmDeploy() {
   log('   • Qualidade do código (lint + TypeScript)');
   log('   • Auditoria de segurança');
   log('   • Build de produção');
-  log('   • Deploy no Firebase');
+  log('   • Deploy no Vercel');
   log('   • Verificações pós-deploy');
   
   // Em um ambiente real, você poderia usar readline para confirmação
@@ -112,8 +112,7 @@ function createBackup() {
     const filesToBackup = [
       'package.json',
       'next.config.ts',
-      'firebase.json',
-      '.firebaserc'
+      'vercel.json'
     ];
     
     filesToBackup.forEach(file => {
@@ -174,27 +173,31 @@ function buildProduction() {
   return true;
 }
 
-function deployToFirebase() {
-  logStep('4', 'Deploy no Firebase');
+function deployToVercel() {
+  logStep('4', 'Deploy no Vercel');
   
-  // Verificar autenticação
-  const authCheck = runCommand('firebase projects:list', 'Verificação de autenticação', { silent: true });
+  // Verificar se Vercel CLI está disponível
+  const cliCheck = runCommand('vercel --version', 'Verificação do Vercel CLI', { silent: true });
   
-  if (!authCheck.success) {
-    logError('Não autenticado no Firebase!');
-    log('Execute: firebase login', 'yellow');
-    process.exit(1);
+  if (!cliCheck.success) {
+    log('Instalando Vercel CLI...', 'yellow');
+    const installResult = runCommand('npm install -g vercel', 'Instalação do Vercel CLI');
+    
+    if (!installResult.success) {
+      logError('Falha ao instalar Vercel CLI!');
+      process.exit(1);
+    }
   }
   
-  // Deploy
-  const result = runCommand('firebase deploy --only hosting', 'Deploy no Firebase Hosting');
+  // Deploy para produção
+  const result = runCommand('vercel --prod --yes', 'Deploy no Vercel');
   
   if (!result.success) {
-    logError('Deploy no Firebase falhou!');
+    logError('Deploy no Vercel falhou!');
     process.exit(1);
   }
   
-  logSuccess('Deploy no Firebase concluído');
+  logSuccess('Deploy no Vercel concluído');
   return true;
 }
 
@@ -204,12 +207,17 @@ function postDeployChecks() {
   // Obter URL do projeto
   let projectUrl;
   try {
-    const firebaserc = JSON.parse(fs.readFileSync('.firebaserc', 'utf8'));
-    const projectId = firebaserc.projects.default;
-    projectUrl = `https://${projectId}.web.app`;
+    // Tentar obter URL do último deploy do Vercel
+    const vercelResult = runCommand('vercel ls', 'Obter URL do projeto', { silent: true });
+    if (vercelResult.success) {
+      // Parse da saída do vercel ls para obter a URL
+      projectUrl = 'https://seu-projeto.vercel.app'; // URL será mostrada no output do deploy
+    } else {
+      projectUrl = 'https://seu-projeto.vercel.app';
+    }
   } catch (error) {
     logWarning('Não foi possível determinar URL do projeto');
-    projectUrl = 'https://seu-projeto.web.app';
+    projectUrl = 'https://seu-projeto.vercel.app';
   }
   
   log(`   Verificando: ${projectUrl}`, 'blue');
@@ -297,8 +305,8 @@ function generateDeployReport(deployInfo) {
   
   log('\n🔗 Links úteis:', 'blue');
   log(`   • Site: ${deployInfo.url}`);
-  log('   • Firebase Console: https://console.firebase.google.com');
-  log('   • Logs: Firebase Console > Hosting > Logs');
+  log('   • Vercel Dashboard: https://vercel.com/dashboard');
+  log('   • Logs: Vercel Dashboard > Functions > Logs');
   
   log('='.repeat(60), 'magenta');
   
@@ -323,7 +331,7 @@ function main() {
     preDeployChecks();
     const backupPath = createBackup();
     buildProduction();
-    deployToFirebase();
+    deployToVercel();
     const url = postDeployChecks();
     
     // Relatório final

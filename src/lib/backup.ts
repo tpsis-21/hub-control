@@ -184,10 +184,7 @@ export class BackupManager {
         await this.sendNotification('failure', result);
       }
       
-      logger.error('Falha no backup completo', {
-        backupId,
-        error: error instanceof Error ? error.message : error,
-      });
+      logger.error('Falha no backup completo', error as Error);
       
       throw error;
     }
@@ -251,10 +248,7 @@ export class BackupManager {
       return result;
       
     } catch (error) {
-      logger.error('Falha no backup do banco de dados', {
-        backupId,
-        error: error instanceof Error ? error.message : error,
-      });
+      logger.error('Falha no backup do banco de dados', error as Error);
       throw error;
     }
   }
@@ -328,10 +322,7 @@ export class BackupManager {
       return result;
       
     } catch (error) {
-      logger.error('Falha no backup de arquivos', {
-        backupId,
-        error: error instanceof Error ? error.message : error,
-      });
+      logger.error('Falha no backup de arquivos', error as Error);
       throw error;
     }
   }
@@ -426,10 +417,7 @@ export class BackupManager {
       return result;
       
     } catch (error) {
-      logger.error('Falha no backup de logs', {
-        backupId,
-        error: error instanceof Error ? error.message : error,
-      });
+      logger.error('Falha no backup de logs', error as Error);
       throw error;
     }
   }
@@ -469,11 +457,7 @@ export class BackupManager {
       logger.info('Restauração de backup concluída', { backupId, type });
       
     } catch (error) {
-      logger.error('Falha na restauração de backup', {
-        backupId,
-        type,
-        error: error instanceof Error ? error.message : error,
-      });
+      logger.error('Falha na restauração de backup', error as Error);
       throw error;
     }
   }
@@ -512,9 +496,7 @@ export class BackupManager {
       return backups.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
       
     } catch (error) {
-      logger.error('Erro ao listar backups', {
-        error: error instanceof Error ? error.message : error,
-      });
+      logger.error('Erro ao listar backups', error as Error);
       return [];
     }
   }
@@ -543,10 +525,7 @@ export class BackupManager {
       return isValid;
       
     } catch (error) {
-      logger.error('Erro ao verificar integridade do backup', {
-        backupId: backup.id,
-        error: error instanceof Error ? error.message : error,
-      });
+      logger.error('Erro ao verificar integridade do backup', error as Error);
       return false;
     }
   }
@@ -586,7 +565,10 @@ export class BackupManager {
   private async createDatabaseDump(outputPath: string, tables: string[]): Promise<void> {
     // Implementar dump do banco usando pg_dump ou similar
     // Por enquanto, simular com export JSON
-    const dumpData = {
+    const dumpData: {
+      timestamp: string;
+      tables: { [key: string]: any };
+    } = {
       timestamp: new Date().toISOString(),
       tables: {},
     };
@@ -598,13 +580,13 @@ export class BackupManager {
           .select('*');
         
         if (error) {
-          logger.warn(`Erro ao exportar tabela ${table}`, { error });
+          logger.warn(`Erro ao exportar tabela ${table}`, error as Error);
           continue;
         }
         
         dumpData.tables[table] = data;
       } catch (error) {
-        logger.warn(`Erro ao exportar tabela ${table}`, { error });
+        logger.warn(`Erro ao exportar tabela ${table}`, error as Error);
       }
     }
     
@@ -672,10 +654,7 @@ export class BackupManager {
       
       return metadata;
     } catch (error) {
-      logger.error('Erro ao ler metadados do backup', {
-        backupId,
-        error: error instanceof Error ? error.message : error,
-      });
+      logger.error('Erro ao ler metadados do backup', error as Error);
       return null;
     }
   }

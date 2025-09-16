@@ -167,7 +167,7 @@ BEGIN
                 WHEN validity = 90 THEN 3
                 WHEN validity = 180 THEN 6
                 WHEN validity = 365 THEN 12
-                ELSE ROUND(validity / 30.44)
+                ELSE ROUND(validity / 30)
             END,
             'migrated', true,
             'original_days', validity
@@ -322,18 +322,19 @@ export class PeriodCalculationService {
   }
   
   /**
-   * Converte dias para meses (aproximação)
+   * Converte dias para meses (padrão comercial TheBest)
    */
   static convertDaysToMonths(days: number): number {
-    // Usar 30.44 dias por mês (365.25/12) para maior precisão
-    return Math.round(days / 30.44);
+    // Usar padrão comercial TheBest: 30 dias por mês (fixo)
+    return Math.round(days / 30);
   }
   
   /**
-   * Converte meses para dias (aproximação)
+   * Converte meses para dias (padrão comercial TheBest)
    */
   static convertMonthsToDays(months: number): number {
-    return Math.round(months * 30.44);
+    // Usar padrão comercial TheBest: 30 dias por mês (fixo)
+    return months * 30;
   }
   
   /**

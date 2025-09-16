@@ -7,7 +7,7 @@ import { systemMonitor } from '@/lib/monitoring';
 export async function GET(request: NextRequest) {
   try {
     // Teste básico de inicialização
-    const testResult = {
+    const testResult: any = {
       systemMonitorExists: !!systemMonitor,
       systemMonitorType: typeof systemMonitor,
       systemMonitorKeys: Object.getOwnPropertyNames(systemMonitor),
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       testResult.recordMockDataUsage = {
         success: false,
-        error: error.message
+        error: (error as Error).message
       };
     }
 
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       testResult.dataSourceMetrics = {
         success: false,
-        error: error.message
+        error: (error as Error).message
       };
     }
 
@@ -58,8 +58,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message,
-        stack: error.stack
+        error: (error as Error).message,
+        stack: (error as Error).stack
       },
       { status: 500 }
     );

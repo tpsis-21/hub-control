@@ -56,7 +56,7 @@ import {
 import {
   useAutoOptimization,
   useOptimizationMetrics,
-  autoOptimizer,
+  getAutoOptimizer,
   OptimizationConfig,
   OptimizationResult
 } from '@/lib/auto-optimization';

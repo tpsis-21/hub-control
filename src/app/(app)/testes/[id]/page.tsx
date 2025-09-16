@@ -122,7 +122,7 @@ function PageSkeleton() {
 export default function TestDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const customerId = typeof params.id === 'string' ? params.id : '';
+  const customerId = typeof params?.id === 'string' ? params.id : '';
   const [customer, setCustomer] = useState<Client | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [servers, setServers] = useState<Server[]>([]);

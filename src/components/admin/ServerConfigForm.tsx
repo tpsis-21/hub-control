@@ -23,28 +23,33 @@ import {
 
 // Configuração padrão do servidor
 const defaultServerConfig: ServerConfig = {
-  id: undefined,
-  name: '',
-  type: 'natv',
-  period_calculation_type: 'monthly',
-  custom_period_days: undefined,
-  credit_threshold: 100,
+  server_name: '',
+  server_type: 'vps',
+  location: '',
+  status: 'active',
+  period_calculation_type: 'fixed',
+  period_duration_days: 30,
+  grace_period_days: 7,
   auto_renewal: true,
+  cpu_cores: 1,
+  ram_gb: 1,
+  storage_gb: 10,
+  bandwidth_mbps: 100,
+  base_price: 0,
+  currency: 'BRL',
   notification_settings: {
-    low_credit_alert: true,
-    renewal_reminder: true,
-    failure_notification: true,
-    alert_threshold_percentage: 20
+    email_notifications: true,
+    webhook_notifications: false,
+    sms_notifications: false,
+    notification_threshold_days: 7
   },
   advanced_settings: {
-    grace_period_days: 7,
-    max_retry_attempts: 3,
-    retry_interval_hours: 24,
-    backup_enabled: true
-  },
-  status: 'active',
-  created_at: undefined,
-  updated_at: undefined
+    backup_enabled: true,
+    monitoring_enabled: true,
+    ssl_enabled: false,
+    firewall_enabled: true,
+    custom_config: undefined
+  }
 };
 
 interface ServerConfigFormProps {
@@ -306,26 +311,28 @@ export function ServerConfigForm({ serverId, onSave, onCancel }: ServerConfigFor
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome do Servidor *</Label>
                   <Input
-                    id="name"
-                    value={config.name}
-                    onChange={(e) => updateConfig('name', e.target.value)}
+                    id="server_name"
+                    value={config.server_name}
+                    onChange={(e) => updateConfig('server_name', e.target.value)}
                     placeholder="Ex: Servidor NATV Principal"
-                    className={errors.name ? 'border-red-500' : ''}
+                    className={errors.server_name ? 'border-red-500' : ''}
                   />
-                  {errors.name && (
-                    <p className="text-sm text-red-500">{errors.name}</p>
-                  )}
+                  {errors.server_name && (
+                     <p className="text-sm text-red-500 mt-1">{errors.server_name}</p>
+                   )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="type">Tipo de Servidor</Label>
-                  <Select value={config.type} onValueChange={(value: 'natv' | 'thebest') => updateConfig('type', value)}>
+                  <Select value={config.server_type} onValueChange={(value: 'vps' | 'dedicated' | 'cloud' | 'hybrid') => updateConfig('server_type', value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="natv">NATV</SelectItem>
-                      <SelectItem value="thebest">The Best</SelectItem>
+                      <SelectItem value="vps">VPS</SelectItem>
+                      <SelectItem value="dedicated">Dedicado</SelectItem>
+                      <SelectItem value="cloud">Cloud</SelectItem>
+                      <SelectItem value="hybrid">Híbrido</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -334,51 +341,35 @@ export function ServerConfigForm({ serverId, onSave, onCancel }: ServerConfigFor
                   <Label htmlFor="period_type">Tipo de Período</Label>
                   <Select 
                     value={config.period_calculation_type} 
-                    onValueChange={(value: 'monthly' | 'quarterly' | 'annual' | 'custom') => updateConfig('period_calculation_type', value)}
+                    onValueChange={(value: 'fixed' | 'usage_based' | 'hybrid') => updateConfig('period_calculation_type', value)}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="monthly">Mensal</SelectItem>
-                      <SelectItem value="quarterly">Trimestral</SelectItem>
-                      <SelectItem value="annual">Anual</SelectItem>
-                      <SelectItem value="custom">Personalizado</SelectItem>
+                      <SelectItem value="fixed">Fixo</SelectItem>
+                      <SelectItem value="usage_based">Baseado em Uso</SelectItem>
+                      <SelectItem value="hybrid">Híbrido</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {config.period_calculation_type === 'custom' && (
+                {config.period_calculation_type === 'hybrid' && (
                   <div className="space-y-2">
-                    <Label htmlFor="custom_days">Período Personalizado (dias) *</Label>
+                    <Label htmlFor="period_duration_days">Duração do Período (dias) *</Label>
                     <Input
-                      id="custom_days"
+                      id="period_duration_days"
                       type="number"
-                      value={config.custom_period_days || ''}
-                      onChange={(e) => updateConfig('custom_period_days', parseInt(e.target.value) || 0)}
+                      value={config.period_duration_days || ''}
+                      onChange={(e) => updateConfig('period_duration_days', parseInt(e.target.value) || 0)}
                       placeholder="Ex: 30"
-                      className={errors.custom_period_days ? 'border-red-500' : ''}
+                      className={errors.period_duration_days ? 'border-red-500' : ''}
                     />
-                    {errors.custom_period_days && (
-                      <p className="text-sm text-red-500">{errors.custom_period_days}</p>
+                    {errors.period_duration_days && (
+                      <p className="text-sm text-red-500">{errors.period_duration_days}</p>
                     )}
                   </div>
                 )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="credit_threshold">Limite de Crédito *</Label>
-                  <Input
-                    id="credit_threshold"
-                    type="number"
-                    value={config.credit_threshold}
-                    onChange={(e) => updateConfig('credit_threshold', parseInt(e.target.value) || 0)}
-                    placeholder="Ex: 100"
-                    className={errors.credit_threshold ? 'border-red-500' : ''}
-                  />
-                  {errors.credit_threshold && (
-                    <p className="text-sm text-red-500">{errors.credit_threshold}</p>
-                  )}
-                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
@@ -409,108 +400,105 @@ export function ServerConfigForm({ serverId, onSave, onCancel }: ServerConfigFor
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <Switch
-                    id="low_credit_alert"
-                    checked={config.notification_settings.low_credit_alert}
-                    onCheckedChange={(checked) => updateConfig('notification_settings.low_credit_alert', checked)}
+                    id="email_notifications"
+                    checked={config.notification_settings.email_notifications}
+                    onCheckedChange={(checked) => updateConfig('notification_settings.email_notifications', checked)}
                   />
-                  <Label htmlFor="low_credit_alert">Alerta de Crédito Baixo</Label>
+                  <Label htmlFor="email_notifications">Notificações por Email</Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
                   <Switch
-                    id="renewal_reminder"
-                    checked={config.notification_settings.renewal_reminder}
-                    onCheckedChange={(checked) => updateConfig('notification_settings.renewal_reminder', checked)}
+                    id="webhook_notifications"
+                    checked={config.notification_settings.webhook_notifications}
+                    onCheckedChange={(checked) => updateConfig('notification_settings.webhook_notifications', checked)}
                   />
-                  <Label htmlFor="renewal_reminder">Lembrete de Renovação</Label>
+                  <Label htmlFor="webhook_notifications">Notificações por Webhook</Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
                   <Switch
-                    id="failure_notification"
-                    checked={config.notification_settings.failure_notification}
-                    onCheckedChange={(checked) => updateConfig('notification_settings.failure_notification', checked)}
+                    id="sms_notifications"
+                    checked={config.notification_settings.sms_notifications}
+                    onCheckedChange={(checked) => updateConfig('notification_settings.sms_notifications', checked)}
                   />
-                  <Label htmlFor="failure_notification">Notificação de Falha</Label>
+                  <Label htmlFor="sms_notifications">Notificações por SMS</Label>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="alert_threshold">Limite de Alerta (%) *</Label>
+                  <Label htmlFor="notification_threshold_days">Limite de Notificação (dias) *</Label>
                   <Input
-                    id="alert_threshold"
+                    id="notification_threshold_days"
                     type="number"
-                    min="0"
-                    max="100"
-                    value={config.notification_settings.alert_threshold_percentage}
-                    onChange={(e) => updateConfig('notification_settings.alert_threshold_percentage', parseInt(e.target.value) || 0)}
-                    placeholder="Ex: 20"
-                    className={errors.alert_threshold_percentage ? 'border-red-500' : ''}
+                    min="1"
+                    max="30"
+                    value={config.notification_settings.notification_threshold_days}
+                    onChange={(e) => updateConfig('notification_settings.notification_threshold_days', parseInt(e.target.value) || 1)}
+                    placeholder="Ex: 7"
+                    className={errors.notification_threshold_days ? 'border-red-500' : ''}
                   />
-                  {errors.alert_threshold_percentage && (
-                    <p className="text-sm text-red-500">{errors.alert_threshold_percentage}</p>
+                  {errors.notification_threshold_days && (
+                    <p className="text-sm text-red-500">{errors.notification_threshold_days}</p>
                   )}
                   <p className="text-sm text-gray-500">
-                    Porcentagem do limite de crédito para disparar alertas
+                    Dias antes do vencimento para disparar notificações
                   </p>
                 </div>
               </div>
             </TabsContent>
 
             <TabsContent value="advanced" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="grace_period">Período de Carência (dias)</Label>
-                  <Input
-                    id="grace_period"
-                    type="number"
-                    min="0"
-                    value={config.advanced_settings.grace_period_days}
-                    onChange={(e) => updateConfig('advanced_settings.grace_period_days', parseInt(e.target.value) || 0)}
-                    className={errors.grace_period_days ? 'border-red-500' : ''}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="backup_enabled"
+                    checked={config.advanced_settings.backup_enabled}
+                    onCheckedChange={(checked) => updateConfig('advanced_settings.backup_enabled', checked)}
                   />
-                  {errors.grace_period_days && (
-                    <p className="text-sm text-red-500">{errors.grace_period_days}</p>
-                  )}
+                  <Label htmlFor="backup_enabled">Backup Habilitado</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="monitoring_enabled"
+                    checked={config.advanced_settings.monitoring_enabled}
+                    onCheckedChange={(checked) => updateConfig('advanced_settings.monitoring_enabled', checked)}
+                  />
+                  <Label htmlFor="monitoring_enabled">Monitoramento Habilitado</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="ssl_enabled"
+                    checked={config.advanced_settings.ssl_enabled}
+                    onCheckedChange={(checked) => updateConfig('advanced_settings.ssl_enabled', checked)}
+                  />
+                  <Label htmlFor="ssl_enabled">SSL Habilitado</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="firewall_enabled"
+                    checked={config.advanced_settings.firewall_enabled}
+                    onCheckedChange={(checked) => updateConfig('advanced_settings.firewall_enabled', checked)}
+                  />
+                  <Label htmlFor="firewall_enabled">Firewall Habilitado</Label>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="max_retries">Máximo de Tentativas</Label>
-                  <Input
-                    id="max_retries"
-                    type="number"
-                    min="1"
-                    value={config.advanced_settings.max_retry_attempts}
-                    onChange={(e) => updateConfig('advanced_settings.max_retry_attempts', parseInt(e.target.value) || 1)}
-                    className={errors.max_retry_attempts ? 'border-red-500' : ''}
+                  <Label htmlFor="custom_config">Configuração Customizada</Label>
+                  <textarea
+                    id="custom_config"
+                    value={config.advanced_settings.custom_config || ''}
+                    onChange={(e) => updateConfig('advanced_settings.custom_config', e.target.value)}
+                    placeholder="Configurações customizadas opcionais..."
+                    className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={1000}
                   />
-                  {errors.max_retry_attempts && (
-                    <p className="text-sm text-red-500">{errors.max_retry_attempts}</p>
-                  )}
+                  <p className="text-sm text-gray-500">
+                    Máximo 1000 caracteres
+                  </p>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="retry_interval">Intervalo entre Tentativas (horas)</Label>
-                  <Input
-                    id="retry_interval"
-                    type="number"
-                    min="1"
-                    value={config.advanced_settings.retry_interval_hours}
-                    onChange={(e) => updateConfig('advanced_settings.retry_interval_hours', parseInt(e.target.value) || 1)}
-                    className={errors.retry_interval_hours ? 'border-red-500' : ''}
-                  />
-                  {errors.retry_interval_hours && (
-                    <p className="text-sm text-red-500">{errors.retry_interval_hours}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="backup_enabled"
-                  checked={config.advanced_settings.backup_enabled}
-                  onCheckedChange={(checked) => updateConfig('advanced_settings.backup_enabled', checked)}
-                />
-                <Label htmlFor="backup_enabled">Backup Habilitado</Label>
               </div>
             </TabsContent>
 

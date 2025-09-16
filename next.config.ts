@@ -23,7 +23,6 @@ const nextConfig: NextConfig = {
   
   // Configurações de produção
   ...(isProd && {
-    swcMinify: true,
     reactStrictMode: true,
     productionBrowserSourceMaps: false,
   }),

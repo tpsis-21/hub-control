@@ -35,13 +35,13 @@ export {
 
 // Bibliotecas Core
 export {
-  autoOptimizer,
+  getAutoOptimizer,
   useAutoOptimization,
   useOptimizationMetrics
 } from '@/lib/auto-optimization';
 
 export {
-  resourceOptimizer,
+  getResourceOptimizer,
   useResourceOptimization
 } from '@/lib/resource-optimization';
 

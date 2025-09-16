@@ -40,7 +40,7 @@ import {
 import {
   AdvancedMaskingType,
   MaskingLevel,
-  MaskingContext
+  AdvancedMaskingContext
 } from '@/lib/data-masking-advanced';
 import { useDataMasking } from '@/hooks/use-data-masking';
 import { useToast } from '@/hooks/use-toast';
@@ -67,7 +67,7 @@ interface SensitiveDataDisplayProps {
   allowExport?: boolean; // Permitir exportar dados
   
   // Contexto de mascaramento
-  context?: Partial<MaskingContext>;
+  context?: Partial<AdvancedMaskingContext>;
   
   // Configurações visuais
   className?: string;

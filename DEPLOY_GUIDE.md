@@ -4,14 +4,14 @@
 
 ### 1. Ferramentas Necessárias
 ```bash
-# Instalar Firebase CLI
-npm install -g firebase-tools
+# Instalar Vercel CLI
+npm install -g vercel
 
-# Fazer login no Firebase
-firebase login
+# Fazer login no Vercel
+vercel login
 
-# Verificar projeto configurado
-firebase projects:list
+# Verificar projetos configurados
+vercel ls
 ```
 
 ### 2. Variáveis de Ambiente
@@ -30,7 +30,7 @@ BPIX_WEBHOOK_SECRET=seu_webhook_secret_prod
 
 # Configurações de Produção
 NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://seu-dominio.web.app
+NEXT_PUBLIC_APP_URL=https://seu-projeto.vercel.app
 
 # Monitoramento
 SENTRY_DSN=seu_sentry_dsn
@@ -54,17 +54,17 @@ npm run deploy:full
 npm run deploy:prod
 ```
 
-### Deploy Apenas Estático
+### Deploy de Preview
 ```bash
-# Apenas build e deploy do frontend
-npm run deploy:firebase
+# Deploy de preview (staging)
+npm run deploy:preview
 ```
 
 ### Preview Local
 ```bash
 # Testar localmente antes do deploy
 npm run build:static
-npm run preview:local
+npm run dev
 ```
 
 ## Checklist de Deploy
@@ -75,7 +75,7 @@ npm run preview:local
 - [ ] Lint sem erros (`npm run lint`)
 - [ ] TypeScript sem erros (`npm run typecheck`)
 - [ ] Build local funcionando (`npm run build:static`)
-- [ ] Preview local testado (`npm run preview:local`)
+- [ ] Preview local testado (`npm run dev`)
 
 ### ✅ Configuração do Banco
 - [ ] Políticas RLS configuradas no Supabase
@@ -100,24 +100,24 @@ npm run preview:local
 - [ ] Health checks funcionando
 - [ ] Alertas configurados
 
-## Configuração do Firebase
+## Configuração do Vercel
 
 ### 1. Configurar Domínio Customizado (Opcional)
 ```bash
-# No console do Firebase
-# Hosting > Domínio personalizado > Adicionar domínio
+# No dashboard do Vercel
+# Project Settings > Domains > Add Domain
 ```
 
 ### 2. Configurar SSL
 ```bash
-# SSL é automático no Firebase Hosting
+# SSL é automático no Vercel
 # Certificados são renovados automaticamente
 ```
 
 ### 3. Configurar CDN
 ```bash
-# CDN é automático no Firebase Hosting
-# Cache configurado no firebase.json
+# CDN é automático no Vercel
+# Cache configurado no vercel.json
 ```
 
 ## Monitoramento Pós-Deploy
@@ -125,14 +125,14 @@ npm run preview:local
 ### 1. Verificações Imediatas
 ```bash
 # Verificar se o site está no ar
-curl -I https://seu-dominio.web.app
+curl -I https://seu-projeto.vercel.app
 
 # Verificar APIs
-curl https://seu-dominio.web.app/api/health
+curl https://seu-projeto.vercel.app/api/health
 ```
 
 ### 2. Logs e Métricas
-- Verificar logs no Firebase Console
+- Verificar logs no Vercel Dashboard
 - Monitorar métricas no Sentry
 - Verificar performance no Lighthouse
 
@@ -146,8 +146,8 @@ curl https://seu-dominio.web.app/api/health
 
 ### Em caso de problemas:
 ```bash
-# Voltar para versão anterior
-firebase hosting:clone SOURCE_SITE_ID:SOURCE_VERSION_ID TARGET_SITE_ID
+# Voltar para versão anterior no Vercel Dashboard
+# Deployments > Previous Deployment > Promote to Production
 
 # Ou fazer deploy da versão anterior
 git checkout versao-anterior
@@ -188,16 +188,17 @@ npm run build
 #### Deploy falhando
 ```bash
 # Verificar autenticação
-firebase login --reauth
+vercel login
 
 # Verificar projeto
-firebase use --add
+vercel link
 ```
 
 #### Site não carregando
-- Verificar variáveis de ambiente
+- Verificar variáveis de ambiente no Vercel Dashboard
 - Verificar configuração do Supabase
-- Verificar logs no Firebase Console
+- Verificar logs no Vercel Dashboard
+- Verificar build logs no Vercel
 
 ## Contatos de Emergência
 

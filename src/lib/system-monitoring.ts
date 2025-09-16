@@ -907,10 +907,36 @@ export class SystemMonitor {
 }
 
 // ============================================
-// INSTÂNCIA GLOBAL
+// INSTÂNCIA GLOBAL COM LAZY INITIALIZATION
 // ============================================
 
-export const systemMonitor = new SystemMonitor();
+let _systemMonitor: SystemMonitor | null = null;
+
+export function getSystemMonitor(): SystemMonitor {
+  if (typeof window === 'undefined') {
+    // No servidor, retornar uma instância mock
+    return {
+      start: async () => {},
+      stop: () => {},
+      getLatestMetrics: () => null,
+      getMetricsHistory: () => [],
+      getActiveAlerts: () => [],
+      resolveAlert: () => {},
+      onMetrics: () => () => {},
+      onAlert: () => () => {},
+      updateConfig: () => {}
+    } as any;
+  }
+  
+  if (!_systemMonitor) {
+    _systemMonitor = new SystemMonitor();
+  }
+  
+  return _systemMonitor;
+}
+
+// Manter compatibilidade com código existente
+export const systemMonitor = getSystemMonitor();
 
 // ============================================
 // HOOKS REACT

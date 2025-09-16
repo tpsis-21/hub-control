@@ -129,7 +129,7 @@ export function MainNav() {
     <SidebarMenu>
       {getMenuItems().map((item, index) => {
         if (item.isGroup && item.subItems) {
-          const isGroupActive = item.subItems.some(sub => pathname.startsWith(sub.href));
+          const isGroupActive = item.subItems.some(sub => pathname?.startsWith(sub.href));
           return (
              <Collapsible.Root key={index} asChild defaultOpen={isGroupActive}>
                 <SidebarMenuItem>
@@ -186,7 +186,7 @@ export function MainNav() {
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
               asChild
-              isActive={pathname.startsWith(item.href)}
+              isActive={pathname?.startsWith(item.href) || false}
               tooltip={{
                 children: item.label,
                 className: "bg-primary text-primary-foreground",

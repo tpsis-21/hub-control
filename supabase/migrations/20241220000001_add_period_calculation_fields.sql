@@ -22,7 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_plans_period_type ON plans(period_type);
 CREATE INDEX IF NOT EXISTS idx_servers_credit_monitoring ON servers(credit_monitoring_enabled) WHERE credit_monitoring_enabled = true;
 
 -- Add comments for documentation
-COMMENT ON COLUMN servers.period_calculation_type IS 'Type of period calculation: days (exact) or months (calendar)';
+COMMENT ON COLUMN servers.period_calculation_type IS 'Type of period calculation: days (exact) or months (calendar - real months)';
 COMMENT ON COLUMN servers.period_calculation_config IS 'JSON configuration for period calculation strategy';
 COMMENT ON COLUMN servers.credit_monitoring_enabled IS 'Enable credit monitoring for this server';
 COMMENT ON COLUMN servers.credit_warning_threshold IS 'Credit threshold for warning notifications';

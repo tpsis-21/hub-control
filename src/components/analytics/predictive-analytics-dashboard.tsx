@@ -112,6 +112,7 @@ export default function PredictiveAnalyticsDashboard() {
   const [selectedTimeframe, setSelectedTimeframe] = useState('1h');
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [selectedMetric, setSelectedMetric] = useState('performance');
+  const [loading, setLoading] = useState(false);
 
   // Auto-refresh
   useEffect(() => {
@@ -155,10 +156,13 @@ export default function PredictiveAnalyticsDashboard() {
           
           <Button
             variant="outline"
-            onClick={() => {
+            onClick={async () => {
+              setLoading(true);
               setConfig(prev => ({ ...prev, autoRefresh: false }));
               // Forçar re-render para atualizar dados
               setConfig(prev => ({ ...prev }));
+              // Simular tempo de carregamento
+              setTimeout(() => setLoading(false), 1000);
             }}
             disabled={loading}
           >

@@ -51,9 +51,7 @@ export async function GET(request: NextRequest) {
         id,
         created_at,
         action,
-        table_name,
-        severity,
-        metadata
+        table_name
       `)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -94,11 +92,11 @@ export async function GET(request: NextRequest) {
       created_at: activity.created_at,
       action: activity.action || 'Ação desconhecida',
       table_name: activity.table_name,
-      severity: activity.severity || 'INFO',
+      severity: 'INFO', // Valor padrão já que a coluna não existe
       description: generateActivityDescription(activity),
       user_email: 'Usuário do sistema', // Não expor emails reais
       user_role: 'user', // Não expor roles reais
-      metadata: sanitizeMetadata(activity.metadata)
+      metadata: {} // Valor padrão já que a coluna não existe
     })) || [];
 
     // Calcular se há mais páginas

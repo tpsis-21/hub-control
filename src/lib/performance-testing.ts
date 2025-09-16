@@ -193,7 +193,14 @@ export class PerformanceTester {
         timestamp: new Date(),
         config: this.config,
         duration,
-        ...loadTestResults,
+        totalRequests: loadTestResults.totalRequests || 0,
+        successfulRequests: loadTestResults.successfulRequests || 0,
+        failedRequests: loadTestResults.failedRequests || 0,
+        averageResponseTime: loadTestResults.averageResponseTime || 0,
+        throughput: loadTestResults.throughput || 0,
+        errorRate: loadTestResults.errorRate || 0,
+        responseTimePercentiles: loadTestResults.responseTimePercentiles || { p50: 0, p95: 0, p99: 0 },
+        endpointResults: loadTestResults.endpointResults || [],
         databaseResults: dbTestResults,
         resourceUsage,
         thresholdViolations: this.checkThresholds(loadTestResults, dbTestResults, resourceUsage),
@@ -306,7 +313,7 @@ export class PerformanceTester {
           responseTime: requestEnd - requestStart,
           statusCode: 0,
           success: false,
-          error: error.message,
+          error: (error as Error).message,
           timestamp: new Date()
         });
       }
@@ -360,7 +367,7 @@ export class PerformanceTester {
           slowQueries++;
         }
       } catch (error) {
-        errors.push(error.message);
+        errors.push((error as Error).message);
         executions.push(0);
       }
     }
@@ -407,7 +414,7 @@ export class PerformanceTester {
     const violations: ThresholdViolation[] = [];
     
     // Verificar tempo de resposta
-    if (loadResults.responseTimePercentiles?.p95! > this.config.thresholds.responseTime.p95) {
+    if (loadResults.responseTimePercentiles?.p95 && loadResults.responseTimePercentiles.p95 > this.config.thresholds.responseTime.p95) {
       violations.push({
         type: 'response_time',
         metric: 'p95',
@@ -501,7 +508,7 @@ export class PerformanceTester {
         throw new Error(`Conectividade falhou: ${response.status}`);
       }
     } catch (error) {
-      throw new Error(`Erro de conectividade: ${error.message}`);
+      throw new Error(`Erro de conectividade: ${(error as Error).message}`);
     }
   }
 
@@ -645,7 +652,7 @@ export class PerformanceTester {
       
       if (error) throw error;
       
-      return data.map(row => row.results);
+      return data.map((row: any) => row.results);
     } catch (error) {
       console.error('Erro ao listar resultados:', error);
       return [];
