@@ -133,7 +133,14 @@ export class EncryptionSystem {
 
   private constructor() {
     // Limpeza periódica do cache
-    setInterval(() => this.cleanupKeyCache(), 60 * 1000); // A cada minuto
+    setInterval(() => {
+      const now = Date.now();
+      for (const [key, value] of keyCache.entries()) {
+        if (value.expires <= now) {
+          keyCache.delete(key);
+        }
+      }
+    }, 60 * 1000); // A cada minuto
   }
 
   public static getInstance(): EncryptionSystem {

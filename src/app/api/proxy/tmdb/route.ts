@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
     }
     
     const baseUrl = getExternalApiConfig().tmdb.baseUrl.replace(/\/$/, '');
-    const tmdbUrl = new URL(`${baseUrl}${endpointPath}`);
-    tmdbUrl.searchParams.set('api_key', tmdbApiKey);
+    const tmdbUrl = new URL(`${baseUrl}${endpointPath};
+    tmdbUrl.searchParams.set('api_key'`, tmdbApiKey);
     tmdbUrl.searchParams.set('language', 'pt-BR');
     
     if (query) {

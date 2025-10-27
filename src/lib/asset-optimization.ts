@@ -1,146 +1,38 @@
 /**
  * Sistema de Otimização de Assets
- * 
  * Implementa otimização automática de imagens, lazy loading de assets,
- * compressão e cache inteligente para melhorar a performance.
+ * compressão e cache inteligente para melhorar Core Web Vitals
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { logger } from './logger';
 
 // ============================================
 // INTERFACES E TIPOS
 // ============================================
 
-interface ImageOptimizationOptions {
+export interface ImageOptimizationOptions {
   quality?: number;
-  format?: 'webp' | 'avif' | 'jpeg' | 'png' | 'auto';
+  format?: 'webp' | 'avif' | 'auto';
   width?: number;
   height?: number;
-  fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
-  blur?: number;
-  progressive?: boolean;
-  lossless?: boolean;
+  blur?: boolean;
+  priority?: boolean;
 }
 
-interface LazyLoadOptions {
-  threshold?: number;
+export interface LazyLoadOptions {
   rootMargin?: string;
-  triggerOnce?: boolean;
+  threshold?: number;
+  once?: boolean;
   placeholder?: string;
   fallback?: string;
 }
 
-interface AssetCacheEntry {
-  url: string;
-  blob: Blob;
-  timestamp: number;
-  size: number;
-  type: string;
-}
-
-interface PerformanceMetrics {
-  loadTime: number;
-  size: number;
+export interface AssetMetrics {
+  originalSize: number;
+  optimizedSize: number;
   compressionRatio: number;
-  cacheHit: boolean;
-}
-
-// ============================================
-// CACHE DE ASSETS
-// ============================================
-
-class AssetCache {
-  private cache: Map<string, AssetCacheEntry> = new Map();
-  private maxSize: number = 50 * 1024 * 1024; // 50MB
-  private currentSize: number = 0;
-  private maxAge: number = 24 * 60 * 60 * 1000; // 24 horas
-
-  // Verificar se asset está no cache
-  has(url: string): boolean {
-    const entry = this.cache.get(url);
-    if (!entry) return false;
-
-    // Verificar se não expirou
-    if (Date.now() - entry.timestamp > this.maxAge) {
-      this.remove(url);
-      return false;
-    }
-
-    return true;
-  }
-
-  // Obter asset do cache
-  get(url: string): Blob | null {
-    if (!this.has(url)) return null;
-    return this.cache.get(url)?.blob || null;
-  }
-
-  // Armazenar asset no cache
-  set(url: string, blob: Blob): void {
-    // Verificar se há espaço suficiente
-    while (this.currentSize + blob.size > this.maxSize && this.cache.size > 0) {
-      this.evictOldest();
-    }
-
-    // Remover entrada existente se houver
-    if (this.cache.has(url)) {
-      this.remove(url);
-    }
-
-    // Adicionar nova entrada
-    const entry: AssetCacheEntry = {
-      url,
-      blob,
-      timestamp: Date.now(),
-      size: blob.size,
-      type: blob.type
-    };
-
-    this.cache.set(url, entry);
-    this.currentSize += blob.size;
-  }
-
-  // Remover asset do cache
-  remove(url: string): void {
-    const entry = this.cache.get(url);
-    if (entry) {
-      this.cache.delete(url);
-      this.currentSize -= entry.size;
-    }
-  }
-
-  // Remover o asset mais antigo
-  private evictOldest(): void {
-    let oldestUrl = '';
-    let oldestTime = Date.now();
-
-    for (const [url, entry] of this.cache) {
-      if (entry.timestamp < oldestTime) {
-        oldestTime = entry.timestamp;
-        oldestUrl = url;
-      }
-    }
-
-    if (oldestUrl) {
-      this.remove(oldestUrl);
-    }
-  }
-
-  // Limpar cache
-  clear(): void {
-    this.cache.clear();
-    this.currentSize = 0;
-  }
-
-  // Estatísticas do cache
-  getStats() {
-    return {
-      entries: this.cache.size,
-      currentSize: this.currentSize,
-      maxSize: this.maxSize,
-      usage: (this.currentSize / this.maxSize) * 100
-    };
-  }
+  loadTime: number;
+  format: string;
 }
 
 // ============================================
@@ -148,250 +40,264 @@ class AssetCache {
 // ============================================
 
 class ImageOptimizer {
-  private cache = new AssetCache();
-  private canvas: HTMLCanvasElement | null = null;
-  private ctx: CanvasRenderingContext2D | null = null;
+  private cache = new Map<string, string>();
+  private metrics = new Map<string, AssetMetrics>();
+  private supportedFormats: Set<string> = new Set();
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      this.canvas = document.createElement('canvas');
-      this.ctx = this.canvas.getContext('2d');
-    }
+    this.detectFormatSupport();
   }
 
-  // Otimizar imagem
+  private detectFormatSupport(): void {
+    if (typeof window === 'undefined') return;
+
+    // Detectar suporte a WebP
+    const webpCanvas = document.createElement('canvas');
+    webpCanvas.width = 1;
+    webpCanvas.height = 1;
+    const webpSupported = webpCanvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+    
+    if (webpSupported) {
+      this.supportedFormats.add('webp');
+    }
+
+    // Detectar suporte a AVIF
+    const avifImg = new Image();
+    avifImg.onload = () => {
+      this.supportedFormats.add('avif');
+    };
+    avifImg.onerror = () => {
+      // AVIF não suportado
+    };
+    avifImg.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgABogQEAwgMg8f8D///8WfhwB8+ErK42A=';
+
+    logger.debug('Formatos de imagem suportados:', Array.from(this.supportedFormats));
+  }
+
   async optimizeImage(
     src: string, 
     options: ImageOptimizationOptions = {}
-  ): Promise<{ url: string; metrics: PerformanceMetrics }> {
-    const startTime = Date.now();
+  ): Promise<string> {
     const cacheKey = this.generateCacheKey(src, options);
-
-    // Verificar cache primeiro
+    
     if (this.cache.has(cacheKey)) {
-      const blob = this.cache.get(cacheKey);
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        return {
-          url,
-          metrics: {
-            loadTime: Date.now() - startTime,
-            size: blob.size,
-            compressionRatio: 0, // Não aplicável para cache hit
-            cacheHit: true
-          }
-        };
-      }
+      return this.cache.get(cacheKey)!;
     }
 
     try {
-      // Carregar imagem original
-      const originalBlob = await this.loadImage(src);
-      const originalSize = originalBlob.size;
-
-      // Otimizar imagem
-      const optimizedBlob = await this.processImage(originalBlob, options);
-      
-      // Armazenar no cache
-      this.cache.set(cacheKey, optimizedBlob);
-
-      const url = URL.createObjectURL(optimizedBlob);
-      const compressionRatio = ((originalSize - optimizedBlob.size) / originalSize) * 100;
-
-      return {
-        url,
-        metrics: {
-          loadTime: Date.now() - startTime,
-          size: optimizedBlob.size,
-          compressionRatio,
-          cacheHit: false
-        }
-      };
+      const optimizedSrc = await this.processImage(src, options);
+      this.cache.set(cacheKey, optimizedSrc);
+      return optimizedSrc;
     } catch (error) {
-      console.error('Erro ao otimizar imagem:', error);
-      // Retornar imagem original em caso de erro
-      return {
-        url: src,
-        metrics: {
-          loadTime: Date.now() - startTime,
-          size: 0,
-          compressionRatio: 0,
-          cacheHit: false
-        }
-      };
+      logger.error('Erro ao otimizar imagem:', error instanceof Error ? error : new Error(String(error)));
+      return src; // Fallback para imagem original
     }
   }
 
-  // Carregar imagem como blob
-  private async loadImage(src: string): Promise<Blob> {
-    const response = await fetch(src);
-    if (!response.ok) {
-      throw new Error(`Falha ao carregar imagem: ${response.statusText}`);
-    }
-    return response.blob();
-  }
-
-  // Processar e otimizar imagem
   private async processImage(
-    blob: Blob, 
+    src: string, 
     options: ImageOptimizationOptions
-  ): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const optimizedBlob = this.compressImage(img, options);
-          resolve(optimizedBlob);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(blob);
-    });
-  }
-
-  // Comprimir imagem usando canvas
-  private compressImage(
-    img: HTMLImageElement, 
-    options: ImageOptimizationOptions
-  ): Blob {
-    if (!this.canvas || !this.ctx) {
-      throw new Error('Canvas não disponível');
-    }
-
+  ): Promise<string> {
     const {
-      quality = 0.8,
+      quality = 85,
       format = 'auto',
       width,
       height,
-      fit = 'cover'
+      blur = false,
+      priority = false
     } = options;
 
-    // Calcular dimensões
-    const dimensions = this.calculateDimensions(img, { width, height, fit });
+    // Determinar melhor formato
+    const targetFormat = this.getBestFormat(format);
     
-    // Configurar canvas
-    this.canvas.width = dimensions.width;
-    this.canvas.height = dimensions.height;
-
-    // Limpar canvas
-    this.ctx.clearRect(0, 0, dimensions.width, dimensions.height);
-
-    // Desenhar imagem redimensionada
-    this.ctx.drawImage(
-      img,
-      dimensions.sx,
-      dimensions.sy,
-      dimensions.sw,
-      dimensions.sh,
-      0,
-      0,
-      dimensions.width,
-      dimensions.height
-    );
-
-    // Aplicar filtros se necessário
-    if (options.blur) {
-      this.ctx.filter = `blur(${options.blur}px)`;
+    // Para imagens externas ou Next.js Image Optimization
+    if (src.startsWith('http') || src.startsWith('/')) {
+      const params = new URLSearchParams();
+      
+      if (width) params.set('w', width.toString());
+      if (height) params.set('h', height.toString());
+      if (quality !== 85) params.set('q', quality.toString());
+      if (targetFormat !== 'auto') params.set('f', targetFormat);
+      if (blur) params.set('blur', '20');
+      
+      const separator = src.includes('?') ? '&' : '?';
+      return `${src}${separator}${params.toString()}`;
     }
 
-    // Determinar formato de saída
-    const outputFormat = this.getOutputFormat(format, img.src);
-    
-    // Converter para blob
-    return new Promise((resolve) => {
-      this.canvas!.toBlob(
-        (blob) => resolve(blob!),
-        outputFormat,
-        quality
-      );
-    }) as any; // Simplificação para o exemplo
+    return src;
   }
 
-  // Calcular dimensões de redimensionamento
-  private calculateDimensions(
-    img: HTMLImageElement,
-    options: { width?: number; height?: number; fit?: string }
-  ) {
-    const { width: targetWidth, height: targetHeight, fit = 'cover' } = options;
-    const { naturalWidth: originalWidth, naturalHeight: originalHeight } = img;
-
-    let width = targetWidth || originalWidth;
-    let height = targetHeight || originalHeight;
-
-    // Se apenas uma dimensão foi especificada, calcular a outra mantendo proporção
-    if (targetWidth && !targetHeight) {
-      height = (originalHeight * targetWidth) / originalWidth;
-    } else if (targetHeight && !targetWidth) {
-      width = (originalWidth * targetHeight) / originalHeight;
+  private getBestFormat(requestedFormat: string): string {
+    if (requestedFormat !== 'auto') {
+      return requestedFormat;
     }
 
-    // Calcular coordenadas de origem para crop
-    let sx = 0, sy = 0, sw = originalWidth, sh = originalHeight;
-
-    if (fit === 'cover' && targetWidth && targetHeight) {
-      const scale = Math.max(targetWidth / originalWidth, targetHeight / originalHeight);
-      sw = targetWidth / scale;
-      sh = targetHeight / scale;
-      sx = (originalWidth - sw) / 2;
-      sy = (originalHeight - sh) / 2;
-    }
-
-    return { width, height, sx, sy, sw, sh };
-  }
-
-  // Determinar formato de saída
-  private getOutputFormat(format: string, originalSrc: string): string {
-    if (format === 'auto') {
-      // Detectar suporte a formatos modernos
-      if (this.supportsWebP()) return 'image/webp';
-      if (this.supportsAVIF()) return 'image/avif';
-      return 'image/jpeg';
+    // Priorizar AVIF > WebP > JPEG
+    if (this.supportedFormats.has('avif')) {
+      return 'avif';
     }
     
-    const formatMap: Record<string, string> = {
-      webp: 'image/webp',
-      avif: 'image/avif',
-      jpeg: 'image/jpeg',
-      png: 'image/png'
-    };
-    
-    return formatMap[format] || 'image/jpeg';
+    if (this.supportedFormats.has('webp')) {
+      return 'webp';
+    }
+
+    return 'jpeg';
   }
 
-  // Verificar suporte a WebP
-  private supportsWebP(): boolean {
-    if (!this.canvas) return false;
-    return this.canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
-  }
-
-  // Verificar suporte a AVIF
-  private supportsAVIF(): boolean {
-    // Implementação simplificada
-    return false; // AVIF ainda tem suporte limitado
-  }
-
-  // Gerar chave de cache
   private generateCacheKey(src: string, options: ImageOptimizationOptions): string {
-    const optionsString = JSON.stringify(options);
-    return btoa(`${src}:${optionsString}`).substring(0, 32);
+    return `${src}_${JSON.stringify(options)}`;
   }
 
-  // Limpar cache
+  getMetrics(src: string): AssetMetrics | undefined {
+    return this.metrics.get(src);
+  }
+
   clearCache(): void {
     this.cache.clear();
-  }
-
-  // Estatísticas
-  getStats() {
-    return this.cache.getStats();
+    this.metrics.clear();
   }
 }
 
 // ============================================
+// LAZY LOADING AVANÇADO
+// ============================================
+
+class LazyLoader {
+  private observers = new Map<string, IntersectionObserver>();
+  private loadedElements = new WeakSet<Element>();
+  private loadingElements = new WeakSet<Element>();
+
+  createObserver(options: LazyLoadOptions = {}): IntersectionObserver {
+    const {
+      rootMargin = '50px',
+      threshold = 0.1,
+      once = true
+    } = options;
+
+    const observerKey = `${rootMargin}_${threshold}_${once}`;
+    
+    if (this.observers.has(observerKey)) {
+      return this.observers.get(observerKey)!;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !this.loadingElements.has(entry.target)) {
+            this.handleIntersection(entry.target, observer, once);
+          }
+        });
+      },
+      {
+        rootMargin,
+        threshold
+      }
+    );
+
+    this.observers.set(observerKey, observer);
+    return observer;
+  }
+
+  private async handleIntersection(
+    element: Element, 
+    observer: IntersectionObserver, 
+    once: boolean
+  ): Promise<void> {
+    this.loadingElements.add(element);
+
+    try {
+      if (element instanceof HTMLImageElement) {
+        await this.loadImage(element);
+      } else if (element instanceof HTMLIFrameElement) {
+        this.loadIframe(element);
+      } else {
+        // Elemento genérico - disparar evento customizado
+        element.dispatchEvent(new CustomEvent('lazyload'));
+      }
+
+      this.loadedElements.add(element);
+      
+      if (once) {
+        observer.unobserve(element);
+      }
+    } catch (error) {
+      logger.error('Erro no lazy loading:', error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      this.loadingElements.delete(element);
+    }
+  }
+
+  private async loadImage(img: HTMLImageElement): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const dataSrc = img.dataset.src;
+      const dataSrcset = img.dataset.srcset;
+
+      if (!dataSrc && !dataSrcset) {
+        resolve();
+        return;
+      }
+
+      const tempImg = new Image();
+      
+      tempImg.onload = () => {
+        // Aplicar transição suave
+        img.style.opacity = '0';
+        img.style.transition = 'opacity 0.3s ease-in-out';
+        
+        if (dataSrc) img.src = dataSrc;
+        if (dataSrcset) img.srcset = dataSrcset;
+        
+        // Remover data attributes
+        delete img.dataset.src;
+        delete img.dataset.srcset;
+        
+        // Fade in
+        requestAnimationFrame(() => {
+          img.style.opacity = '1';
+        });
+        
+        resolve();
+      };
+      
+      tempImg.onerror = reject;
+      tempImg.src = dataSrc || '';
+    });
+  }
+
+  private loadIframe(iframe: HTMLIFrameElement): void {
+    const dataSrc = iframe.dataset.src;
+    if (dataSrc) {
+      iframe.src = dataSrc;
+      delete iframe.dataset.src;
+    }
+  }
+
+  isLoaded(element: Element): boolean {
+    return this.loadedElements.has(element);
+  }
+
+  isLoading(element: Element): boolean {
+    return this.loadingElements.has(element);
+  }
+
+  cleanup(): void {
+    this.observers.forEach(observer => observer.disconnect());
+    this.observers.clear();
+  }
+}
+
+// ============================================
+// INSTÂNCIAS GLOBAIS
+// ============================================
+
+const imageOptimizer = new ImageOptimizer();
+const lazyLoader = new LazyLoader();
+
+// ============================================
 // HOOKS REACT
 // ============================================
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 // Hook para lazy loading de imagens
 export function useLazyImage(
@@ -400,65 +306,66 @@ export function useLazyImage(
 ) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   const [optimizedSrc, setOptimizedSrc] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const optimizerRef = useRef(new ImageOptimizer());
 
   // Configurar Intersection Observer
   useEffect(() => {
     if (!imgRef.current) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          if (options.triggerOnce) {
-            observer.disconnect();
-          }
-        }
-      },
-      {
-        threshold: options.threshold || 0.1,
-        rootMargin: options.rootMargin || '50px'
-      }
-    );
+    const observer = lazyLoader.createObserver({
+      rootMargin: options.rootMargin,
+      threshold: options.threshold,
+      once: options.once
+    });
 
-    observer.observe(imgRef.current);
+    const element = imgRef.current;
+    observer.observe(element);
 
-    return () => observer.disconnect();
-  }, [options.threshold, options.rootMargin, options.triggerOnce]);
+    const handleLazyLoad = () => {
+      setIsInView(true);
+    };
 
-  // Carregar e otimizar imagem quando estiver em view
+    element.addEventListener('lazyload', handleLazyLoad);
+
+    return () => {
+      observer.unobserve(element);
+      element.removeEventListener('lazyload', handleLazyLoad);
+    };
+  }, [options.rootMargin, options.threshold, options.once]);
+
+  // Otimizar imagem quando entrar em view
   useEffect(() => {
-    if (!isInView || optimizedSrc) return;
+    if (!isInView) return;
 
-    const loadImage = async () => {
+    const optimizeAndLoad = async () => {
       try {
-        const result = await optimizerRef.current.optimizeImage(src, options);
-        setOptimizedSrc(result.url);
-        setMetrics(result.metrics);
+        const optimized = await imageOptimizer.optimizeImage(src, {
+          quality: options.quality,
+          format: options.format,
+          width: options.width,
+          height: options.height,
+          blur: options.blur,
+          priority: options.priority
+        });
+        
+        setOptimizedSrc(optimized);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar imagem');
-        setOptimizedSrc(src); // Fallback para imagem original
+        setError(err as Error);
       }
     };
 
-    loadImage();
-  }, [isInView, src, optimizedSrc]);
+    optimizeAndLoad();
+  }, [isInView, src, options]);
 
-  // Marcar como carregada quando a imagem for carregada
-  const handleLoad = useCallback(() => {
+  const onLoad = useCallback(() => {
     setIsLoaded(true);
   }, []);
 
-  const handleError = useCallback(() => {
-    setError('Falha ao carregar imagem');
-    if (options.fallback) {
-      setOptimizedSrc(options.fallback);
-    }
-  }, [options.fallback]);
+  const onError = useCallback((err: any) => {
+    setError(new Error('Falha ao carregar imagem'));
+  }, []);
 
   return {
     ref: imgRef,
@@ -466,155 +373,94 @@ export function useLazyImage(
     isLoaded,
     isInView,
     error,
-    metrics,
-    onLoad: handleLoad,
-    onError: handleError
+    onLoad,
+    onError
   };
 }
 
-// Hook para pré-carregamento de assets
-export function useAssetPreloader(urls: string[], priority: 'high' | 'low' = 'low') {
-  const [loadedAssets, setLoadedAssets] = useState<Set<string>>(new Set());
-  const [failedAssets, setFailedAssets] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(false);
-
-  const preloadAsset = useCallback(async (url: string) => {
-    try {
-      // Usar diferentes estratégias baseadas no tipo de asset
-      if (url.match(/\.(jpg|jpeg|png|webp|avif)$/i)) {
-        // Pré-carregar imagem
-        const img = new Image();
-        img.src = url;
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-        });
-      } else {
-        // Pré-carregar outros assets
-        await fetch(url);
-      }
-      
-      setLoadedAssets(prev => new Set([...prev, url]));
-    } catch (error) {
-      setFailedAssets(prev => new Set([...prev, url]));
-    }
-  }, []);
+// Hook para lazy loading genérico
+export function useLazyLoad(options: LazyLoadOptions = {}) {
+  const [isInView, setIsInView] = useState(false);
+  const [hasIntersected, setHasIntersected] = useState(false);
+  const elementRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (urls.length === 0) return;
+    if (!elementRef.current) return;
 
-    setIsLoading(true);
+    const observer = lazyLoader.createObserver(options);
+    const element = elementRef.current;
     
-    const preloadAll = async () => {
-      if (priority === 'high') {
-        // Carregar em paralelo para alta prioridade
-        await Promise.allSettled(urls.map(preloadAsset));
-      } else {
-        // Carregar sequencialmente para baixa prioridade
-        for (const url of urls) {
-          await preloadAsset(url);
-          // Pequeno delay para não bloquear a thread
-          await new Promise(resolve => setTimeout(resolve, 10));
-        }
+    observer.observe(element);
+
+    const handleLazyLoad = () => {
+      setIsInView(true);
+      if (!hasIntersected) {
+        setHasIntersected(true);
       }
-      
-      setIsLoading(false);
     };
 
-    preloadAll();
-  }, [urls, priority, preloadAsset]);
+    element.addEventListener('lazyload', handleLazyLoad);
+
+    return () => {
+      observer.unobserve(element);
+      element.removeEventListener('lazyload', handleLazyLoad);
+    };
+  }, [options, hasIntersected]);
 
   return {
-    loadedAssets,
-    failedAssets,
-    isLoading,
-    progress: urls.length > 0 ? (loadedAssets.size + failedAssets.size) / urls.length : 0
+    ref: elementRef,
+    isInView,
+    hasIntersected
   };
 }
-
-// ============================================
-// NOTA: Componente React foi movido para:
-// src/components/ui/optimized-image.tsx
-// ============================================
 
 // ============================================
 // FUNÇÕES UTILITÁRIAS
 // ============================================
 
-// Otimizar múltiplas imagens em lote
-export async function optimizeImageBatch(
-  images: { src: string; options?: ImageOptimizationOptions }[],
-  concurrency: number = 3
-): Promise<{ src: string; optimizedUrl: string; metrics: PerformanceMetrics }[]> {
-  const optimizer = new ImageOptimizer();
-  const results: any[] = [];
-  
-  // Processar em lotes para controlar concorrência
-  for (let i = 0; i < images.length; i += concurrency) {
-    const batch = images.slice(i, i + concurrency);
-    const batchPromises = batch.map(async ({ src, options }) => {
-      const result = await optimizer.optimizeImage(src, options);
-      return {
-        src,
-        optimizedUrl: result.url,
-        metrics: result.metrics
-      };
-    });
-    
-    const batchResults = await Promise.allSettled(batchPromises);
-    results.push(...batchResults.filter(r => r.status === 'fulfilled').map(r => (r as any).value));
-  }
-  
-  return results;
+export function preloadImage(src: string, options: ImageOptimizationOptions = {}): Promise<void> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const optimizedSrc = await imageOptimizer.optimizeImage(src, options);
+      
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = reject;
+      img.src = optimizedSrc;
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
-// Detectar tipo de conexão para ajustar qualidade
-export function getOptimalQuality(): number {
-  if (typeof navigator === 'undefined') return 0.8;
-  
-  const connection = (navigator as any).connection;
-  if (!connection) return 0.8;
-  
-  switch (connection.effectiveType) {
-    case 'slow-2g':
-    case '2g':
-      return 0.5;
-    case '3g':
-      return 0.7;
-    case '4g':
-    default:
-      return 0.8;
-  }
+export function preloadImages(sources: string[], options: ImageOptimizationOptions = {}): Promise<void[]> {
+  return Promise.all(sources.map(src => preloadImage(src, options)));
 }
 
-// Calcular tamanho ideal baseado no viewport
-export function getOptimalDimensions(maxWidth?: number, maxHeight?: number) {
-  if (typeof window === 'undefined') {
-    return { width: maxWidth || 800, height: maxHeight || 600 };
-  }
-  
-  const dpr = window.devicePixelRatio || 1;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  
-  const width = Math.min(maxWidth || viewportWidth, viewportWidth) * dpr;
-  const height = Math.min(maxHeight || viewportHeight, viewportHeight) * dpr;
-  
-  return { width: Math.round(width), height: Math.round(height) };
+export function getImageMetrics(src: string): AssetMetrics | undefined {
+  return imageOptimizer.getMetrics(src);
+}
+
+export function clearImageCache(): void {
+  imageOptimizer.clearCache();
+}
+
+export function cleanupLazyLoader(): void {
+  lazyLoader.cleanup();
 }
 
 // ============================================
-// EXPORTAÇÕES
+// CONFIGURAÇÃO GLOBAL
 // ============================================
 
-export type {
-  ImageOptimizationOptions,
-  LazyLoadOptions,
-  PerformanceMetrics
+export const AssetOptimization = {
+  imageOptimizer,
+  lazyLoader,
+  preloadImage,
+  preloadImages,
+  getImageMetrics,
+  clearImageCache,
+  cleanupLazyLoader
 };
 
-export {
-  ImageOptimizer,
-  AssetCache
-};
-export default ImageOptimizer;
+export default AssetOptimization;

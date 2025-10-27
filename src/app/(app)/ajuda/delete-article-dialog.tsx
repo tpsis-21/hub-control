@@ -67,3 +67,4 @@ export function DeleteArticleDialog({ articleId, articleTitle }: { articleId: st
         </AlertDialog>
     );
 }
+

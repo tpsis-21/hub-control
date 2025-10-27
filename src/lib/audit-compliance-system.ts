@@ -3,6 +3,7 @@
 
 import { createApiSupabaseClient } from "./supabase/clients/api";
 import { realtimeSecurityMonitor, SecurityEvent, SecurityEventType, SecuritySeverity } from './security';
+import { logger } from '@/utils/production-logger';
 
 // Tipos de eventos de auditoria
 export enum AuditEventType {
@@ -373,7 +374,7 @@ export class AuditComplianceSystem {
       
       await supabase.from('audit_events').insert(eventData);
     } catch (error) {
-      console.error('Erro ao persistir evento de auditoria:', error);
+      logger.error('Failed to persist audit event', error, 'AUDIT');
       // Em caso de erro, manter o evento na memória para retry
     }
   }
@@ -460,7 +461,7 @@ export class AuditComplianceSystem {
             break;
         }
       } catch (error) {
-        console.error(`Erro ao executar ação de compliance ${action.type}:`, error);
+        logger.error(`Failed to execute compliance action ${action.type}`, error, 'COMPLIANCE');
       }
     }
   }
@@ -471,7 +472,7 @@ export class AuditComplianceSystem {
     rule: ComplianceRule,
     parameters: Record<string, any>
   ): Promise<void> {
-    console.log(`ALERTA DE COMPLIANCE [${rule.category}]:`, {
+    logger.auditLog(`COMPLIANCE ALERT [${rule.category}]: ${rule.name}`, event.userId, {
       rule: rule.name,
       event: event.type,
       user: event.userEmail,
@@ -487,7 +488,11 @@ export class AuditComplianceSystem {
   ): Promise<void> {
     if (event.userId) {
       // Implementar bloqueio baseado em compliance
-      console.log(`Usuário ${event.userId} bloqueado por violação de compliance`);
+      logger.auditLog(`User blocked for compliance violation`, event.userId, {
+        reason: 'compliance_violation',
+        event_type: event.type,
+        resource: event.resource
+      });
     }
   }
   
@@ -532,7 +537,11 @@ export class AuditComplianceSystem {
     parameters: Record<string, any>
   ): Promise<void> {
     // Implementar notificação para equipe de compliance
-    console.log(`Notificação de compliance enviada para:`, parameters.recipients);
+    logger.auditLog('Compliance notification sent', event.userId, {
+      recipients: parameters.recipients,
+      rule: rule.name,
+      category: rule.category
+    });
   }
   
   // Iniciar remediação
@@ -542,7 +551,11 @@ export class AuditComplianceSystem {
     parameters: Record<string, any>
   ): Promise<void> {
     // Implementar processo de remediação automática
-    console.log(`Remediação iniciada para regra ${rule.name}`);
+    logger.auditLog(`Remediation initiated for rule ${rule.name}`, event.userId, {
+      rule_id: rule.id,
+      category: rule.category,
+      parameters
+    });
   }
   
   // Escalar problema de compliance
@@ -552,7 +565,11 @@ export class AuditComplianceSystem {
     parameters: Record<string, any>
   ): Promise<void> {
     // Implementar escalação para níveis superiores
-    console.log(`Problema de compliance escalado para: ${parameters.to}`);
+    logger.auditLog(`Compliance issue escalated to ${parameters.to}`, event.userId, {
+      rule: rule.name,
+      category: rule.category,
+      escalated_to: parameters.to
+    });
   }
   
   // Verificar thresholds de alerta
@@ -577,7 +594,12 @@ export class AuditComplianceSystem {
     
     const threshold = this.config.alertThresholds[thresholdKey];
     if (threshold && count >= threshold) {
-      console.log(`Threshold de alerta excedido: ${thresholdKey} (${count}/${threshold})`);
+      logger.auditLog(`Alert threshold exceeded: ${thresholdKey}`, event.userId, {
+        threshold_type: thresholdKey,
+        count,
+        threshold,
+        event_type: event.type
+      });
     }
   }
   
@@ -650,7 +672,7 @@ export class AuditComplianceSystem {
       
       return data.map(this.mapDatabaseEventToAuditEvent);
     } catch (error) {
-      console.error('Erro ao obter eventos para relatório:', error);
+      logger.error('Failed to get events for report', error, 'COMPLIANCE');
       return [];
     }
   }
@@ -807,7 +829,7 @@ export class AuditComplianceSystem {
         generated_by: report.generatedBy
       });
     } catch (error) {
-      console.error('Erro ao salvar relatório de compliance:', error);
+      logger.error('Failed to save compliance report', error, 'COMPLIANCE');
     }
   }
   
@@ -826,7 +848,9 @@ export class AuditComplianceSystem {
   
   // Verificação diária de compliance
   private async performDailyComplianceCheck(): Promise<void> {
-    console.log('Executando verificação diária de compliance...');
+    logger.auditLog('Executing daily compliance check', undefined, {
+      timestamp: new Date().toISOString()
+    });
     
     for (const rule of this.complianceRules.filter(r => r.enabled)) {
       try {
@@ -841,7 +865,7 @@ export class AuditComplianceSystem {
           await this.executeComplianceActions(rule.actions, events[0], rule);
         }
       } catch (error) {
-        console.error(`Erro na verificação da regra ${rule.id}:`, error);
+        logger.error(`Failed to check compliance rule ${rule.id}`, error, 'COMPLIANCE');
       }
     }
   }
@@ -860,9 +884,12 @@ export class AuditComplianceSystem {
         .lt('timestamp', cutoffDate.toISOString())
         .not('compliance_categories', 'cs', '{"gdpr","lgpd","sox"}'); // Manter eventos GDPR/LGPD/SOX
       
-      console.log(`Limpeza de dados concluída. Removidos eventos anteriores a ${cutoffDate}`);
+      logger.auditLog('Data cleanup completed', undefined, {
+        cutoff_date: cutoffDate.toISOString(),
+        retention_days: this.config.retentionPeriodDays
+      });
     } catch (error) {
-      console.error('Erro na limpeza de dados:', error);
+      logger.error('Failed to cleanup old data', error, 'AUDIT');
     }
   }
   

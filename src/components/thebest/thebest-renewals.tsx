@@ -58,6 +58,22 @@ export function TheBestRenewals() {
     }
   }, [user?.id]);
 
+  const loadRenewals = async () => {
+    const response = await fetch(`/api/thebest/renewals?user_id=${user?.id}`);
+    if (response.ok) {
+      const data = await response.json();
+      setRenewals(data.renewals || []);
+    }
+  };
+
+  const loadPackages = async () => {
+    const response = await fetch('/api/thebest/packages');
+    if (response.ok) {
+      const data = await response.json();
+      setPackages(data.packages || []);
+    }
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -75,22 +91,6 @@ export function TheBestRenewals() {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadRenewals = async () => {
-    const response = await fetch(`/api/thebest/renewals?user_id=${user?.id}`);
-    if (response.ok) {
-      const data = await response.json();
-      setRenewals(data.renewals || []);
-    }
-  };
-
-  const loadPackages = async () => {
-    const response = await fetch('/api/thebest/packages');
-    if (response.ok) {
-      const data = await response.json();
-      setPackages(data.packages || []);
     }
   };
 

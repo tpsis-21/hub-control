@@ -3,6 +3,7 @@
 
 // import { logSecurityEvent } from './security-config';
 import { SecuritySeverity } from './security';
+import { logger } from '@/utils/production-logger'
 
 // Tipos de métricas coletadas
 export type MetricType = 
@@ -741,12 +742,12 @@ export class PerformanceMonitor {
   // Notificar alerta (implementar conforme necessário)
   private notifyAlert(alert: Alert): void {
     // Implementar notificações (email, Slack, webhook, etc.)
-    console.warn(`🚨 ALERTA [${alert.severity.toUpperCase()}]: ${alert.message}`);
+    logger.warn(`🚨 ALERTA [${alert.severity.toUpperCase()}]: ${alert.message}`, undefined, "WARN");
   }
 
   // Log de métrica
   private logMetric(metric: Metric): void {
-    console.log(`📊 MÉTRICA [${metric.type}]: ${metric.name} = ${metric.value}${metric.unit}`);
+    logger.debug(`📊 MÉTRICA [${metric.type}]: ${metric.name} = ${metric.value}${metric.unit}`, undefined, "DEBUG");
   }
 
   // Obter threshold crítico

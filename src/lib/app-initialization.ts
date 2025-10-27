@@ -6,6 +6,7 @@ import { LoggerService, LogLevel } from "@/services/logger.service";
 import { CacheService } from "@/services/cache.service";
 import { ErrorService } from "@/services/error.service";
 import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
+import { logger } from '@/utils/production-logger'
 
 /**
  * Configurações de inicialização da aplicação
@@ -183,7 +184,15 @@ export class AppInitializer {
       LoggerService.info('Health checks completed', 'AppInitializer', { healthChecks });
 
       // 6. Registra métricas de inicialização
-      await this.recordInitializationMetrics();
+      const metrics = {
+        initializationTime: Date.now(),
+        environment: ConfigService.get('environment'),
+        cacheStats: CacheService.getStats(),
+        configuredFeatures: Object.entries(ConfigService.get('features'))
+          .filter(([, enabled]) => enabled)
+          .map(([feature]) => feature)
+      };
+      LoggerService.info('Application initialized', 'AppInitializer', metrics);
 
       const initializationTime = Date.now() - startTime;
       const success = errors.length === 0;
@@ -390,7 +399,17 @@ export class AppInitializer {
 
     // Verifica funcionamento do cache
     try {
-      await this.checkCacheService();
+      const testKey = 'health_check_test';
+      const testValue = { timestamp: Date.now() };
+      
+      CacheService.set(testKey, testValue, 1000);
+      const retrieved = CacheService.get(testKey);
+      
+      if (!retrieved || (retrieved as any).timestamp !== testValue.timestamp) {
+        throw new Error('Cache service not working properly');
+      }
+      
+      CacheService.delete(testKey);
       healthChecks.cache = true;
     } catch (error) {
       LoggerService.warn('Cache health check failed', 'AppInitializer', { error });
@@ -398,7 +417,19 @@ export class AppInitializer {
 
     // Verifica configurações críticas
     try {
-      await this.checkCriticalConfigurations();
+      const config = ConfigService.getConfig();
+      const criticalConfigs = [
+        { key: 'supabaseUrl', value: config.supabaseUrl },
+        { key: 'supabaseAnonKey', value: config.supabaseAnonKey },
+      ];
+
+      const missingConfigs = criticalConfigs.filter(c => !c.value);
+      
+      if (missingConfigs.length > 0) {
+        throw new Error(`Missing critical configurations: ${missingConfigs.map(c => c.key).join(', ')}`);
+      }
+      
+      LoggerService.info('Critical configurations verified', 'HealthCheck');
       healthChecks.config = true;
     } catch (error) {
       LoggerService.warn('Config health check failed', 'AppInitializer', { error });
@@ -450,7 +481,7 @@ export class AppInitializer {
         throw new Error(`Supabase query failed: ${error.message}`);
       }
       
-      LoggerService.info('Supabase connection verified', 'HealthCheck');
+      LoggerService.info('Supabase connection verified', undefined, 'HealthCheck');
     } catch (error) {
       // Log como warning ao invés de error para não quebrar a aplicação
       LoggerService.warn('Supabase connection check failed', 'HealthCheck', { error });
@@ -458,63 +489,11 @@ export class AppInitializer {
     }
   }
 
-  /**
-   * Verifica funcionamento do cache
-   */
-  private static async checkCacheService(): Promise<void> {
-    try {
-      const testKey = 'health_check_test';
-      const testValue = { timestamp: Date.now() };
-      
-      CacheService.set(testKey, testValue, 1000);
-      const retrieved = CacheService.get(testKey);
-      
-      if (!retrieved || (retrieved as any).timestamp !== testValue.timestamp) {
-        throw new Error('Cache service not working properly');
-      }
-      
-      CacheService.delete(testKey);
-      LoggerService.info('Cache service verified', 'HealthCheck');
-    } catch (error) {
-      LoggerService.error('Cache service check failed', 'HealthCheck', { error });
-      throw error;
-    }
-  }
 
-  /**
-   * Verifica configurações críticas
-   */
-  private static async checkCriticalConfigurations(): Promise<void> {
-    const config = ConfigService.getConfig();
-    const criticalConfigs = [
-      { key: 'supabaseUrl', value: config.supabaseUrl },
-      { key: 'supabaseAnonKey', value: config.supabaseAnonKey },
-    ];
 
-    const missingConfigs = criticalConfigs.filter(c => !c.value);
-    
-    if (missingConfigs.length > 0) {
-      throw new Error(`Missing critical configurations: ${missingConfigs.map(c => c.key).join(', ')}`);
-    }
-    
-    LoggerService.info('Critical configurations verified', 'HealthCheck');
-  }
 
-  /**
-   * Registra métricas de inicialização
-   */
-  private static async recordInitializationMetrics(): Promise<void> {
-    const metrics = {
-      initializationTime: Date.now(),
-      environment: ConfigService.get('environment'),
-      cacheStats: CacheService.getStats(),
-      configuredFeatures: Object.entries(ConfigService.get('features'))
-        .filter(([, enabled]) => enabled)
-        .map(([feature]) => feature)
-    };
 
-    LoggerService.info('Application initialized', 'AppInitializer', metrics);
-  }
+
 
   /**
    * Verifica se a aplicação foi inicializada
@@ -582,12 +561,12 @@ export function useAppInitialization() {
   React.useEffect(() => {
     // Evita reinicializações desnecessárias
     if (!AppInitializer.isAppInitialized() && !isInitializing && !hasInitialized) {
-      console.log('🔄 Iniciando inicialização da aplicação...');
+      logger.debug('🔄 Iniciando inicialização da aplicação...', {}, "DEBUG");
       setIsInitializing(true);
       setHasInitialized(true);
       
       AppInitializer.initialize().then((result) => {
-        console.log('✅ Inicialização concluída:', result.success);
+        logger.debug('✅ Inicialização concluída:', { success: result.success }, "DEBUG");
         setInitializationResult(result);
         setIsInitialized(result.success);
         setIsInitializing(false);

@@ -1,9 +1,10 @@
 // @/services/reminder.service.ts
 
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createApiSupabaseClient } from "@/lib/supabase/unified-client";
 import { mapDatabaseClientToClient } from "@/lib/database-mappers";
 import { MessageQueueService } from "@/services/message-queue.service";
 import { LoggerService } from "@/services/logger.service";
+import { logger } from '@/utils/production-logger'
 import type { Client } from "@/lib/types";
 
 export class ReminderService {
@@ -16,12 +17,12 @@ export class ReminderService {
    */
   static startReminderService() {
     if (this.isRunning) {
-      console.log('Serviço de lembretes já está em execução');
+      logger.debug('Serviço de lembretes já está em execução');
       return;
     }
 
     this.isRunning = true;
-    console.log('Iniciando serviço de lembretes automáticos...');
+    logger.debug('Iniciando serviço de lembretes automáticos...');
 
     // Executa após 30 segundos (para não bloquear o startup) e depois a cada hora
     setTimeout(() => {
@@ -44,7 +45,7 @@ export class ReminderService {
    */
   static stopReminderService() {
     if (!this.isRunning) {
-      console.log('Serviço de lembretes não está em execução');
+      logger.debug('Serviço de lembretes não está em execução');
       return;
     }
 
@@ -54,7 +55,7 @@ export class ReminderService {
       this.intervalId = null;
     }
 
-    console.log('Serviço de lembretes parado');
+    logger.debug('Serviço de lembretes parado');
     LoggerService.info('Serviço de lembretes parado', 'system', {
       timestamp: new Date().toISOString()
     });
@@ -65,20 +66,23 @@ export class ReminderService {
    */
   private static async checkExpiringClients() {
     try {
-      console.log('Verificando clientes com vencimento próximo...');
+      logger.debug('Verificando clientes com vencimento próximo...');
       
-      const supabase = await createApiSupabaseClient();
+      const supabase = createApiSupabaseClient(true); // Use service role key
       const now = new Date();
       const threeDaysFromNow = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
       const oneDayFromNow = new Date(now.getTime() + (1 * 24 * 60 * 60 * 1000));
 
       // Buscar clientes ativos com vencimento em 3 dias ou 1 dia
+      const nowDate = now.toISOString().split('T')[0];
+      const threeDaysDate = threeDaysFromNow.toISOString().split('T')[0];
+      
       const { data: expiringClients, error } = await supabase
         .from('clients')
         .select('*')
         .eq('status', 'Ativo')
-        .or(`expiration_date.lte.${threeDaysFromNow.toISOString()},expiration_date.lte.${oneDayFromNow.toISOString()}`)
-        .gte('expiration_date', now.toISOString());
+        .gte('expiration_date', nowDate)
+        .lte('expiration_date', threeDaysDate);
 
       if (error) {
         console.error('Erro ao buscar clientes com vencimento próximo:', error);
@@ -86,11 +90,11 @@ export class ReminderService {
       }
 
       if (!expiringClients || expiringClients.length === 0) {
-        console.log('Nenhum cliente com vencimento próximo encontrado');
+        logger.debug('Nenhum cliente com vencimento próximo encontrado');
         return;
       }
 
-      console.log(`Encontrados ${expiringClients.length} clientes com vencimento próximo`);
+      logger.debug(`Encontrados ${expiringClients.length} clientes com vencimento próximo`);
 
       for (const clientData of expiringClients) {
         const client = mapDatabaseClientToClient(clientData);
@@ -140,7 +144,7 @@ export class ReminderService {
         isUrgent: false
       });
 
-      console.log(`Lembrete normal enviado para ${client.name} (${daysUntilExpiration} dias)`);
+      logger.debug(`Lembrete normal enviado para ${client.name} (${daysUntilExpiration} dias)`);
     } catch (error) {
       console.error(`Erro ao enviar lembrete normal para ${client.name}:`, error);
     }
@@ -161,7 +165,7 @@ export class ReminderService {
         isUrgent: true
       });
 
-      console.log(`Lembrete urgente enviado para ${client.name} (${daysUntilExpiration} dias)`);
+      logger.debug(`Lembrete urgente enviado para ${client.name} (${daysUntilExpiration} dias)`);
     } catch (error) {
       console.error(`Erro ao enviar lembrete urgente para ${client.name}:`, error);
     }
@@ -172,17 +176,19 @@ export class ReminderService {
    */
   static async checkExpiredClients() {
     try {
-      console.log('Verificando clientes vencidos...');
+      logger.debug('Verificando clientes vencidos...');
       
-      const supabase = await createApiSupabaseClient();
+      const supabase = createApiSupabaseClient(true); // Use service role key
       const now = new Date();
 
       // Buscar clientes ativos com data de vencimento passada
+      const nowDate = now.toISOString().split('T')[0];
+      
       const { data: expiredClients, error } = await supabase
         .from('clients')
         .select('*')
         .eq('status', 'Ativo')
-        .lt('expiration_date', now.toISOString());
+        .lt('expiration_date', nowDate);
 
       if (error) {
         console.error('Erro ao buscar clientes vencidos:', error);
@@ -190,17 +196,17 @@ export class ReminderService {
       }
 
       if (!expiredClients || expiredClients.length === 0) {
-        console.log('Nenhum cliente vencido encontrado');
+        logger.debug('Nenhum cliente vencido encontrado');
         return;
       }
 
-      console.log(`Encontrados ${expiredClients.length} clientes vencidos`);
+      logger.debug(`Encontrados ${expiredClients.length} clientes vencidos`);
 
       // Atualizar status dos clientes vencidos para 'Inativo'
       const { error: updateError } = await supabase
         .from('clients')
         .update({ status: 'Inativo' })
-        .in('id', expiredClients.map(c => c.id));
+        .in('id', expiredClients.map((c: any) => c.id));
 
       if (updateError) {
         console.error('Erro ao atualizar status dos clientes vencidos:', updateError);
@@ -246,10 +252,10 @@ export class ReminderService {
    * Executa verificação manual de lembretes e clientes vencidos
    */
   static async runManualCheck() {
-    console.log('Executando verificação manual...');
+    logger.debug('Executando verificação manual...');
     await this.checkExpiringClients();
     await this.checkExpiredClients();
-    console.log('Verificação manual concluída');
+    logger.debug('Verificação manual concluída');
   }
 
   /**
@@ -263,8 +269,8 @@ export class ReminderService {
   }
 }
 
-// Iniciar o serviço automaticamente quando o módulo for carregado
-if (typeof window === 'undefined') {
-  // Apenas no servidor
-  ReminderService.startReminderService();
-}
+// Iniciar o serviço automaticamente quando o módulo for carregado - TEMPORARIAMENTE DESABILITADO
+// if (typeof window === 'undefined') {
+//   // Apenas no servidor
+//   ReminderService.startReminderService();
+// }

@@ -180,7 +180,21 @@ async function checkAuthentication(
   }
 
   try {
-    const supabase = await createServerSupabaseClient()
+    // Criar objeto cookies a partir da requisição
+    const cookies = {
+      get: (name: string) => {
+        const cookieHeader = request.headers.get('cookie')
+        if (!cookieHeader) return undefined
+        
+        const cookies = cookieHeader.split(';').map(c => c.trim())
+        const cookie = cookies.find(c => c.startsWith(`${name}=`))
+        return cookie ? cookie.split('=')[1] : undefined
+      },
+      set: () => {}, // Não usado no middleware
+      remove: () => {} // Não usado no middleware
+    }
+    
+    const supabase = await createServerSupabaseClient(cookies)
     const { data: { session }, error } = await supabase.auth.getSession()
 
     if (error || !session?.user) {

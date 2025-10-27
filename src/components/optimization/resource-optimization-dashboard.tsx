@@ -71,6 +71,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { logger } from '@/utils/production-logger';
 import {
   useResourceOptimization,
   ResourceMetrics,
@@ -462,7 +463,7 @@ const RuleManager: React.FC<RuleManagerProps> = ({ rules, onAddRule, onRemoveRul
                     checked={rule.enabled}
                     onCheckedChange={(enabled) => {
                       // Implementar toggle de regra
-                      console.log(`Toggle rule ${rule.id}: ${enabled}`);
+                      logger.debug(`Toggle rule ${rule.id}: ${enabled}`);
                     }}
                   />
                   <Button

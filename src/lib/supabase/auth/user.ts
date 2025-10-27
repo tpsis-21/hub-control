@@ -5,6 +5,7 @@ import type { User } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ADMIN_EMAIL } from '../config';
 import { supabaseLogger } from '../utils/logger';
+import { logger } from '@/utils/production-logger'
 
 // Tipos para operações de usuário
 export interface UserProfile {

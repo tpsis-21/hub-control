@@ -2,7 +2,7 @@
 // Endpoints para gerenciar configurações de cálculo de períodos
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 import { createStandardErrorResponse, createStandardSuccessResponse } from '@/middleware/shared/helpers';
 import { z } from 'zod';
 
@@ -43,7 +43,7 @@ const planConfigSchema = z.object({
 // Função para verificar se o usuário é admin
 async function isUserAdmin(userId: string): Promise<boolean> {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     
     // Admin principal é sempre admin
     if (userId === '2f67bed8-9448-446f-8f38-9306f773620d') {
@@ -66,7 +66,7 @@ async function isUserAdmin(userId: string): Promise<boolean> {
 // GET - Buscar configurações de períodos
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'servers' ou 'plans'
     const id = searchParams.get('id');
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
 // PUT - Atualizar configuração de servidor
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const body = await request.json();
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
@@ -233,7 +233,7 @@ export async function PUT(request: NextRequest) {
 // POST - Testar configuração de período
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const body = await request.json();
     const { serverId, planId, testData } = body;
 

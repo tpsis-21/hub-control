@@ -1,14 +1,19 @@
 // @/app/(app)/financeiro/actions.ts
 'use server';
 
-import { createServerSupabaseClient, createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
+import { createServerClient, createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
+
+// Helper function to create server supabase client
+async function createServerSupabaseClient() {
+  return await createServerClient();
+}
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { FinancialTransaction, FinancialSummary } from '@/lib/types';
 // import { getFinancialSummary as getFinancialSummaryHelper } from '@/lib/financial-summary-helper';
 
 export async function getFinancialData(): Promise<FinancialTransaction[]> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerClient();
   
   const { data, error } = await supabase
     .from('financial_transactions')
@@ -25,16 +30,21 @@ export async function getFinancialData(): Promise<FinancialTransaction[]> {
 }
 
 export async function getFinancialSummary(): Promise<FinancialSummary> {
-  const supabase = await createServerSupabaseClient();
-  
   try {
-    // Temporariamente usando apenas fallback devido a erro de build
-    // const summaryData = await getFinancialSummaryHelper(supabase);
-    return await getFinancialSummaryFallback();
+    const supabase = await createServerClient();
+    
+    // Buscar dados dos últimos 12 meses
+    const { data, error } = await supabase
+      .from('financial_transactions')
+      .select('*')
+      .gte('transaction_date', new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString());
+
+    if (error) throw error;
+    
+    return getFinancialSummaryFallback();
   } catch (error) {
     console.error('Erro ao buscar resumo financeiro:', error);
-    // Fallback para cálculo manual se houver erro
-    return await getFinancialSummaryFallback();
+    return getFinancialSummaryFallback();
   }
 }
 
@@ -88,12 +98,21 @@ async function getFinancialSummaryFallback(): Promise<FinancialSummary> {
     .gte('transaction_date', `${previousMonthYear}-${previousMonth.toString().padStart(2, '0')}-01`)
     .lt('transaction_date', `${previousMonthYear}-${currentMonth.toString().padStart(2, '0')}-01`);
 
+  // Despesas do ano
+  const { data: yearExpenses } = await supabase
+    .from('financial_transactions')
+    .select('amount')
+    .eq('type', 'expense')
+    .gte('transaction_date', `${currentYear}-01-01`)
+    .lt('transaction_date', `${currentYear + 1}-01-01`);
+
   // Calcular totais
-  const receitasMesAtual = (currentMonthPayments || []).reduce((sum, p) => sum + p.amount, 0);
-  const receitasMesAnterior = (previousMonthPayments || []).reduce((sum, p) => sum + p.amount, 0);
-  const totalReceitas = (yearPayments || []).reduce((sum, p) => sum + p.amount, 0);
-  const despesasMesAtual = (currentMonthExpenses || []).reduce((sum, e) => sum + Math.abs(e.amount), 0);
-  const despesasMesAnterior = (previousMonthExpenses || []).reduce((sum, e) => sum + Math.abs(e.amount), 0);
+  const receitasMesAtual = (currentMonthPayments || []).reduce((sum: number, p: any) => sum + p.amount, 0);
+  const receitasMesAnterior = (previousMonthPayments || []).reduce((sum: number, p: any) => sum + p.amount, 0);
+  const totalReceitas = (yearPayments || []).reduce((sum: number, p: any) => sum + p.amount, 0);
+  const despesasMesAtual = (currentMonthExpenses || []).reduce((sum: number, e: any) => sum + Math.abs(e.amount), 0);
+  const despesasMesAnterior = (previousMonthExpenses || []).reduce((sum: number, e: any) => sum + Math.abs(e.amount), 0);
+  const totalDespesas = (yearExpenses || []).reduce((sum: number, e: any) => sum + Math.abs(e.amount), 0);
 
   const saldoMesAtual = receitasMesAtual - despesasMesAtual;
   const crescimentoReceitas = receitasMesAnterior > 0 ? ((receitasMesAtual - receitasMesAnterior) / receitasMesAnterior) * 100 : 0;
@@ -109,6 +128,7 @@ async function getFinancialSummaryFallback(): Promise<FinancialSummary> {
     crescimentoDespesas: crescimentoDespesas || 0
   };
 }
+
 
 export async function addFinancialTransaction(formData: FormData) {
   const supabase = await createServerSupabaseClientForActions();
@@ -175,7 +195,7 @@ export async function getFinancialCategories(): Promise<string[]> {
     return ['Assinaturas IPTV', 'Vendas', 'Operacional', 'Marketing', 'Estornos', 'Outros'];
   }
 
-  const categories = [...new Set((data || []).map(t => t.category))];
+  const categories = [...new Set((data || []).map((t: any) => t.category))].filter(Boolean) as string[];
   return categories.length > 0 ? categories : ['Assinaturas IPTV', 'Vendas', 'Operacional', 'Marketing', 'Estornos', 'Outros'];
 }
 
@@ -186,16 +206,7 @@ export async function getPaymentsFinancialData() {
   // Buscar pagamentos recentes
   const { data: payments, error: paymentsError } = await supabase
     .from('payments')
-    .select(`
-      id,
-      amount,
-      status,
-      date,
-      payment_method,
-      transaction_id,
-      client_id,
-      clients(name)
-    `)
+    .select('id, amount, status, date, payment_method, transaction_id, client_id, clients(name)')
     .order('date', { ascending: false })
     .limit(50);
 
@@ -243,14 +254,7 @@ export async function getMonthlyFinancialReport(year: number, month: number) {
   // Buscar pagamentos do mês
   const { data: payments, error: paymentsError } = await supabase
     .from('payments')
-    .select(`
-      id,
-      amount,
-      status,
-      date,
-      payment_method,
-      clients(name)
-    `)
+    .select('id, amount, status, date, payment_method, clients(name)')
     .gte('date', startDate)
     .lte('date', endDate)
     .eq('status', 'Pago')
@@ -261,20 +265,20 @@ export async function getMonthlyFinancialReport(year: number, month: number) {
   }
 
   // Calcular resumo do mês
-  const receitas = (transactions || []).filter(t => t.type === 'income');
-  const despesas = (transactions || []).filter(t => t.type === 'expense');
+  const receitas = (transactions || []).filter((t: any) => t.type === 'income');
+  const despesas = (transactions || []).filter((t: any) => t.type === 'expense');
   
-  const totalReceitas = receitas.reduce((sum, t) => sum + t.amount, 0);
-  const totalDespesas = despesas.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const totalReceitas = receitas.reduce((sum: number, t: any) => sum + t.amount, 0);
+  const totalDespesas = despesas.reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
   const saldoLiquido = totalReceitas - totalDespesas;
   
   // Agrupar por categoria
-  const receitasPorCategoria = receitas.reduce((acc, t) => {
+  const receitasPorCategoria = receitas.reduce((acc: Record<string, number>, t: any) => {
     acc[t.category] = (acc[t.category] || 0) + t.amount;
     return acc;
   }, {} as Record<string, number>);
   
-  const despesasPorCategoria = despesas.reduce((acc, t) => {
+  const despesasPorCategoria = despesas.reduce((acc: Record<string, number>, t: any) => {
     acc[t.category] = (acc[t.category] || 0) + Math.abs(t.amount);
     return acc;
   }, {} as Record<string, number>);

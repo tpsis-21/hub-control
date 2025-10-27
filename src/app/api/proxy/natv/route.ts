@@ -3,31 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rateLimitCustom, parseWindowToMs, buildRateLimitHeaders } from '@/lib/security/rate-limit';
 import { getExternalApiConfig } from '@/lib/security';
 import { ErrorService, ErrorType } from '@/services/error.service';
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from '@/lib/supabase/unified-client';
 
 // Função para verificar autenticação
 async function isAuthenticated(request: NextRequest): Promise<{ authenticated: boolean; user?: any }> {
-  const authHeader = request.headers.get('authorization');
-  
-  if (!authHeader?.startsWith('Bearer ')) {
-    return { authenticated: false };
-  }
-  
-  const token = authHeader.replace('Bearer ', '');
-  
   try {
-    // Criar cliente Supabase com token do usuário
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      }
-    );
+    // Usar cliente Supabase consolidado
+    const supabase = createApiSupabaseClient(false);
     
     // Verificar se o token é válido
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -55,16 +37,7 @@ async function getUserNATVConfig(userId: string): Promise<{
   error?: string;
 }> {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    const supabase = createApiSupabaseClient(false);
 
     const { data, error } = await supabase
       .from('integration_configs')
@@ -74,7 +47,7 @@ async function getUserNATVConfig(userId: string): Promise<{
       .eq('is_active', true)
       .single();
 
-    if (error || !data) {
+    if (error || !data || !data.base_url || !data.auth_token) {
       return {
         success: false,
         error: 'Configuração NATV não encontrada para este usuário'
@@ -261,16 +234,7 @@ export async function POST(request: NextRequest) {
 
     // Atualizar last_used_at da configuração
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        }
-      );
+      const supabase = createApiSupabaseClient();
 
       await supabase
         .from('integration_configs')
@@ -487,16 +451,7 @@ export async function GET(request: NextRequest) {
 
     // Atualizar last_used_at da configuração
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        }
-      );
+      const supabase = createApiSupabaseClient();
 
       await supabase
         .from('integration_configs')

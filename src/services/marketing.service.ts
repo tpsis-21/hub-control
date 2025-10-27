@@ -136,7 +136,7 @@ export class MarketingService {
       if (!data) return [];
 
       // Mapear dados do Supabase para o tipo Campaign
-      const mappedCampaigns: Campaign[] = data.map(item => ({
+      const mappedCampaigns: Campaign[] = data.map((item: any) => ({
         id: item.id,
         name: item.name,
         subject: item.subject,
@@ -326,7 +326,7 @@ export class MarketingService {
         .order('created_at', { ascending: false });
 
       // Mapear dados do Supabase para o tipo Campaign
-      const campaigns: Campaign[] = campaignsData?.map(item => ({
+      const campaigns: Campaign[] = campaignsData?.map((item: any) => ({
         id: item.id,
         name: item.name,
         subject: item.subject,
@@ -406,7 +406,7 @@ export class MarketingService {
           .slice(0, 5) || [],
         automationStats: {
           totalRules: automations?.length || 0,
-          activeRules: automations?.filter(a => a.is_active).length || 0,
+          activeRules: automations?.filter((a: any) => a.is_active).length || 0,
           executionsToday: 0 // TODO: Implementar contagem de execuções
         }
       };

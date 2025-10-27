@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // INTERFACES E TIPOS
@@ -218,7 +219,7 @@ class IntelligentCache {
     // Em um ambiente real, isso seria feito em background
     setTimeout(() => {
       // Revalidar entrada
-      console.log(`Revalidando cache para ${key}`);
+      logger.debug(`Revalidando cache para ${key}`, undefined, "DEBUG");
     }, 100);
   }
 

@@ -277,7 +277,8 @@ export class CacheService {
   }
 
   static deleteUserData(userId: string): boolean {
-    return this.deletePattern(`^user:${userId}`) > 0;
+    const deletedCount = this.deletePattern(`^user:${userId}`);
+    return deletedCount > 0;
   }
 
   static setQueryResult(table: string, filters: Record<string, any>, data: any, ttl?: number): void {

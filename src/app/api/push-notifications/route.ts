@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from "../../../lib/supabase/clients/server";
 import { notificationSystem } from '../../../lib/notification-system';
 import { NotificationType, NotificationPriority } from '../../../types/notifications';
+import { logger } from '@/utils/production-logger'
 
 // Verificar se o usuário tem permissão para enviar notificações
 async function verifyPermission(request: NextRequest) {
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
           .select('id, user_id')
           .eq('company', targets.empresaId);
         
-        const userIds = companyUsers?.map(u => u.id) || [];
+        const userIds = companyUsers?.map((u: any) => u.id) || [];
         result = await notificationSystem.sendNotification(
           'user' as NotificationType,
           payload.title,
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
           .from('profiles')
           .select('id, user_id');
         
-        const allUserIds = allUsers?.map(u => u.id) || [];
+        const allUserIds = allUsers?.map((u: any) => u.id) || [];
         result = await notificationSystem.sendNotification(
           'system' as NotificationType,
           payload.title,
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log da ação
-    console.log(`Notificação enviada por ${user?.email}: tipo=${type}, resultado=`, result);
+    logger.debug(`Notificação enviada por ${user?.email}: tipo=${type}, resultado=${JSON.stringify(result)}`);
 
     return NextResponse.json({
       success: true,
@@ -230,21 +231,20 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // TODO: Implementar tabela push_subscriptions no banco
     // Remover subscription do usuário
-    // const { error: deleteError } = await supabase
-    //   .from('push_subscriptions')
-    //   .delete()
-    //   .eq('user_id', user!.id)
-    //   .eq('endpoint', endpoint);
+    const { error: deleteError } = await supabase
+      .from('push_subscriptions')
+      .delete()
+      .eq('user_id', user!.id)
+      .eq('endpoint', endpoint);
 
-    // if (deleteError) {
-    //   console.error('Erro ao remover subscription:', deleteError);
-    //   return NextResponse.json(
-    //     { error: 'Erro ao remover subscription' },
-    //     { status: 500 }
-    //   );
-    // }
+    if (deleteError) {
+      console.error('Erro ao remover subscription:', deleteError);
+      return NextResponse.json(
+        { error: 'Erro ao remover subscription' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

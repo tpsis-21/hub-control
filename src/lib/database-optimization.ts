@@ -1,12 +1,13 @@
 /**
  * Sistema de Otimização de Banco de Dados
  * 
- * Implementa cache inteligente, otimização de queries e gerenciamento de índices
- * para melhorar a performance do banco de dados.
+ * Implementa cache inteligente, otimização de queries,
+ * análise de performance e monitoramento em tempo real.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from './supabase/unified-client';
 import { useState, useEffect } from 'react';
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // INTERFACES E TIPOS
@@ -356,7 +357,7 @@ class QueryOptimizer {
 
   // Lidar com queries lentas
   private handleSlowQuery(query: string, executionTime: number, params?: any): void {
-    console.warn(`Query lenta detectada (${executionTime}ms):`, {
+    logger.warn(`Query lenta detectada (${executionTime}ms)`, {
       query: query.substring(0, 100) + '...',
       executionTime,
       params
@@ -535,7 +536,7 @@ class QueryOptimizer {
 
 // Criar instância otimizada do Supabase
 export function createOptimizedSupabase(url: string, key: string, cacheConfig?: CacheConfig) {
-  const supabase = createClient(url, key);
+  const supabase = createApiSupabaseClient(true); // service role para otimização
   const optimizer = new QueryOptimizer(supabase, cacheConfig);
   
   return {

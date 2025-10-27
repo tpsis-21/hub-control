@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rateLimitCustom, parseWindowToMs, buildRateLimitHeaders } from '@/lib/security/rate-limit';
 import { getExternalApiConfig } from '@/lib/security';
 import { ErrorService, ErrorType } from '@/services/error.service';
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 
 // Função para verificar autenticação
 async function isAuthenticated(request: NextRequest): Promise<{ authenticated: boolean; user?: any }> {
@@ -16,18 +16,8 @@ async function isAuthenticated(request: NextRequest): Promise<{ authenticated: b
   const token = authHeader.replace('Bearer ', '');
   
   try {
-    // Criar cliente Supabase com token do usuário
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      }
-    );
+    // Usar cliente Supabase consolidado
+    const supabase = createApiSupabaseClient();
     
     // Verificar se o token é válido
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -49,26 +39,18 @@ async function getUserTheBestConfig(userId: string): Promise<{
   config?: {
     baseUrl: string;
     apiKey: string;
+    apiSecret?: string;
     username?: string;
     password?: string;
   };
   error?: string;
 }> {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    const supabase = createApiSupabaseClient();
 
     const { data, error } = await supabase
       .from('thebest_configs')
-      .select('api_url, api_key, username, password, config_data')
+      .select('api_url, api_key, api_secret')
       .eq('user_id', userId)
       .eq('is_active', true)
       .single();
@@ -80,15 +62,12 @@ async function getUserTheBestConfig(userId: string): Promise<{
       };
     }
 
-    const configData = data.config_data as any || {};
-
     return {
       success: true,
       config: {
         baseUrl: data.api_url,
         apiKey: data.api_key,
-        username: data.username || configData.username,
-        password: data.password || configData.password
+        apiSecret: data.api_secret || undefined
       }
     };
   } catch (error) {
@@ -103,16 +82,7 @@ async function getUserTheBestConfig(userId: string): Promise<{
 // Função para registrar log da API
 async function logApiCall(userId: string, operation: string, success: boolean, responseData?: any, errorMessage?: string) {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    const supabase = createApiSupabaseClient();
 
     await supabase
       .from('thebest_api_logs')
@@ -248,13 +218,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { baseUrl, apiKey, username, password } = configResult.config;
+    const { baseUrl, apiKey, apiSecret } = configResult.config;
 
     // Preparar dados para The Best API
     const theBestData = {
       ...body,
-      username: username,
-      password: password,
       action: action
     };
 
@@ -314,16 +282,7 @@ export async function POST(request: NextRequest) {
       
       // Atualizar last_used_at da configuração
       try {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false
-            }
-          }
-        );
+        const supabase = createApiSupabaseClient();
 
         await supabase
           .from('thebest_configs')

@@ -5,7 +5,7 @@
  * gerenciamento de índices e monitoramento de queries lentas.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from './supabase/unified-client';
 import { useState, useEffect, useCallback } from 'react';
 
 // ============================================
@@ -84,6 +84,8 @@ export interface QueryOptimizationConfig {
     indexMisses: number;
   };
 }
+
+
 
 // ============================================
 // REGRAS DE OTIMIZAÇÃO PADRÃO

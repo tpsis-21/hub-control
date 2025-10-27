@@ -28,7 +28,6 @@ import {
   Download
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { createClientSupabaseClient } from '@/lib/supabase/clients/browser'
 import { validateIntegrationConfig } from '@/lib/local-validation'
 import { ValidationFeedback, InlineValidation } from '@/components/ui/validation-feedback'
 
@@ -57,6 +56,7 @@ export function TheBestConfig() {
     timeout: 30000
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<{
     success: boolean
@@ -94,57 +94,67 @@ export function TheBestConfig() {
 
   const initializeComponent = async () => {
     try {
-      const supabase = createClientSupabaseClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (user) {
-        setCurrentUser(user)
-        await loadUserConfig(user.id)
+      // Usar API segura para verificar autenticação
+      const response = await fetch('/api/auth/user', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const { user } = await response.json();
+        if (user) {
+          setCurrentUser(user);
+          await loadUserConfig(user.id);
+        } else {
+          toast.error('Usuário não autenticado');
+        }
       } else {
-        toast.error('Usuário não autenticado')
+        toast.error('Erro ao verificar autenticação');
       }
     } catch (error) {
-      console.error('Erro ao inicializar componente:', error)
-      toast.error('Erro ao carregar dados do usuário')
+      console.error('Erro ao inicializar componente:', error);
+      toast.error('Erro ao carregar dados do usuário');
     }
   }
 
   const loadUserConfig = async (userId: string) => {
     try {
-      setIsLoading(true)
-      const supabase = createClientSupabaseClient()
+      setIsLoading(true);
       
-      const { data, error } = await supabase
-        .from('integration_configs')
-        .select('*')
-        .eq('provider', 'thebest')
-        .eq('created_by', userId)
-        .eq('is_active', true)
-        .single()
-      
-      if (data && !error) {
-        const configData = data.config_data as any
-        setConfig({
-          apiUrl: data.base_url || '',
-          apiKey: data.auth_token || '',
-          username: configData?.username || '',
-          password: configData?.password || '',
-          timeout: configData?.timeout || 30000
-        })
-        setIsConfigured(true)
-        
-        // Carregar pacotes se configurado
-        await loadPackages()
-        await loadUserRenewals()
+      // Usar API backend segura
+      const response = await fetch('/api/admin/thebest-operations?operation=get_config', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const configData = result.data.config_data || {};
+          setConfig({
+            apiUrl: result.data.base_url || '',
+            apiKey: result.data.auth_token || '',
+            username: configData.username || '',
+            password: configData.password || '',
+            timeout: configData.timeout || 30000
+          });
+          setIsConfigured(true);
+        } else {
+          setIsConfigured(false);
+        }
       } else {
-        setIsConfigured(false)
+        console.error('Erro ao carregar configuração:', response.statusText);
+        setIsConfigured(false);
       }
     } catch (error) {
-      console.error('Erro ao carregar configuração do usuário:', error)
-      toast.error('Erro ao carregar configuração The Best')
-      setIsConfigured(false)
+      console.error('Erro ao carregar configuração:', error);
+      setIsConfigured(false);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -161,49 +171,30 @@ export function TheBestConfig() {
 
     try {
       setIsLoading(true)
-      const supabase = createClientSupabaseClient()
       
-      // Verificar se já existe configuração
-      const { data: existingConfig } = await supabase
-        .from('integration_configs')
-        .select('id')
-        .eq('provider', 'thebest')
-        .eq('created_by', currentUser.id)
-        .eq('is_active', true)
-        .single()
-      
-      const configData = {
-        provider: 'thebest',
-        name: 'The Best API',
-        base_url: config.apiUrl,
-        auth_token: config.apiKey,
-        auth_type: 'bearer',
-        config_data: {
-          username: config.username,
-          password: config.password,
-          timeout: config.timeout
+      const response = await fetch('/api/integrations/thebest/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        is_active: true,
-        updated_at: new Date().toISOString(),
-        created_by: currentUser.id,
-        updated_by: currentUser.id
+        body: JSON.stringify({ config }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao salvar configuração');
       }
+
+      const { success, message } = await response.json();
       
-      if (existingConfig) {
-        // Atualizar configuração existente
-        const { error } = await supabase
-          .from('integration_configs')
-          .update(configData)
-          .eq('id', existingConfig.id)
+      if (success) {
+        setIsConfigured(true)
+        toast.success(message || 'Configuração salva com sucesso!')
         
-        if (error) throw error
+        // Testar conexão após salvar
+        await testConnection()
       } else {
-        // Criar nova configuração
-        const { error } = await supabase
-          .from('integration_configs')
-          .insert(configData)
-        
-        if (error) throw error
+        throw new Error(message || 'Erro ao salvar configuração')
       }
       
       setIsConfigured(true)
@@ -238,7 +229,6 @@ export function TheBestConfig() {
       const response = await fetch('/api/proxy/thebest?action=test_connection', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${(await createClientSupabaseClient().auth.getSession()).data.session?.access_token}`,
           'Content-Type': 'application/json'
         }
       })
@@ -270,24 +260,108 @@ export function TheBestConfig() {
     }
   }
 
+  // Função duplicada removida - usar loadPackages mais abaixo
+
+  // Função duplicada removida - usar syncPackages mais abaixo
+
+  // Função duplicada removida - usar createRenewal mais abaixo
+
+  // Função duplicada removida - usar loadUserRenewals mais abaixo
+
+  const loadConfig = async () => {
+    if (!currentUser) return
+
+    try {
+      setIsLoading(true)
+      
+      // Usar API segura em vez de acesso direto ao banco
+      const response = await fetch('/api/integrations/thebest/config', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao carregar configuração');
+      }
+
+      const { data } = await response.json();
+
+      if (data) {
+        setConfig({
+          apiUrl: data.base_url || '',
+          apiKey: data.auth_token || '',
+          username: data.config_data?.username || '',
+          password: data.config_data?.password || '',
+          timeout: data.config_data?.timeout || 30000
+        })
+        setIsConfigured(true)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configuração:', error)
+      toast.error('Erro ao carregar configuração')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Função duplicada removida - usar testConnection em vez disso
+
+  const testConnection = async () => {
+    try {
+      setIsTesting(true)
+      
+      const response = await fetch('/api/integrations/thebest/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ config }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao testar conexão');
+      }
+
+      const { success, message } = await response.json();
+      
+      if (success) {
+        setTestResult({ success: true, message: message || 'Conexão testada com sucesso!' })
+        toast.success('Conexão testada com sucesso!')
+      } else {
+        setTestResult({ success: false, message: message || 'Falha na conexão' })
+        toast.error('Falha na conexão')
+      }
+    } catch (error) {
+      console.error('Erro ao testar conexão:', error)
+      setTestResult({ success: false, message: 'Erro ao testar conexão' })
+      toast.error('Erro ao testar conexão')
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
   const loadPackages = async () => {
-    if (!isConfigured) return
-    
     try {
       setIsLoadingPackages(true)
-      // TODO: Implementar carregamento de pacotes quando a tabela thebest_packages estiver disponível
-      // const supabase = createClientSupabaseClient()
-      // 
-      // const { data, error } = await supabase
-      //   .from('thebest_packages')
-      //   .select('*')
-      //   .order('classificacao', { ascending: true })
-      //   .order('duracao', { ascending: true })
-      // 
-      // if (error) throw error
-      // 
-      // setPackages(data || [])
-      setPackages([])
+      
+      const response = await fetch('/api/integrations/thebest/packages', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao carregar pacotes');
+      }
+
+      const { data } = await response.json();
+      setPackages(data || [])
     } catch (error) {
       console.error('Erro ao carregar pacotes:', error)
       toast.error('Erro ao carregar pacotes')
@@ -308,7 +382,6 @@ export function TheBestConfig() {
       const response = await fetch('/api/proxy/thebest?action=sync_packages', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${(await createClientSupabaseClient().auth.getSession()).data.session?.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({})
@@ -343,7 +416,6 @@ export function TheBestConfig() {
       const response = await fetch('/api/proxy/thebest?action=create_renewal', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${(await createClientSupabaseClient().auth.getSession()).data.session?.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -378,27 +450,20 @@ export function TheBestConfig() {
     
     try {
       setIsLoadingRenewals(true)
-      const supabase = createClientSupabaseClient()
       
-      // TODO: Implementar carregamento de renovações quando a tabela thebest_renewals estiver disponível
-      // const { data, error } = await supabase
-      //   .from('thebest_renewals')
-      //   .select(`
-      //     *,
-      //     thebest_packages (
-      //       classificacao,
-      //       duracao,
-      //       telas,
-      //       creditos
-      //     )
-      //   `)
-      //   .eq('created_by', currentUser?.id)
-      //   .order('created_at', { ascending: false })
-      //   .limit(10)
+      // TODO: Implementar carregamento de renovações quando a API estiver disponível
+      // const response = await fetch('/api/integrations/thebest/renewals', {
+      //   method: 'GET',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      // });
       // 
-      // if (error) throw error
-      // 
-      // setUserRenewals(data || [])
+      // if (response.ok) {
+      //   const { data } = await response.json();
+      //   setUserRenewals(data || []);
+      // }
+      
       setUserRenewals([])
     } catch (error) {
       console.error('Erro ao carregar renovações:', error)
@@ -409,23 +474,24 @@ export function TheBestConfig() {
   }
 
   const removeConfig = async () => {
-    if (!currentUser) {
-      toast.error('Usuário não autenticado')
+    if (!confirm('Tem certeza que deseja remover esta configuração?')) {
       return
     }
 
     try {
-      setIsLoading(true)
-      const supabase = createClientSupabaseClient()
-      
-      const { error } = await supabase
-        .from('integration_configs')
-        .update({ is_active: false })
-        .eq('created_by', currentUser.id)
-        .eq('provider', 'thebest')
-      
-      if (error) throw error
-      
+      const response = await fetch('/api/integrations/thebest/config', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao remover configuração');
+      }
+
+      // Resetar estado
       setConfig({
         apiUrl: '',
         apiKey: '',
@@ -434,14 +500,13 @@ export function TheBestConfig() {
         timeout: 30000
       })
       setIsConfigured(false)
+      setTestResult(null)
       setPackages([])
-      setUserRenewals([])
+      
       toast.success('Configuração removida com sucesso!')
     } catch (error) {
       console.error('Erro ao remover configuração:', error)
       toast.error('Erro ao remover configuração')
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -833,4 +898,4 @@ export function TheBestConfig() {
   )
 }
 
-export default TheBestConfig
+export default TheBestConfig;

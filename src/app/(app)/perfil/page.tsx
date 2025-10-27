@@ -11,7 +11,9 @@ import { getBrowserUser, createBrowserSupabaseClient } from "@/lib/supabase/clie
 import { User, Mail, Calendar, Shield, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ImageUpload } from "@/components/ui/image-upload";
+
 import { useRouter } from "next/navigation";
+import { logger } from '@/utils/production-logger'
 
 export default function PerfilPage() {
   const { toast } = useToast();
@@ -36,15 +38,15 @@ export default function PerfilPage() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        console.log('🔄 Iniciando carregamento dos dados do usuário...');
+        logger.debug('🔄 Iniciando carregamento dos dados do usuário...');
         
         // Obter usuário autenticado
-        console.log('🔍 Chamando getBrowserUser...');
+        logger.debug('🔍 Chamando getBrowserUser...');
         const currentUser = await getBrowserUser();
-        console.log('👤 Usuário obtido:', currentUser ? { id: currentUser.id, email: currentUser.email } : 'null');
+        logger.debug('👤 Usuário obtido:', currentUser ? { id: currentUser.id, email: currentUser.email } : 'null');
         
         if (!currentUser) {
-          console.log('❌ Usuário não encontrado - redirecionando para login');
+          logger.debug('❌ Usuário não encontrado - redirecionando para login');
           console.error('❌ Usuário não autenticado');
           toast({
             title: "Erro de Autenticação",
@@ -54,47 +56,47 @@ export default function PerfilPage() {
           return;
         }
         
-        console.log('✅ Usuário autenticado:', currentUser.email);
+        logger.debug('✅ Usuário autenticado:', currentUser.email);
         setUser(currentUser);
         
         const supabase = createBrowserSupabaseClient();
-        console.log('🔗 Cliente Supabase:', supabase ? 'Inicializado' : 'Não inicializado');
+        logger.debug('🔗 Cliente Supabase:', supabase ? 'Inicializado' : 'Não inicializado');
         
         // Tentar buscar perfil por user_id primeiro
-        console.log('🔍 Buscando perfil por user_id:', currentUser.id);
+        logger.debug('🔍 Buscando perfil por user_id:', currentUser.id);
         let { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', currentUser.id)
           .single();
         
-        console.log('📊 Resultado da busca por user_id:', { 
+        logger.debug('📊 Resultado da busca por user_id:', { 
           profile: profile ? { id: profile.id, user_id: profile.user_id } : null, 
           profileError: profileError ? { code: profileError.code, message: profileError.message } : null 
         });
         
         // Se não encontrar por user_id, tentar por id
         if (profileError && profileError.code === 'PGRST116') {
-          console.log('🔍 Perfil não encontrado por user_id, tentando por id:', currentUser.id);
+          logger.debug('🔍 Perfil não encontrado por user_id, tentando por id:', currentUser.id);
           const { data: profileById, error: profileByIdError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', currentUser.id)
             .single();
           
-          console.log('📊 Resultado da busca por id:', { 
+          logger.debug('📊 Resultado da busca por id:', { 
             profileById: profileById ? { id: profileById.id, user_id: profileById.user_id } : null, 
             profileByIdError: profileByIdError ? { code: profileByIdError.code, message: profileByIdError.message } : null 
           });
           
           if (!profileByIdError) {
-            console.log('✅ Perfil encontrado por id');
+            logger.debug('✅ Perfil encontrado por id');
             profile = profileById;
             profileError = null;
           } else {
-            console.log('⚠️ Perfil não encontrado, criando novo...');
-            console.log('🆕 Criando novo perfil para o usuário:', currentUser.id);
-            console.log('📝 Dados do usuário para criação:', {
+            logger.debug('⚠️ Perfil não encontrado, criando novo...');
+            logger.debug('🆕 Criando novo perfil para o usuário:', currentUser.id);
+            logger.debug('📝 Dados do usuário para criação:', {
               id: currentUser.id,
               email: currentUser.email,
               metadata: currentUser.user_metadata
@@ -111,7 +113,7 @@ export default function PerfilPage() {
               updated_at: new Date().toISOString()
             };
             
-            console.log('📝 Perfil a ser criado:', newProfileData);
+            logger.debug('📝 Perfil a ser criado:', newProfileData);
             
             const { data: newProfile, error: createError } = await supabase
               .from('profiles')
@@ -119,7 +121,7 @@ export default function PerfilPage() {
               .select()
               .single();
             
-            console.log('📊 Resultado da criação do perfil:', { 
+            logger.debug('📊 Resultado da criação do perfil:', { 
               newProfile: newProfile ? { id: newProfile.id, user_id: newProfile.user_id } : null, 
               createError: createError ? { code: createError.code, message: createError.message } : null 
             });
@@ -127,7 +129,7 @@ export default function PerfilPage() {
             if (createError) {
               console.error('❌ Erro ao criar perfil:', createError);
             } else {
-              console.log('✅ Perfil criado com sucesso');
+              logger.debug('✅ Perfil criado com sucesso');
               profile = newProfile;
               profileError = null;
             }
@@ -146,7 +148,7 @@ export default function PerfilPage() {
           throw profileError;
         }
         
-        console.log('📋 Perfil carregado:', profile);
+        logger.debug('📋 Perfil carregado:', profile);
         setUserProfile(profile);
         
         if (profile) {
@@ -186,7 +188,7 @@ export default function PerfilPage() {
           variant: "destructive",
         });
       } finally {
-        console.log('🏁 Finalizando carregamento dos dados');
+        logger.debug('🏁 Finalizando carregamento dos dados');
         setLoading(false);
       }
     };
@@ -196,10 +198,19 @@ export default function PerfilPage() {
 
   const handleSave = async () => {
     try {
+      console.log('💾 [PerfilPage] Iniciando salvamento do perfil');
+      console.log('💾 [PerfilPage] FormData atual:', formData);
+      
       setSaving(true);
       
       const user = await getBrowserUser();
+      
+      console.log('👤 [PerfilPage] Usuário obtido:', {
+        user: user ? { id: user.id, email: user.email } : null
+      });
+      
       if (!user) {
+        console.error('❌ [PerfilPage] Usuário não autenticado');
         toast({
           title: "Erro",
           description: "Usuário não autenticado",
@@ -210,7 +221,7 @@ export default function PerfilPage() {
       
       // Verificar se o user_id é válido (não vazio e é um UUID válido)
       if (!user.id || typeof user.id !== 'string' || user.id.trim() === '') {
-        console.error('🚨 [DEBUG] User ID inválido:', user.id);
+        console.error('🚨 [PerfilPage] User ID inválido:', user.id);
         toast({
           title: "Erro",
           description: "ID do usuário inválido. Faça login novamente.",
@@ -222,7 +233,7 @@ export default function PerfilPage() {
       // Verificar se o UUID tem formato válido
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(user.id)) {
-        console.error('🚨 [DEBUG] Formato de UUID inválido:', user.id);
+        console.error('❌ [PerfilPage] ID do usuário não é um UUID válido:', user.id);
         toast({
           title: "Erro",
           description: "Formato do ID do usuário inválido. Faça login novamente.",
@@ -234,11 +245,14 @@ export default function PerfilPage() {
       const supabase = createBrowserSupabaseClient();
 
       // Verificar se existe um perfil para este usuário
+      console.log('🔍 [PerfilPage] Verificando perfil existente para user.id:', user.id);
       const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('id, user_id, full_name')
         .eq('user_id', user.id)
         .maybeSingle();
+      
+      console.log('🔍 [PerfilPage] Perfil existente encontrado:', existingProfile);
 
       if (checkError) {
         // Se o erro for de foreign key, significa que o user_id não existe
@@ -260,6 +274,7 @@ export default function PerfilPage() {
       }
 
       // Preparar dados para upsert (sem incluir id se não existir perfil)
+      console.log('🔍 [PerfilPage] FormData before save:', formData);
       const profileData = existingProfile ? {
         id: existingProfile.id,
         user_id: user.id,
@@ -274,20 +289,30 @@ export default function PerfilPage() {
         phone: formData.phone || '',
         company: formData.company || '',
         avatar_url: formData.avatar_url || '',
-        role: (user.email === 'topplaytv7@gmail.com' ? 'admin' : 'user'),
+        role: (user.email === 'topplaytv7@gmail.com' ? 'admin' : 'user') as 'admin' | 'user',
         approved: true,
         updated_at: new Date().toISOString()
       };
+      
+      console.log('💾 [PerfilPage] Dados para upsert:', profileData);
+      console.log('📸 [PerfilPage] Avatar URL sendo salvo:', profileData.avatar_url);
 
       const { data, error } = await supabase
         .from('profiles')
-        .upsert(profileData, {
+        .upsert([profileData] as any, {
           onConflict: 'user_id',
           ignoreDuplicates: false
         })
         .select();
 
+      console.log('💾 [PerfilPage] Resultado do upsert:', {
+        data,
+        error,
+        success: !error
+      });
+
       if (error) {
+        console.error('❌ [PerfilPage] Erro ao salvar perfil:', error);
         console.error('Erro detalhado do Supabase:', {
           message: error?.message || 'Mensagem não disponível',
           details: error?.details || 'Detalhes não disponíveis',
@@ -309,7 +334,8 @@ export default function PerfilPage() {
         throw error;
       }
 
-      console.log('Perfil salvo com sucesso:', data);
+      console.log('✅ [PerfilPage] Perfil salvo com sucesso!');
+      logger.debug('Perfil salvo com sucesso:', data);
       
       toast({
         title: "Sucesso",
@@ -317,6 +343,7 @@ export default function PerfilPage() {
       });
 
       // Recarregar dados do perfil
+      console.log('🔄 [PerfilPage] Recarregando dados do perfil');
       const { data: updatedProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
@@ -324,12 +351,13 @@ export default function PerfilPage() {
         .single();
       
       if (fetchError) {
-        console.warn('⚠️ Erro ao recarregar perfil:', fetchError);
+        logger.warn('⚠️ Erro ao recarregar perfil:', fetchError);
       } else {
         setUserProfile(updatedProfile);
       }
       
     } catch (error: any) {
+      console.error('❌ [PerfilPage] Erro no catch ao salvar perfil:', error);
       console.error('Erro ao salvar perfil:', error ? {
         message: error?.message || 'Erro desconhecido',
         stack: error?.stack || 'Stack não disponível',
@@ -347,6 +375,7 @@ export default function PerfilPage() {
       });
     } finally {
       setSaving(false);
+      console.log('🏁 [PerfilPage] Salvamento finalizado');
     }
   };
 
@@ -526,8 +555,30 @@ export default function PerfilPage() {
             <div className="flex justify-center mb-4">
               <ImageUpload
                 value={formData.avatar_url}
-                onChange={(url) => setFormData({ ...formData, avatar_url: url })}
-                onRemove={() => setFormData({ ...formData, avatar_url: "" })}
+                onChange={(url) => {
+                  console.log('📸 [PerfilPage] ImageUpload onChange chamado:', {
+                    novaUrl: url,
+                    urlAnterior: formData.avatar_url,
+                    timestamp: new Date().toISOString()
+                  })
+                  setFormData(prev => {
+                    const novoFormData = { ...prev, avatar_url: url }
+                    console.log('📸 [PerfilPage] FormData atualizado:', {
+                      formDataAnterior: prev,
+                      novoFormData,
+                      avatar_url: novoFormData.avatar_url
+                    })
+                    return novoFormData
+                  })
+                }}
+                onRemove={() => {
+                  console.log('🗑️ [PerfilPage] ImageUpload onRemove chamado')
+                  setFormData(prev => {
+                    const novoFormData = { ...prev, avatar_url: '' }
+                    console.log('🗑️ [PerfilPage] FormData limpo:', novoFormData)
+                    return novoFormData
+                  })
+                }}
                 type="avatar"
                 disabled={saving}
               />
@@ -636,6 +687,8 @@ export default function PerfilPage() {
             </div>
           </CardContent>
         </Card>
+
+
 
         {/* Configurações de Segurança */}
         <Card className="md:col-span-3">

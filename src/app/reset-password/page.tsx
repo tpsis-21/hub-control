@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
+import { logger } from '@/utils/production-logger'
 
 function ResetPasswordForm() {
   const [password, setPassword] = useState("");
@@ -22,10 +23,10 @@ function ResetPasswordForm() {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('🔍 [RESET-PASSWORD] Iniciando verificação de tokens');
-    console.log('🔍 [RESET-PASSWORD] URL completa:', window.location.href);
-    console.log('🔍 [RESET-PASSWORD] Hash:', window.location.hash);
-    console.log('🔍 [RESET-PASSWORD] Search:', window.location.search);
+    logger.debug('🔍 [RESET-PASSWORD] Iniciando verificação de tokens');
+    logger.debug(`🔍 [RESET-PASSWORD] URL completa: ${window.location.href}`);
+    logger.debug(`🔍 [RESET-PASSWORD] Hash: ${window.location.hash}`);
+    logger.debug(`🔍 [RESET-PASSWORD] Search: ${window.location.search}`);
     
     // Verifica se há um token de recuperação válido na URL
     // Primeiro verifica na hash (#)
@@ -34,11 +35,11 @@ function ResetPasswordForm() {
     let refreshToken = hashParams.get('refresh_token');
     let type = hashParams.get('type');
     
-    console.log('🔍 [RESET-PASSWORD] Tokens da hash:', { 
+    logger.debug(`🔍 [RESET-PASSWORD] Tokens da hash: ${JSON.stringify({ 
       accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : null, 
       refreshToken: refreshToken ? `${refreshToken.substring(0, 20)}...` : null, 
       type 
-    });
+    })}`);
 
     // Se não encontrou na hash, verifica nos query parameters (?)
     if (!accessToken || !refreshToken || !type) {
@@ -47,26 +48,26 @@ function ResetPasswordForm() {
       const searchRefreshToken = searchParams.get('refresh_token');
       const searchType = searchParams.get('type');
       
-      console.log('🔍 [RESET-PASSWORD] Tokens dos query params:', { 
+      logger.debug(`🔍 [RESET-PASSWORD] Tokens dos query params: ${JSON.stringify({ 
         accessToken: searchAccessToken ? `${searchAccessToken.substring(0, 20)}...` : null, 
         refreshToken: searchRefreshToken ? `${searchRefreshToken.substring(0, 20)}...` : null, 
         type: searchType 
-      });
+      })}`);
       
       accessToken = searchAccessToken || accessToken;
       refreshToken = searchRefreshToken || refreshToken;
       type = searchType || type;
     }
 
-    console.log('🔍 [RESET-PASSWORD] Tokens finais:', { 
+    logger.debug(`🔍 [RESET-PASSWORD] Tokens finais: ${JSON.stringify({ 
       hasAccessToken: !!accessToken, 
       hasRefreshToken: !!refreshToken, 
       type,
       isValidCombination: type === 'recovery' && accessToken && refreshToken
-    });
+    })}`);
 
     if (type === 'recovery' && accessToken && refreshToken) {
-      console.log('✅ [RESET-PASSWORD] Tokens válidos encontrados, definindo sessão...');
+      logger.debug('✅ [RESET-PASSWORD] Tokens válidos encontrados, definindo sessão...');
       setIsValidToken(true);
       // Define a sessão com os tokens de recuperação
       const supabase = createBrowserSupabaseClient();
@@ -78,16 +79,16 @@ function ResetPasswordForm() {
           console.error('❌ [RESET-PASSWORD] Erro ao definir sessão:', error);
           setIsValidToken(false);
         } else {
-          console.log('✅ [RESET-PASSWORD] Sessão definida com sucesso');
+          logger.debug('✅ [RESET-PASSWORD] Sessão definida com sucesso');
         }
       });
     } else {
-      console.log('❌ [RESET-PASSWORD] Token inválido ou ausente');
-      console.log('❌ [RESET-PASSWORD] Detalhes:', {
+      logger.debug('❌ [RESET-PASSWORD] Token inválido ou ausente');
+      logger.debug(`❌ [RESET-PASSWORD] Detalhes: ${JSON.stringify({
         typeCheck: type === 'recovery',
         hasAccessToken: !!accessToken,
         hasRefreshToken: !!refreshToken
-      });
+      })}`);
     }
   }, []);
 

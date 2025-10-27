@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   XCircle
 } from 'lucide-react';
+import { logger } from '@/utils/production-logger';
 import {
   LineChart,
   Line,
@@ -180,14 +181,14 @@ function useIntelligentCacheSystem() {
 
   const clearAllCaches = async () => {
     // Implementar limpeza de todos os caches
-    console.log('Limpando todos os caches...');
+    logger.debug('Limpando todos os caches...', undefined, "DEBUG");
     await new Promise(resolve => setTimeout(resolve, 2000));
     refreshData();
   };
 
   const optimizeAllCaches = async () => {
     // Implementar otimização de todos os caches
-    console.log('Otimizando todos os caches...');
+    logger.debug('Otimizando todos os caches...', undefined, "DEBUG");
     await new Promise(resolve => setTimeout(resolve, 3000));
     refreshData();
   };

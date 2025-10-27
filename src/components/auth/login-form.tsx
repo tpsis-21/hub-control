@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Shield, Loader2, Eye, EyeOff } from 'lucide-react';
 import Link from "next/link";
 import { supabaseConfig } from "@/lib/supabase/config";
+import { logger } from '@/utils/production-logger'
 
 
 // === LOGS DE DEBUG ADICIONADOS ===
@@ -19,7 +20,7 @@ const DEBUG_AUTH = process.env.NODE_ENV === 'development';
 
 function debugLog(message: string, data?: any) {
   if (DEBUG_AUTH) {
-    console.log(`[LOGIN FORM DEBUG] ${new Date().toISOString()} - ${message}`, data || '');
+    logger.debug(`[LOGIN FORM DEBUG] ${new Date().toISOString()} - ${message}`, data || '');
   }
 }
 
@@ -46,7 +47,7 @@ async function debugSupabaseConnectivity() {
       },
       mode: 'cors',
     });
-    console.debug('[Supabase Debug] settings status:', res.status, info);
+    logger.debug('[Supabase Debug] settings status:', res.status, JSON.stringify(info));
   } catch (err) {
     console.error('[Supabase Debug] Falha ao acessar /auth/v1/settings', info, err);
   }
@@ -166,12 +167,12 @@ export function LoginForm() {
      const supabase = createBrowserSupabaseClient();
 
     try {
-       console.debug('[Reset Password] Iniciando solicitação', {
+       logger.debug('[Reset Password] Iniciando solicitação', JSON.stringify({
          supabaseUrl: supabaseConfig.url,
          redirectTo: `${window.location.origin}/reset-password`,
          appOrigin: window.location.origin,
          isHttps: window.location.protocol === 'https:'
-       });
+       }));
        const { error } = await supabase.auth.resetPasswordForEmail(email, {
          redirectTo: `${window.location.origin}/reset-password`,
        });

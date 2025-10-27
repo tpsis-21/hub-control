@@ -170,3 +170,4 @@ export type FinancialSummary = {
   crescimentoReceita: number;
   crescimentoDespesas: number;
 };
+

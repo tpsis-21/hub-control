@@ -2,7 +2,7 @@
 // Endpoints para gerenciar monitoramento e alertas de créditos baixos
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 import { createStandardErrorResponse, createStandardSuccessResponse } from '@/middleware/shared/helpers';
 import { z } from 'zod';
 
@@ -37,7 +37,7 @@ const reportFiltersSchema = z.object({
 // Função para verificar se o usuário é admin
 async function isUserAdmin(userId: string): Promise<boolean> {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     
     // Admin principal é sempre admin
     if (userId === '2f67bed8-9448-446f-8f38-9306f773620d') {
@@ -60,7 +60,7 @@ async function isUserAdmin(userId: string): Promise<boolean> {
 // GET - Buscar status de créditos e alertas
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action'); // 'status', 'alerts', 'history'
     const serverId = searchParams.get('serverId');
@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
 // PUT - Atualizar configurações de alerta
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const body = await request.json();
 
     // Verificar autenticação
@@ -247,7 +247,7 @@ export async function PUT(request: NextRequest) {
 // POST - Executar verificação manual de créditos
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const body = await request.json();
     const { serverId, forceCheck } = body;
 
@@ -343,7 +343,7 @@ export async function POST(request: NextRequest) {
 // DELETE - Marcar alerta como resolvido
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { searchParams } = new URL(request.url);
     const alertId = searchParams.get('alertId');
 

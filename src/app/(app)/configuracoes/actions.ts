@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
 import type { Settings } from "@/lib/types";
 import { settingsSchema } from "@/lib/schemas";
 
@@ -21,7 +21,7 @@ const settingsId = 'main';
 
 // Getter
 export async function getSettings(): Promise<Settings> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { data, error } = await supabase.from(settingsTable).select('*').eq('id', settingsId).single();
   if (data) {
     return {
@@ -43,7 +43,7 @@ export async function getSettings(): Promise<Settings> {
 
 // Saver
 export async function saveSettingsAction(data: z.infer<typeof settingsSchema>) {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { error } = await supabase.from('settings').upsert([data]);
   revalidatePath('/configuracoes');
   if (error) return { success: false, error: error.message };
@@ -59,3 +59,4 @@ export async function generateNewApiKeyAction() {
     }
     return { success: false, error: "Falha ao gerar nova chave de API." };
 }
+

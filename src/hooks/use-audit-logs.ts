@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // TIPOS E INTERFACES
@@ -340,7 +341,7 @@ export function useAuditLogs(options: UseAuditLogsOptions = {}): UseAuditLogsRet
     try {
       // Verificar novos logs no backend
       // Implementação real faria polling ou usaria WebSockets
-      console.log('Verificando novos logs...');
+      logger.debug('Verificando novos logs...');
     } catch (err) {
       console.error('Erro ao verificar novos logs:', err);
     }
@@ -473,7 +474,7 @@ export function useAuditLogs(options: UseAuditLogsOptions = {}): UseAuditLogsRet
       persistLogs(updatedLogs);
       
       // Em uma implementação real, enviaria para o backend
-      console.log('Log de auditoria registrado:', newEntry);
+      logger.debug('Log de auditoria registrado:', newEntry);
       
     } catch (err) {
       console.error('Erro ao registrar log:', err);
@@ -570,7 +571,7 @@ export function useAuditLogs(options: UseAuditLogsOptions = {}): UseAuditLogsRet
 
   const loadMoreLogs = useCallback(async () => {
     // Implementar paginação
-    console.log('Carregando mais logs...');
+    logger.debug('Carregando mais logs...');
   }, []);
 
   const refreshLogs = useCallback(async () => {

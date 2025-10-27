@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect } from 'react';
+import { logger } from '@/utils/production-logger'
 
 /**
  * Componente responsável por inicializar serviços seguros no lado cliente
@@ -11,7 +12,7 @@ export function ServiceInitializer() {
   useEffect(() => {
     const initializeClientServices = async () => {
       try {
-        console.log('🚀 Inicializando cliente...');
+        logger.debug('🚀 Inicializando cliente...', undefined, "DEBUG");
         
         // Chamar API para inicializar serviços do servidor
         const response = await fetch('/api/initialize-services', {
@@ -23,12 +24,8 @@ export function ServiceInitializer() {
         
         if (response.ok) {
           const result = await response.json();
-          console.log('✅ Serviços inicializados:', result.message);
-        } else {
-          console.warn('⚠️ Falha ao inicializar serviços do servidor');
+          console.log('🚀 Cliente inicializado com sucesso');
         }
-        
-        console.log('🚀 Cliente inicializado com sucesso');
       } catch (error) {
         console.error('❌ Erro ao inicializar cliente:', error);
         // Não bloquear a aplicação se a inicialização falhar
@@ -36,7 +33,7 @@ export function ServiceInitializer() {
     };
 
     initializeClientServices();
-   }, []);
+  }, []);
 
   // Este componente não renderiza nada visível
   return null;

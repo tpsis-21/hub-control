@@ -12,6 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { CheckCircle, XCircle, Users, Settings, UserCheck, UserX, RefreshCw, AlertTriangle, Calendar, Database } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { logger } from '@/utils/production-logger'
 
 interface User {
   id: string;
@@ -245,7 +246,7 @@ export function AdminPanel() {
       try {
         await supabase.auth.admin.deleteUser(userId);
       } catch (authError) {
-        console.warn('Não foi possível deletar do auth:', authError);
+        logger.warn('Não foi possível deletar do auth:', authError);
       }
 
       toast({

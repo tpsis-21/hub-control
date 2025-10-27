@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getBrowserUser } from '@/lib/supabase/clients/browser';
+import { getBrowserUser } from '@/lib/supabase/unified-client';
+import { logger } from '@/utils/production-logger'
 import type { User } from '@supabase/supabase-js';
 
 export default function TestAuthPage() {
@@ -16,12 +17,10 @@ export default function TestAuthPage() {
         setLoading(true);
         
         const currentUser = await getBrowserUser();
-        console.log('🧪 TestAuth: Resultado:', currentUser);
-        
-        setUser(currentUser);
         
         if (currentUser) {
           console.log('✅ TestAuth: Usuário autenticado com sucesso');
+          setUser(currentUser);
         } else {
           console.log('❌ TestAuth: Nenhum usuário encontrado');
           setError('Nenhum usuário autenticado');

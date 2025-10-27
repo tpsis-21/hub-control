@@ -119,6 +119,26 @@ export function CreditMonitoringDashboard() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const { toast } = useToast();
 
+  const refreshData = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        loadCreditStatus(),
+        loadAlerts(),
+        loadHistory(),
+        loadMetrics()
+      ]);
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar dados',
+        variant: 'destructive'
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   // Carregamento inicial apenas
   useEffect(() => {
     loadDashboardData();
@@ -136,7 +156,7 @@ export function CreditMonitoringDashboard() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [config.auto_refresh, config.refresh_interval]);
+  }, [config.auto_refresh, config.refresh_interval, refreshData]);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -200,26 +220,6 @@ export function CreditMonitoringDashboard() {
       }
     } catch (error) {
       // Usar configuração padrão se não conseguir carregar
-    }
-  };
-
-  const refreshData = async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([
-        loadCreditStatus(),
-        loadAlerts(),
-        loadHistory(),
-        loadMetrics()
-      ]);
-    } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao atualizar dados',
-        variant: 'destructive'
-      });
-    } finally {
-      setRefreshing(false);
     }
   };
 

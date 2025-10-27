@@ -4,6 +4,7 @@
 import { AlertEvent, AlertSeverity, PerformanceMetric, ThresholdConfig, MetricType } from './types';
 import { auditComplianceSystem, AuditEventType } from '../audit-compliance-system';
 import { SecuritySeverity } from '../security';
+import { logger } from '@/utils/production-logger'
 
 export class AlertSystem {
   private alerts: AlertEvent[] = [];
@@ -17,6 +18,11 @@ export class AlertSystem {
   ) {
     this.maxAlertsHistory = maxAlertsHistory;
     this.loadThresholds(thresholds);
+  }
+
+  // Gerar ID único para alerta
+  private generateAlertId(): string {
+    return `alert_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   // Carregar configurações de threshold
@@ -141,7 +147,7 @@ export class AlertSystem {
       )
       .catch((e) => {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('Falha ao registrar evento de auditoria (alerta de performance):', e);
+          logger.warn('Falha ao registrar evento de auditoria (alerta de performance):', e, "WARN");
         }
       });
   }
@@ -210,7 +216,7 @@ export class AlertSystem {
       )
       .catch((e) => {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('Falha ao registrar evento de auditoria (resolução de alerta):', e);
+          logger.warn('Falha ao registrar evento de auditoria (resolução de alerta:', e);
         }
       });
 
@@ -288,11 +294,6 @@ export class AlertSystem {
     this.alerts = this.alerts.filter(alert => alert.timestamp >= cutoffDate);
     
     return initialCount - this.alerts.length;
-  }
-
-  // Gerar ID único para alerta
-  private generateAlertId(): string {
-    return `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   // Reset do sistema

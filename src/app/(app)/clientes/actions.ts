@@ -6,12 +6,13 @@ import { revalidatePath } from "next/cache";
 import { addDays } from "date-fns";
 import type { Client, Plan, Server } from "@/lib/types";
 import { addCustomerSchema, editCustomerSchema, importCustomerSchema } from "@/lib/schemas";
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClientForActions } from '@/lib/supabase/unified-client';
 import { mapDatabaseClientToClient, mapClientToDatabaseClient, mapClientUpdateToDatabaseUpdate } from "@/lib/database-mappers";
 import { generateUniqueManagerId } from "@/lib/id-generators";
 import { getServers } from "@/app/(app)/servidores/actions";
 import { MessageQueueService } from "@/services/message-queue.service";
 import { PeriodCalculationService } from "@/services/period-calculation.service";
+import { logger } from '@/utils/production-logger'
 
 // Helper para gerar um link único para a área do cliente.
 const generateUniqueLink = () => `/cliente/link_${new Date().getTime()}${Math.random().toString(36).substring(2, 8)}`;
@@ -115,7 +116,7 @@ async function syncRenewalWithPanel({
     }
     
     const responseData = await response.json();
-    console.log('Sincronização com painel IPTV realizada com sucesso:', {
+    logger.debug('Sincronização com painel IPTV realizada com sucesso:', {
       panelType: panelConfig.panelType,
       serverId: server.id,
       clientId: client.id,
@@ -172,7 +173,7 @@ function processApiBodyTags(body: any, context: {
 }
 
 export async function getClienteById(id: string): Promise<Client | undefined> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { data, error } = await supabase.from('clients').select('*').eq('id', id).single();
   if (error || !data) return undefined;
   return mapDatabaseClientToClient(data);
@@ -189,7 +190,7 @@ export async function getClientes(params?: {
   plan?: string | string[];
   uniqueLink?: string;
 }): Promise<Client[]> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   let query = supabase.from('clients').select('*');
   if (params?.uniqueLink) query = query.eq('unique_link', params.uniqueLink);
   if (params?.status) {
@@ -201,7 +202,7 @@ export async function getClientes(params?: {
   let clientsData = (data || []).map(mapDatabaseClientToClient);
   if (params?.q) {
     const searchTerm = params.q.toLowerCase();
-    clientsData = clientsData.filter(client =>
+    clientsData = clientsData.filter((client: Client) =>
       client.name.toLowerCase().includes(searchTerm) ||
       client.iptvUsername?.toLowerCase().includes(searchTerm) ||
       client.iptvUserId?.toLowerCase().includes(searchTerm) ||
@@ -216,7 +217,7 @@ export async function getClientes(params?: {
  * @returns Uma lista de clientes em teste.
  */
 export async function getTestes(): Promise<Client[]> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { data, error } = await supabase.from('clients').select('*').eq('status', 'Em teste');
   return (data || []).map(mapDatabaseClientToClient);
 }
@@ -227,7 +228,7 @@ export async function getTestes(): Promise<Client[]> {
  * @returns Um objeto indicando sucesso ou falha na operação.
  */
 export async function addCustomerAction(data: z.infer<typeof addCustomerSchema>, allPlans: Plan[]) {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   const plan = allPlans.find(p => p.id === data.planId);
   if (!plan) {
@@ -238,7 +239,7 @@ export async function addCustomerAction(data: z.infer<typeof addCustomerSchema>,
   if (!managerId || !/^([A-Z][0-9]|[A-Z]{3}[0-9]{3})$/.test(managerId)) {
     // Buscar IDs existentes para garantir unicidade
     const { data: existingClients } = await supabase.from('clients').select('manager_id');
-    const existingIds = (existingClients || []).map(c => c.manager_id).filter(Boolean) as string[];
+    const existingIds = (existingClients || []).map((c: any) => c.manager_id).filter(Boolean) as string[];
     managerId = generateUniqueManagerId(existingIds, 'long');
   }
   if (data.serverId && data.serverId !== 'none') {
@@ -313,7 +314,7 @@ export async function editCustomerAction(data: Omit<z.infer<typeof editCustomerS
   };
   
   const dbUpdateData = mapClientUpdateToDatabaseUpdate(finalUpdateData);
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { error } = await supabase.from('clients').update(dbUpdateData).eq('id', id);
   revalidatePath('/clientes');
   revalidatePath(`/clientes/${data.id}`);
@@ -331,7 +332,7 @@ export async function editCustomerAction(data: Omit<z.infer<typeof editCustomerS
  * @returns Um objeto indicando sucesso ou falha na operação.
  */
 export async function updateCustomerStatusAction(customerId: string, status: 'Ativo' | 'Inativo' | 'Bloqueado' | 'Em teste') {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { error } = await supabase.from('clients').update({ status }).eq('id', customerId);
   revalidatePath('/clientes');
   revalidatePath(`/clientes/${customerId}`);
@@ -352,7 +353,7 @@ export async function renewCustomerAction(
   planId: string,
   serverId?: string
 ) {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   try {
     // 1. Buscar dados necessários
@@ -472,7 +473,7 @@ export async function renewCustomerAction(
  * @returns Um objeto indicando sucesso ou falha na operação.
  */
 export async function convertTestToCustomerAction(customerId: string, planValidity: number) {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   // Busca o cliente de teste
   const { data, error } = await supabase.from('clients').select('*').eq('id', customerId).single();
   if (error || !data) return { success: false, error: 'Cliente não encontrado' };
@@ -518,7 +519,7 @@ export async function convertTestToCustomerAction(customerId: string, planValidi
  * @returns Um objeto indicando sucesso ou falha na operação.
  */
 export async function updateCustomerNotesAction(customerId: string, notes: string) {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { error } = await supabase.from('clients').update({ notes }).eq('id', customerId);
   revalidatePath(`/clientes/${customerId}`);
   revalidatePath(`/testes/${customerId}`);
@@ -532,7 +533,7 @@ export async function updateCustomerNotesAction(customerId: string, notes: strin
  * @returns Um objeto indicando sucesso ou falha.
  */
 export async function deleteCustomerAction(customerId: string) {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { error } = await supabase.from('clients').delete().eq('id', customerId);
   revalidatePath('/clientes');
   revalidatePath('/testes');
@@ -550,7 +551,7 @@ export async function importCustomersAction(importedData: z.infer<typeof importC
   let successCount = 0;
   let failureCount = 0;
   const errors: { line: number; message: string; data: any }[] = [];
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   // Buscar todos os servidores para mapear panelServerId para UUID
   const allServers = await getServers();
@@ -613,3 +614,4 @@ export async function importCustomersAction(importedData: z.infer<typeof importC
   }
   return { successCount, failureCount, errors };
 }
+

@@ -1499,6 +1499,165 @@ export interface Database {
          }
          Relationships: []
        }
+       thebest_configs: {
+         Row: {
+           id: string
+           user_id: string
+           name: string
+           description: string | null
+           api_url: string
+           api_key: string
+           api_secret: string | null
+           rate_limit_per_minute: number | null
+           is_default: boolean | null
+           is_active: boolean
+           last_used_at: string | null
+           created_at: string
+           updated_at: string
+         }
+         Insert: {
+           id?: string
+           user_id: string
+           name: string
+           description?: string | null
+           api_url?: string
+           api_key: string
+           api_secret?: string | null
+           rate_limit_per_minute?: number | null
+           is_default?: boolean | null
+           is_active?: boolean
+           last_used_at?: string | null
+           created_at?: string
+           updated_at?: string
+         }
+         Update: {
+           id?: string
+           user_id?: string
+           name?: string
+           description?: string | null
+           api_url?: string
+           api_key?: string
+           api_secret?: string | null
+           rate_limit_per_minute?: number | null
+           is_default?: boolean | null
+           is_active?: boolean
+           last_used_at?: string | null
+           created_at?: string
+           updated_at?: string
+         }
+         Relationships: []
+       }
+       thebest_renewals: {
+         Row: {
+           id: string
+           config_id: string
+           credits: number
+           status: string
+           processed_at: string | null
+           created_at: string
+           updated_at: string
+         }
+         Insert: {
+           id?: string
+           config_id: string
+           credits: number
+           status?: string
+           processed_at?: string | null
+           created_at?: string
+           updated_at?: string
+         }
+         Update: {
+           id?: string
+           config_id?: string
+           credits?: number
+           status?: string
+           processed_at?: string | null
+           created_at?: string
+           updated_at?: string
+         }
+         Relationships: [
+           {
+             foreignKeyName: "thebest_renewals_config_id_fkey"
+             columns: ["config_id"]
+             isOneToOne: false
+             referencedRelation: "thebest_configs"
+             referencedColumns: ["id"]
+           }
+         ]
+       }
+       thebest_packages: {
+         Row: {
+           id: string
+           config_id: string
+           name: string
+           credits: number
+           price: number
+           is_active: boolean
+           created_at: string
+           updated_at: string
+         }
+         Insert: {
+           id?: string
+           config_id: string
+           name: string
+           credits: number
+           price: number
+           is_active?: boolean
+           created_at?: string
+           updated_at?: string
+         }
+         Update: {
+           id?: string
+           config_id?: string
+           name?: string
+           credits?: number
+           price?: number
+           is_active?: boolean
+           created_at?: string
+           updated_at?: string
+         }
+         Relationships: [
+           {
+             foreignKeyName: "thebest_packages_config_id_fkey"
+             columns: ["config_id"]
+             referencedRelation: "thebest_configs"
+             referencedColumns: ["id"]
+           }
+         ]
+       }
+       thebest_api_logs: {
+         Row: {
+           id: string
+           user_id: string
+           operation_type: string
+           request_data: Json | null
+           response_data: Json | null
+           status_code: number | null
+           error_message: string | null
+           created_at: string
+         }
+         Insert: {
+           id?: string
+           user_id: string
+           operation_type: string
+           request_data?: Json | null
+           response_data?: Json | null
+           status_code?: number | null
+           error_message?: string | null
+           created_at?: string
+         }
+         Update: {
+           id?: string
+           user_id?: string
+           operation_type?: string
+           request_data?: Json | null
+           response_data?: Json | null
+           status_code?: number | null
+           error_message?: string | null
+           created_at?: string
+         }
+         Relationships: []
+       }
       }
        Views: {}
     Functions: {

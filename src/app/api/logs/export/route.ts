@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       'Valores Novos'
     ];
 
-    const csvRows = logs?.map(log => [
+    const csvRows = logs?.map((log: any) => [
       format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss'),
       log.action || '',
       log.table_name || '',
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
 
     const csvContent = [
       csvHeaders.join(','),
-      ...csvRows.map(row => row.join(','))
+      ...csvRows.map((row: any) => row.join(','))
     ].join('\n');
 
     return attachSecurityHeaders(

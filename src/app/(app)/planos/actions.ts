@@ -3,17 +3,17 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
 import { isBrowserUserAdmin } from "@/lib/supabase/clients/browser";
 import type { Plan, PlanGroup } from "@/lib/types";
 import { planSchema, editPlanSchema, planGroupSchema, editPlanGroupSchema } from "@/lib/schemas";
+import { logger } from '@/utils/production-logger'
 
 
 // Substituir todas as operações Firestore por chamadas Supabase
 // Exemplo: getPlans
 export async function getPlans(): Promise<Plan[]> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { data, error } = await supabase.from('plans').select('*');
   
   if (error) {
@@ -35,7 +35,7 @@ export async function getPlans(): Promise<Plan[]> {
 }
 
 export async function getPlanGroups(): Promise<PlanGroup[]> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   // Forçar busca sem cache adicionando timestamp
   const { data, error } = await supabase
     .from('plan_groups')
@@ -47,7 +47,7 @@ export async function getPlanGroups(): Promise<PlanGroup[]> {
     return [];
   }
   
-  console.log('Grupos buscados do banco:', data?.length || 0);
+  logger.debug('Grupos buscados do banco:', data?.length || 0);
   return (data || []) as PlanGroup[];
 }
 
@@ -75,7 +75,7 @@ export async function addPlanAction(data: z.infer<typeof planSchema>) {
   delete (newPlanData as any).priceBeforeDiscount;
   delete (newPlanData as any).panelPlanId;
   
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { data: inserted, error } = await supabase.from('plans').insert([newPlanData]).select().single();
   revalidatePath('/planos');
   if (error || !inserted) return { success: false, error: error?.message || 'Erro ao adicionar plano' };
@@ -83,18 +83,18 @@ export async function addPlanAction(data: z.infer<typeof planSchema>) {
 }
 
 export async function editPlanAction(data: z.infer<typeof editPlanSchema>) {
-  console.log('🔍 editPlanAction - Dados recebidos:', JSON.stringify(data, null, 2));
+  logger.debug('🔍 editPlanAction - Dados recebidos:', JSON.stringify(data, null, 2));
   
   const { id, ...updateData } = data;
-  console.log('🔍 editPlanAction - ID:', id);
-  console.log('🔍 editPlanAction - updateData:', JSON.stringify(updateData, null, 2));
+  logger.debug('🔍 editPlanAction - ID:', id);
+  logger.debug('🔍 editPlanAction - updateData:', JSON.stringify(updateData, null, 2));
   
   try {
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     
     // Verificar se o usuário está autenticado
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.log('🔍 editPlanAction - Usuário autenticado:', user?.id, user?.email);
+    logger.debug('🔍 editPlanAction - Usuário autenticado:', user?.id, user?.email);
     
     if (authError || !user) {
       console.error('❌ editPlanAction - Usuário não autenticado:', authError);
@@ -103,7 +103,7 @@ export async function editPlanAction(data: z.infer<typeof editPlanSchema>) {
     
     // Verificar se é o usuário admin conhecido
     const isKnownAdmin = user.id === '2f67bed8-9448-446f-8f38-9306f773620d' && user.email === 'topplaytv7@gmail.com';
-    console.log('🔍 editPlanAction - É admin conhecido:', isKnownAdmin);
+    logger.debug('🔍 editPlanAction - É admin conhecido:', isKnownAdmin);
     
     if (!isKnownAdmin) {
       console.error('❌ editPlanAction - Usuário não tem permissão de admin');
@@ -119,7 +119,7 @@ export async function editPlanAction(data: z.infer<typeof editPlanSchema>) {
         group_id: updateData.groupId === "none" ? null : updateData.groupId,
     };
     
-    console.log('🔍 editPlanAction - finalUpdateData antes da limpeza:', JSON.stringify(finalUpdateData, null, 2));
+    logger.debug('🔍 editPlanAction - finalUpdateData antes da limpeza:', JSON.stringify(finalUpdateData, null, 2));
     
     // Remover os campos camelCase antes de enviar para o banco
     delete (finalUpdateData as any).countingType;
@@ -129,7 +129,7 @@ export async function editPlanAction(data: z.infer<typeof editPlanSchema>) {
     delete (finalUpdateData as any).priceBeforeDiscount;
     delete (finalUpdateData as any).panelPlanId;
     
-    console.log('🔍 editPlanAction - finalUpdateData após limpeza:', JSON.stringify(finalUpdateData, null, 2));
+    logger.debug('🔍 editPlanAction - finalUpdateData após limpeza:', JSON.stringify(finalUpdateData, null, 2));
     
     // Usar endpoint seguro do backend para operações administrativas
     try {
@@ -149,7 +149,7 @@ export async function editPlanAction(data: z.infer<typeof editPlanSchema>) {
       }
       
       const { data: updated } = await response.json();
-      console.log('✅ editPlanAction - Plano atualizado via API segura:', updated);
+      logger.debug('✅ editPlanAction - Plano atualizado via API segura:', updated);
       
       revalidatePath('/planos');
       return { success: true, data: updated };
@@ -168,7 +168,7 @@ export async function editPlanAction(data: z.infer<typeof editPlanSchema>) {
 
 export async function deletePlanAction(planId: string) {
   try {
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     
     const response = await fetch(`/api/admin/plans?id=${planId}`, {
       method: 'DELETE',
@@ -183,7 +183,7 @@ export async function deletePlanAction(planId: string) {
       return { success: false, error: errorData.error || 'Erro ao deletar plano' };
     }
     
-    console.log('✅ deletePlanAction - Plano deletado via API segura');
+    logger.debug('✅ deletePlanAction - Plano deletado via API segura');
     revalidatePath('/planos');
     return { success: true };
     
@@ -195,7 +195,7 @@ export async function deletePlanAction(planId: string) {
 
 // Ações para Grupos de Planos
 export async function addPlanGroupAction(data: z.infer<typeof planGroupSchema>) {
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     
     // Verificar se o usuário está autenticado
     const { data: { session } } = await supabase.auth.getSession();
@@ -235,7 +235,7 @@ export async function addPlanGroupAction(data: z.infer<typeof planGroupSchema>) 
 
 export async function editPlanGroupAction(data: z.infer<typeof editPlanGroupSchema>) {
     const { id, ...updateData } = data;
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     const { data: updated, error } = await supabase.from('plan_groups').update(updateData).eq('id', id).select().single();
     revalidatePath('/planos/grupos');
     revalidatePath('/planos');
@@ -245,25 +245,25 @@ export async function editPlanGroupAction(data: z.infer<typeof editPlanGroupSche
 
 // Função de teste para debug
 export async function testDeletePermissions() {
-    console.log('Teste - Iniciando verificação de permissões');
+    logger.debug('Teste - Iniciando verificação de permissões');
     
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    console.log('Teste - Usuário:', user?.id, user?.email);
-    console.log('Teste - Erro auth:', authError);
+    logger.debug('Teste - Usuário:', user?.id, user?.email);
+    logger.debug('Teste - Erro auth:', authError);
     
     if (user) {
-        console.log('Teste - Usuário autenticado, assumindo role admin baseado na verificação anterior');
-        console.log('Teste - Profile: { role: "admin" }');
-        console.log('Teste - Permissão para deletar: true');
+        logger.debug('Teste - Usuário autenticado, assumindo role admin baseado na verificação anterior');
+        logger.debug('Teste - Profile: { role: "admin" }');
+        logger.debug('Teste - Permissão para deletar: true');
     }
     
     return { success: true };
 }
 
 export async function deletePlanGroupAction(groupId: string) {
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     
     // Verificar se o usuário está autenticado
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -273,15 +273,15 @@ export async function deletePlanGroupAction(groupId: string) {
     }
     
     // Verificar se o usuário é admin (assumindo admin baseado na verificação anterior)
-    console.log('Verificando perfil do usuário:', user.id, user.email);
+    logger.debug('Verificando perfil do usuário:', user.id, user.email);
     
     // Como já confirmamos que este usuário específico é admin, vamos prosseguir
     if (user.id !== '2f67bed8-9448-446f-8f38-9306f773620d') {
-        console.log('Usuário não autorizado para esta operação');
+        logger.debug('Usuário não autorizado para esta operação');
         return { success: false, error: 'Acesso negado: apenas administradores podem excluir grupos' };
     }
     
-    console.log('Usuário confirmado como admin, prosseguindo com exclusão');
+    logger.debug('Usuário confirmado como admin, prosseguindo com exclusão');
     
     // Usar cliente normal já que confirmamos que o usuário é admin
     
@@ -326,7 +326,7 @@ export async function deletePlanGroupAction(groupId: string) {
         revalidatePath('/', 'layout');
         
         // Log para debug
-        console.log(`Grupo ${groupId} excluído com sucesso`);
+        logger.debug(`Grupo ${groupId} excluído com sucesso`);
         
         // Verificar se realmente foi excluído
         const { data: checkDeleted } = await supabase
@@ -336,7 +336,7 @@ export async function deletePlanGroupAction(groupId: string) {
             .single();
         
         if (!checkDeleted) {
-            console.log(`Confirmado: Grupo ${groupId} foi excluído do banco`);
+            logger.debug(`Confirmado: Grupo ${groupId} foi excluído do banco`);
         } else {
             console.error(`ERRO: Grupo ${groupId} ainda existe no banco após exclusão`);
         }
@@ -346,3 +346,4 @@ export async function deletePlanGroupAction(groupId: string) {
         return { success: false, error: 'Erro interno do servidor' };
     }
 }
+

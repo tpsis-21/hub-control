@@ -1,7 +1,7 @@
 // 🔒 Sistema de Backup Automatizado e Criptografado
 // Realiza backups seguros dos dados críticos da aplicação
 
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 // import { logSecurityEvent } from './security-config';
 import { SecuritySeverity } from './security';
 import crypto from 'crypto';
@@ -11,6 +11,7 @@ import { createWriteStream, createReadStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import { createGzip, createGunzip } from 'zlib';
 import { Database } from '@/lib/database.types';
+import { logger } from '@/utils/production-logger'
 
 // Configurações do sistema de backup
 interface BackupConfig {
@@ -239,7 +240,7 @@ export class BackupSystem {
       //   metadata: { backupId, tables: metadata.tables }
       // });
 
-      const supabase = await createClient();
+      const supabase = await createServerSupabaseClient();
       const backupData: any = {
         metadata,
         tables: {},
@@ -400,7 +401,7 @@ export class BackupSystem {
 
       // Parsear dados
       const backup = JSON.parse((backupData as Buffer).toString('utf8'));
-      const supabase = await createClient();
+      const supabase = await createServerSupabaseClient();
 
       // await logSecurityEvent({
       //   action: 'BACKUP_RESTORE_STARTED',
@@ -419,7 +420,7 @@ export class BackupSystem {
             .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
           
           if (deleteError) {
-            console.warn(`Aviso ao limpar tabela ${tableName}:`, deleteError);
+            logger.warn(`Aviso ao limpar tabela ${tableName}: ${deleteError.message}`, undefined, "WARN");
           }
           
           // Inserir dados do backup
@@ -434,7 +435,7 @@ export class BackupSystem {
       }
 
       // await logSecurityEvent({
-      //   action: 'BACKUP_RESTORE_COMPLETED',
+      //   action: 'BACKUP_RESTORE_COMPLETED'`,
       //   details: `Restauração de backup concluída: ${backupId}`,
       //   severity: SecuritySeverity.MEDIUM,
       //   metadata: { backupId }
@@ -469,7 +470,7 @@ export class BackupSystem {
           const metadata: BackupMetadata = JSON.parse(content);
           backups.push(metadata);
         } catch (error) {
-          console.warn(`Erro ao ler metadados do backup ${file}:`, error);
+          logger.warn(`Erro ao ler metadados do backup ${file}: ${error instanceof Error ? error.message : String(error)}`, undefined, "WARN");
         }
       }
       
@@ -501,7 +502,7 @@ export class BackupSystem {
         deletedCount++;
         
         // await logSecurityEvent({
-        //   action: 'BACKUP_DELETED',
+        //   action: 'BACKUP_DELETED'`,
         //   details: `Backup antigo removido: ${backup.id}`,
         //   severity: SecuritySeverity.LOW,
         //   metadata: { backupId: backup.id, age: cutoffDate.getTime() - backup.startTime.getTime() }

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { logger } from '@/utils/production-logger'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -9,12 +10,7 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next') ?? '/'
   const type = searchParams.get('type')
 
-  console.log('🔍 [AUTH-CALLBACK] Processando callback:', {
-    hasCode: !!code,
-    type,
-    next,
-    origin
-  })
+  logger.debug(`🔍 [AUTH-CALLBACK] Processando callback: ${JSON.stringify({ hasCode: !!code, type, next, origin })}`)
 
   if (code) {
     const cookieStore = await cookies()
@@ -57,11 +53,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${origin}/login?error=auth_callback_error`)
       }
 
-      console.log('✅ [AUTH-CALLBACK] Sessão criada com sucesso para:', data.user?.email)
+      logger.debug('✅ [AUTH-CALLBACK] Sessão criada com sucesso para:', data.user?.email)
       
       // Se for recuperação de senha, redirecionar para página de reset
       if (type === 'recovery') {
-        console.log('🔄 [AUTH-CALLBACK] Redirecionando para reset-password')
+        logger.debug('🔄 [AUTH-CALLBACK] Redirecionando para reset-password')
         return NextResponse.redirect(`${origin}/reset-password`)
       }
       
@@ -75,7 +71,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Se não há código, redirecionar para login
-  console.log('⚠️ [AUTH-CALLBACK] Nenhum código encontrado, redirecionando para login')
+  logger.debug('⚠️ [AUTH-CALLBACK] Nenhum código encontrado, redirecionando para login')
   return NextResponse.redirect(`${origin}/login?error=no_code`)
 }
 

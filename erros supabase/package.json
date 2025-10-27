@@ -1,0 +1,17 @@
+{
+  "name": "supabase-security-fixes",
+  "version": "1.0.0",
+  "description": "Scripts para correção de problemas de segurança no Supabase",
+  "main": "execute-security-fixes.js",
+  "scripts": {
+    "fix-views": "node execute-security-fixes.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1"
+  },
+  "keywords": ["supabase", "security", "database", "postgresql"],
+  "author": "Hub Control Security Team",
+  "license": "MIT"
+}

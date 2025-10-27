@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // TIPOS E INTERFACES
@@ -387,7 +388,7 @@ export function useSystemAlerts(options: UseSystemAlertsOptions = {}): UseSystem
         audio.volume = 0.5;
         await audio.play();
       } catch (err) {
-        console.warn('Não foi possível reproduzir som de alerta:', err);
+        logger.warn('Não foi possível reproduzir som de alerta:', err instanceof Error ? err : new Error(String(err)));
       }
     }
     

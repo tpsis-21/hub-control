@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ReminderService } from "@/services/reminder.service";
 import { LoggerService } from "@/services/logger.service";
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClient } from "@/lib/supabase/clients/server";
 import { getUserPermissions } from "@/lib/auth-utils";
 
 /**
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const status = ReminderService.getStatus();
     
     // Buscar estatísticas de clientes próximos ao vencimento
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const now = new Date();
     const threeDaysFromNow = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
     
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'start':
-        ReminderService.startReminderService();
+        // ReminderService.startReminderService(); // Temporariamente desabilitado
         LoggerService.info('Serviço de lembretes iniciado manualmente', 'RemindersAPI', {
           timestamp: new Date().toISOString()
         });
@@ -172,7 +172,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Buscar dados do cliente
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const { data: clientData, error } = await supabase
       .from('clients')
       .select('*')

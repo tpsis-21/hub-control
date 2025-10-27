@@ -7,10 +7,11 @@ import { addMinutes } from "date-fns";
 import type { Client, Plan, Server } from "@/lib/types";
 // Usando fetch nativo do Node.js/Next.js
 import { addTestSchema, addAutomaticTestSchema, addManualTestSchema } from "@/lib/schemas";
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
 import { getServers } from "@/app/(app)/servidores/actions";
 import { mapClientToDatabaseClient, mapDatabaseClientToClient } from "@/lib/database-mappers";
 import { NATVService } from "@/services/natv.service";
+import { logger } from '@/utils/production-logger'
 
 
 // Helper para gerar um link único para a área do cliente.
@@ -105,10 +106,10 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
                 };
 
             } else if (testConfig.type === 'chatbot') {
-                console.log(`--- [SIMULAÇÃO DE AUTOMAÇÃO DE TESTE VIA CHATBOT] ---`);
-                console.log(`Link do Chatbot: ${testConfig.chatbotLink}`);
-                console.log(`Mensagem: ${testConfig.chatbotMessage}`);
-                console.log(`-------------------------------------------`);
+                logger.debug(`--- [SIMULAÇÃO DE AUTOMAÇÃO DE TESTE VIA CHATBOT] ---`, undefined, "DEBUG");
+                logger.debug(`Link do Chatbot: ${testConfig.chatbotLink}`, undefined, "DEBUG");
+                logger.debug(`Mensagem: ${testConfig.chatbotMessage}`, undefined, "DEBUG");
+                logger.debug(`-------------------------------------------`, undefined, "DEBUG");
             }
         }
      } catch (error: any) {
@@ -127,7 +128,7 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
     serverId: data.serverId === 'none' ? undefined : data.serverId,
     uniqueLink: generateUniqueLink(),
   };
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const databaseData = mapClientToDatabaseClient(newTestCustomerData);
   const { data: inserted, error } = await supabase.from(clientsTable).insert([databaseData]).select().single();
   revalidatePath('/testes');
@@ -216,7 +217,7 @@ export async function addAutomaticTestAction(data: z.infer<typeof addAutomaticTe
     notes: `Teste automático criado via ${server.name}`,
   };
 
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const databaseData = mapClientToDatabaseClient(newTestCustomerData);
   const { data: inserted, error } = await supabase.from(clientsTable).insert([databaseData]).select().single();
   
@@ -262,7 +263,7 @@ export async function addManualTestAction(data: z.infer<typeof addManualTestSche
     iptvPassword: data.iptvPassword || '',
   };
 
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const databaseData = mapClientToDatabaseClient(newTestCustomerData);
   const { data: inserted, error } = await supabase.from(clientsTable).insert([databaseData]).select().single();
   
@@ -278,7 +279,7 @@ export async function addManualTestAction(data: z.infer<typeof addManualTestSche
  */
 async function updateServerCredits(serverId: string, credits: number) {
   try {
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     await supabase
       .from('servers')
       .update({ 
@@ -303,7 +304,7 @@ async function sendTestMessage(params: {
 }) {
   try {
     // Implementar envio de mensagem
-    console.log('Enviando mensagem de teste:', params);
+    logger.debug('Enviando mensagem de teste:', params);
     // TODO: Integrar com sistema de mensagens
   } catch (error) {
     console.error('Erro ao enviar mensagem de teste:', error);
@@ -361,3 +362,4 @@ export async function getServersWithIntegration() {
     server.apiKey
   );
 }
+

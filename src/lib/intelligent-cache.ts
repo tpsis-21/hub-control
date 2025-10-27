@@ -72,7 +72,7 @@ class CompressionUtils {
       // Em produção, usar uma biblioteca como lz-string
       return btoa(data);
     } catch (error) {
-      console.warn('Erro na compressão:', error);
+      logger.warn('Erro na compressão:', error);
       return data;
     }
   }
@@ -81,7 +81,7 @@ class CompressionUtils {
     try {
       return atob(data);
     } catch (error) {
-      console.warn('Erro na descompressão:', error);
+      logger.warn('Erro na descompressão:', error);
       return data;
     }
   }
@@ -362,7 +362,7 @@ class MemoryCache {
     this.updateMetrics();
     
     if (cleaned > 0) {
-      console.log(`Cache cleanup: ${cleaned} entradas expiradas removidas`);
+      logger.debug(`Cache cleanup: ${cleaned} entradas expiradas removidas`, undefined, "DEBUG");
     }
   }
 
@@ -386,7 +386,7 @@ class MemoryCache {
     }
     
     if (recompressed > 0) {
-      console.log(`Cache recompression: ${recompressed} entradas recomprimidas`);
+      logger.debug(`Cache recompression: ${recompressed} entradas recomprimidas`, undefined, "DEBUG");
       this.updateMetrics();
     }
   }
@@ -516,7 +516,7 @@ class PersistentCache {
     this.getStorageSize().then(size => {
       metrics.diskUsage = size;
     }).catch(error => {
-      console.warn('Erro ao obter tamanho do storage:', error);
+      logger.warn('Erro ao obter tamanho do storage:', error);
     });
     
     return metrics;
@@ -546,7 +546,7 @@ class PersistentCache {
         }
       }
     } catch (error) {
-      console.warn('Erro ao carregar cache do storage:', error);
+      logger.warn('Erro ao carregar cache do storage:', error);
     }
   }
 
@@ -556,7 +556,7 @@ class PersistentCache {
       const data = JSON.stringify(entries);
       await this.setToStorage(data);
     } catch (error) {
-      console.warn('Erro ao salvar cache no storage:', error);
+      logger.warn('Erro ao salvar cache no storage:', error);
     }
   }
 
@@ -763,6 +763,7 @@ export const cacheManager = new IntelligentCacheManager();
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/utils/production-logger'
 
 export function useCache<T>(
   key: string,

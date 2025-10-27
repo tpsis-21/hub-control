@@ -2,9 +2,9 @@
 // Endpoints para gerenciar webhooks de notificação
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/clients/server';
 // import { notificationSystem } from '@/lib/notifications';
-import { applySecurityMiddleware } from '@/middleware/security-middleware';
+import { withUnifiedMiddleware } from '@/middleware/unified-middleware';
 // import { logSecurityEvent } from '@/lib/security';
 import { z } from 'zod';
 import crypto from 'crypto';
@@ -124,24 +124,10 @@ async function validateWebhookUrl(url: string): Promise<boolean> {
 }
 
 // GET - Listar webhooks
-export async function GET(request: NextRequest) {
+async function GET(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
 
-      enablePayloadScan: false,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return securityCheck.response || NextResponse.json(
-        { error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'read_webhooks');
 
     if (!hasPermission) {
@@ -172,12 +158,12 @@ export async function GET(request: NextRequest) {
     // }
 
     // if (search) {
-    //   query = query.or(`name.ilike.%${search}%,url.ilike.%${search}%`);
+    //   query = query.or(`name.ilike.%${search}%,url.ilike.%${search}%;
     // }
 
     // // Paginação
     // const offset = (page - 1) * limit;
-    // query = query.range(offset, offset + limit - 1);
+    // query = query.range(offset`, offset + limit - 1);
 
     // // Ordenação
     // query = query.order('created_at', { ascending: false });
@@ -286,24 +272,9 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Criar webhook ou testar webhook
-export async function POST(request: NextRequest) {
+async function POST(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
-
-      enablePayloadScan: true,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return securityCheck.response || NextResponse.json(
-        { error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const body = await request.json();
     const { action, ...data } = body;
 
@@ -580,24 +551,9 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Atualizar webhook
-export async function PUT(request: NextRequest) {
+async function PUT(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
-
-      enablePayloadScan: true,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return securityCheck.response || NextResponse.json(
-        { error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'update_webhooks');
 
     if (!hasPermission) {
@@ -718,24 +674,9 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE - Deletar webhook
-export async function DELETE(request: NextRequest) {
+async function DELETE(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
-
-      enablePayloadScan: false,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return securityCheck.response || NextResponse.json(
-        { error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'delete_webhooks');
 
     if (!hasPermission) {
@@ -830,3 +771,30 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+// Exportar funções com middleware unificado
+const GET_WITH_MIDDLEWARE = withUnifiedMiddleware(GET, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const POST_WITH_MIDDLEWARE = withUnifiedMiddleware(POST, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const PUT_WITH_MIDDLEWARE = withUnifiedMiddleware(PUT, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const DELETE_WITH_MIDDLEWARE = withUnifiedMiddleware(DELETE, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+export { GET_WITH_MIDDLEWARE as GET, POST_WITH_MIDDLEWARE as POST, PUT_WITH_MIDDLEWARE as PUT, DELETE_WITH_MIDDLEWARE as DELETE };

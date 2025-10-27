@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 // Temporariamente comentado para resolver erro de build
 // import { securityMiddleware } from '@/lib/middleware/security';
 // Temporariamente comentado para resolver erro de build
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     // }
 
     // Obter usuário autenticado
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (!user) {
       return attachSecurityHeaders(

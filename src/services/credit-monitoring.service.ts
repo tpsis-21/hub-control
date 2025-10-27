@@ -1,5 +1,6 @@
 import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { logger } from '@/utils/production-logger'
 
 /**
  * Interface para configuração de monitoramento de créditos
@@ -142,34 +143,28 @@ export class CreditMonitoringService {
   private async fetchServerCredits(server: any): Promise<number | null> {
     try {
       if (!server.api_url) {
+        console.error(`Servidor ${server.name} não possui URL da API configurada`);
         return null;
       }
 
-      const headers = JSON.parse(server.api_headers || '{}');
-      const body = JSON.parse(server.api_body || '{}');
+      const headers = server.api_headers ? JSON.parse(server.api_headers) : {};
+      const body = server.api_body ? JSON.parse(server.api_body) : {};
 
-      // Adicionar endpoint específico para consulta de créditos
-      const creditsUrl = `${server.api_url}/credits` || `${server.api_url}?action=get_credits`;
-
-      const response = await fetch(creditsUrl, {
+      const response = await fetch(server.api_url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...headers
         },
-        body: JSON.stringify({
-          ...body,
-          action: 'get_credits'
-        })
+        body: JSON.stringify(body)
       });
 
       if (!response.ok) {
-        throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
+        console.error(`Erro na API do servidor ${server.name}: ${response.status} ${response.statusText}`);
+        return null;
       }
 
       const data = await response.json();
-      
-      // Extrair créditos da resposta (pode variar por painel)
       return this.extractCreditsFromResponse(data, server);
     } catch (error) {
       console.error(`Erro ao buscar créditos do servidor ${server.name}:`, error);
@@ -178,13 +173,13 @@ export class CreditMonitoringService {
   }
 
   /**
-   * Extrai créditos da resposta da API baseado no tipo de painel
+   * Extrai créditos da resposta da API baseado no formato
    */
   private extractCreditsFromResponse(data: any, server: any): number | null {
     try {
       // Para NATV
-      if (data.credits !== undefined) {
-        return parseInt(data.credits);
+      if (data.data && data.data.credits !== undefined) {
+        return parseInt(data.data.credits);
       }
 
       // Para The Best
@@ -201,7 +196,7 @@ export class CreditMonitoringService {
         return parseInt(data.remaining_credits);
       }
 
-      console.warn(`Formato de resposta não reconhecido para servidor ${server.name}:`, data);
+      logger.warn(`Formato de resposta não reconhecido para servidor ${server.name}:`, data);
       return null;
     } catch (error) {
       console.error(`Erro ao extrair créditos da resposta:`, error);
@@ -250,18 +245,18 @@ export class CreditMonitoringService {
   private generateNotificationMessage(serverName: string, currentCredits: number, type: 'warning' | 'critical'): string {
     if (type === 'critical') {
       if (currentCredits === 0) {
-        return `⚠️ CRÍTICO: O servidor "${serverName}" está sem créditos!`;
+        return `⚠️ CRITICO: O servidor "${serverName}" esta sem creditos!`;
       }
-      return `⚠️ CRÍTICO: O servidor "${serverName}" está com apenas ${currentCredits} créditos restantes.`;
+      return `⚠️ CRITICO: O servidor "${serverName}" esta com apenas ${currentCredits} creditos restantes.`;
     }
 
-    return `⚡ AVISO: O servidor "${serverName}" está com ${currentCredits} créditos restantes.`;
+    return `⚡ AVISO: O servidor "${serverName}" esta com ${currentCredits} creditos restantes.`;
   }
 
   /**
    * Busca última notificação para um servidor
    */
-  private async getLastNotification(userId: string, serverId: string, type: 'warning' | 'critical'): Promise<any> {
+  async getLastNotification(userId: string, serverId: string, type: 'warning' | 'critical'): Promise<CreditNotification | null> {
     try {
       const { data, error } = await this.supabase
         .from('server_credit_notifications')

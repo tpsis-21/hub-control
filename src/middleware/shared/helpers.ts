@@ -1,12 +1,13 @@
 /**
  * Helpers Compartilhados para Middlewares - Núcleo Comum
  * 
- * Este módulo centraliza as funcionalidades comuns entre security-middleware 
- * e validation-middleware para eliminar duplicidade e facilitar manutenção.
+ * Este módulo centraliza as funcionalidades comuns dos middlewares
+ * para eliminar duplicidade e facilitar manutenção.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimitCustom, buildRateLimitHeaders, getClientIP, type RateLimitResult } from '@/lib/security/rate-limit'
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // TIPOS E INTERFACES COMPARTILHADAS
@@ -99,7 +100,7 @@ export async function applyRateLimit(
   })
 
   if (!result.success) {
-    console.warn(`🚫 Rate limit excedido IP: ${ip} namespace: ${config.namespace}`)
+    logger.warn(`Rate limit exceeded for IP: ${ip} namespace: ${config.namespace}`, { ip, namespace: config.namespace }, 'RATE_LIMIT')
     
     const response = createStandardErrorResponse(
       'Muitas tentativas',
@@ -329,8 +330,7 @@ export function logMiddlewareEvent(
   ip: string,
   details?: any
 ): void {
-  const timestamp = new Date().toISOString()
-  console.log(`[${timestamp}] [${type.toUpperCase()}-MIDDLEWARE] ${event} | IP: ${ip}`, details || '')
+  logger.info(`${event}`, { ip, ...details }, `${type.toUpperCase()}_MIDDLEWARE`)
 }
 
 /**
@@ -342,6 +342,5 @@ export function logMiddlewareError(
   ip: string,
   details?: any
 ): void {
-  const timestamp = new Date().toISOString()
-  console.error(`[${timestamp}] [${type.toUpperCase()}-MIDDLEWARE] ERROR: ${error} | IP: ${ip}`, details || '')
+  logger.error(`${error}`, { ip, ...details }, `${type.toUpperCase()}_MIDDLEWARE`)
 }

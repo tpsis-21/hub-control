@@ -250,7 +250,7 @@ const NotificationTemplateManager: React.FC = () => {
       
       toast({
         title: 'Sucesso',
-        description: `Template ${editingTemplate ? 'atualizado' : 'criado'} com sucesso`
+        description: editingTemplate ? 'Template atualizado com sucesso' : 'Template criado com sucesso'
       });
       
       setIsDialogOpen(false);
@@ -286,7 +286,7 @@ const NotificationTemplateManager: React.FC = () => {
   const duplicateTemplate = (template: NotificationTemplate) => {
     setEditingTemplate(null);
     setFormData({
-      name: `${template.name} (Cópia)`,
+      name: template.name + ' (Cópia)',
       type: template.type,
       channel: template.channel,
       subject: template.subject || '',
@@ -643,7 +643,7 @@ const NotificationTemplateManager: React.FC = () => {
       {/* Lista de Templates */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {templates.map((template) => (
-          <Card key={template.id} className={`${!template.is_active ? 'opacity-60' : ''}`}>
+          <Card key={template.id} className={!template.is_active ? 'opacity-60' : ''}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex-1">

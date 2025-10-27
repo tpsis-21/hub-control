@@ -13,7 +13,7 @@ const DEBUG_AUTH = process.env.NODE_ENV === 'development';
 
 function debugLog(message: string, data?: any) {
   if (DEBUG_AUTH) {
-    console.log(`[LOGIN API DEBUG] ${new Date().toISOString()} - ${message}`, data || '');
+    logger.debug(`[LOGIN API DEBUG] ${new Date().toISOString()} - ${message}`, data || '', "DEBUG");
   }
 }
 
@@ -29,7 +29,8 @@ import {
   applyRateLimit,
   attachRateLimitHeaders 
 } from '@/middleware/shared/helpers'
-import { getClientIP } from '@/lib/security/rate-limit'
+import { getClientIP, rateLimitCustom, buildRateLimitHeaders } from '@/lib/security/rate-limit'
+import { logger } from '@/utils/production-logger'
 
 // =====================================================
 // CONFIGURAÇÕES E VALIDAÇÕES
@@ -149,14 +150,24 @@ function mapSupabaseError(error: any): { message: string; code: string; userFrie
 
 export async function POST(request: NextRequest) {
   try {
-    // =====================================================
-    // 1. RATE LIMITING CENTRALIZADO
-    // =====================================================
-    const ip = getClientIP(request)
-    const rateCheck = await applyRateLimit(request, { requests: 5, windowMs: 5 * 60 * 1000, namespace: 'auth:login' })
-    if (!rateCheck.success) {
-      console.warn(`🚫 Rate limit excedido para login IP: ${ip}`)
-      return rateCheck.response!
+    // Rate limiting - 20 tentativas a cada 5 minutos por IP
+    const rateLimitResult = await rateLimitCustom(request, {
+      windowMs: 5 * 60 * 1000, // 5 minutos
+      max: 20, // 20 tentativas
+      namespace: 'auth-login'
+    });
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Muitas tentativas de login. Tente novamente em alguns minutos.',
+          code: 'RATE_LIMIT_EXCEEDED'
+        },
+        { 
+          status: 429,
+          headers: buildRateLimitHeaders(rateLimitResult)
+        }
+      );
     }
     
     // =====================================================
@@ -169,7 +180,7 @@ export async function POST(request: NextRequest) {
     try {
       validatedData = loginSchema.parse(rawData)
     } catch (validationError: any) {
-      console.warn('🚫 Dados inválidos:', validationError.errors)
+      logger.warn('🚫 Dados inválidos:', validationError.errors)
       const firstError = validationError.errors?.[0]
       const fieldName = firstError?.path?.[0] === 'email' ? 'email' : 'senha'
       
@@ -182,7 +193,8 @@ export async function POST(request: NextRequest) {
     
     const { email, password } = validatedData
     
-    console.log('🔐 Tentativa de login para:', email, 'IP:', ip)
+    const ip = getClientIP(request)
+    logger.debug(`🔐 Tentativa de login para: ${email} IP: ${ip}`)
     
     // =====================================================
     // 3. AUTENTICAR COM SUPABASE
@@ -191,7 +203,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createAuthClient()
     
     debugLog('Tentando autenticação com Supabase');
-  const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -235,7 +247,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Anexar cabeçalhos de rate limit na resposta de sucesso
-    return attachRateLimitHeaders(response, rateCheck.result)
+    return attachRateLimitHeaders(response, rateLimitResult)
 
   } catch (error) {
     console.error('Erro inesperado no login:', error)

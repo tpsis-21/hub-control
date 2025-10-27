@@ -15,7 +15,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRouter } from "next/navigation";
-import { getInAppNotifications, markNotificationAsRead } from "@/app/(app)/pagamentos/actions";
 import { FormattedDate } from "@/components/app/formatted-date";
 
 interface InAppNotification {
@@ -66,24 +65,66 @@ export function InAppNotifications({ userId, autoRefresh = false, refreshInterva
     return () => clearInterval(interval);
   }, [autoRefresh, refreshInterval]);
 
+  // Usar API route ao invés de Server Action para evitar problemas de ID inconsistente
   const loadNotifications = async () => {
     try {
-      const data = await getInAppNotifications(userId);
-      setNotifications(data);
+      const response = await fetch(`/api/notifications/in-app?userId=${encodeURIComponent(userId)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setNotifications(data.notifications || []);
     } catch (error) {
       console.error('Erro ao carregar notificações:', error);
+      // Em caso de erro, definir array vazio para evitar quebrar a UI
+      setNotifications([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Usar API route para marcar como lida também
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const response = await fetch('/api/notifications/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ notificationId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error);
+      return { success: false, error: 'Erro ao marcar notificação como lida' };
     }
   };
 
   const handleNotificationClick = async (notification: InAppNotification) => {
     // Marcar como lida se não estiver lida
     if (!notification.read) {
-      await markNotificationAsRead(notification.id);
-      setNotifications(prev => 
-        (prev || []).map(n => n.id === notification.id ? { ...n, read: true } : n)
-      );
+      try {
+        const result = await markAsRead(notification.id);
+        if (result.success) {
+          setNotifications(prev => 
+            (prev || []).map(n => n.id === notification.id ? { ...n, read: true } : n)
+          );
+        }
+      } catch (error) {
+        console.error('Erro ao marcar notificação como lida:', error);
+      }
     }
 
     // Redirecionar baseado no tipo de notificação

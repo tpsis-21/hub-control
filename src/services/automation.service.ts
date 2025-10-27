@@ -134,7 +134,7 @@ export class AutomationService {
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
 
-      return data ? data.map(dbRule => ({
+      return data ? data.map((dbRule: any) => ({
         id: dbRule.id,
         name: dbRule.name,
         description: dbRule.description || undefined,

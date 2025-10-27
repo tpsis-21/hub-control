@@ -309,7 +309,7 @@ export function BPIXMetrics({
                 <span className="text-sm">Expirados</span>
               </div>
               <span className="text-sm font-medium">
-                {loading ? '...' : stats?.expired_payments || 0}
+                {loading ? '...' : payments?.filter(p => p.status === 'expired').length || 0}
               </span>
             </div>
             
@@ -319,7 +319,7 @@ export function BPIXMetrics({
                 <span className="text-sm">Cancelados</span>
               </div>
               <span className="text-sm font-medium">
-                {loading ? '...' : stats?.cancelled_payments || 0}
+                {loading ? '...' : payments?.filter(p => p.status === 'cancelled').length || 0}
               </span>
             </div>
           </CardContent>
@@ -432,4 +432,4 @@ export function BPIXMetrics({
   )
 }
 
-export default BPIXMetrics
+export default BPIXMetrics;

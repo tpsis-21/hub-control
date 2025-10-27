@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClient } from "@/lib/supabase/clients/server";
 import nodemailer from 'nodemailer'
 
 export async function POST(request: NextRequest) {
   try {
     const { campaignId } = await request.json()
     
-    const supabase = createApiSupabaseClient()
+    const supabase = await createServerSupabaseClient()
     
     // Get campaign details
     const { data: campaign, error: campaignError } = await supabase
@@ -94,25 +94,27 @@ export async function POST(request: NextRequest) {
         })
         
         // Log successful send
-        // TODO: Fix email_logs table type issue
-        // await supabase.from('email_logs').insert({
-        //   campaign_id: campaignId,
-        //   email: recipient.email,
-        //   status: 'sent',
-        //   sent_at: new Date().toISOString(),
-        // })
+        await supabase.from('email_logs').insert({
+          campaign_id: campaignId,
+          email: recipient.email!,
+          subject: campaign.subject,
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+        })
         
         sentCount++
       } catch (error) {
         // Log failed send
-        // TODO: Fix email_logs table type issue
-        // await supabase.from('email_logs').insert({
-        //   campaign_id: campaignId,
-        //   email: recipient.email,
-        //   status: 'failed',
-        //   error_message: error instanceof Error ? error.message : 'Unknown error',
-        //   sent_at: new Date().toISOString(),
-        // })
+        if (recipient.email) {
+          await supabase.from('email_logs').insert({
+            campaign_id: campaignId,
+            email: recipient.email,
+            subject: campaign.subject,
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Unknown error',
+            sent_at: new Date().toISOString(),
+          })
+        }
         
         failedCount++
       }

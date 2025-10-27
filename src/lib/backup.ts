@@ -12,6 +12,7 @@ import { pipeline } from 'stream';
 import { promisify } from 'util';
 import { createGzip } from 'zlib';
 import { logger } from './logger';
+import { createApiSupabaseClient } from './supabase/unified-client';
 
 const pipelineAsync = promisify(pipeline);
 
@@ -88,12 +89,7 @@ export class BackupManager {
   constructor(config: BackupConfig) {
     this.config = config;
     
-    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      this.supabase = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-      );
-    }
+    this.supabase = createApiSupabaseClient(true); // service role para backup
   }
 
   /**

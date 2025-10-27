@@ -6,6 +6,7 @@
  */
 
 import { notificationSystem } from '../../notification-system';
+import { logger } from '@/utils/production-logger'
 import type { 
   NotificationType,
   NotificationChannel,
@@ -218,7 +219,7 @@ export async function sendConditionalNotification(
   
   // Verificar se o canal de email está habilitado
   if (!userPreferences.channels.email) {
-    console.log(`Usuário ${userId} tem notificações por email desabilitadas`);
+    logger.debug(`Usuário ${userId} tem notificações por email desabilitadas`, undefined, "DEBUG");
     return { skipped: true, reason: 'email_disabled' };
   }
 

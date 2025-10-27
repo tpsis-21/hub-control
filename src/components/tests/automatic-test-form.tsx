@@ -1,55 +1,70 @@
-'use client';
-
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import * as z from 'zod';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Zap, Server as ServerIcon, Clock, MessageSquare } from 'lucide-react';
-import { addAutomaticTestSchema } from '@/lib/schemas';
-import { addAutomaticTestAction, getServersWithIntegration } from '@/app/(app)/testes/actions';
-import { Server } from '@/lib/types';
+import { Clock, MessageSquare, Zap, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getServers } from '@/app/(app)/servidores/actions';
+import { createAutomaticTest } from '@/lib/test-service';
+import type { Server } from '@/lib/types';
+
+const automaticTestSchema = z.object({
+  testName: z.string().optional(),
+  iptvUsername: z.string().optional(),
+  email: z.string().email('E-mail inválido').optional().or(z.literal('')),
+  phone: z.string().optional(),
+  serverId: z.string().min(1, 'Servidor é obrigatório'),
+  testDurationHours: z.number().min(0.25, 'Duração mínima é 15 minutos'),
+  sendMessage: z.boolean().default(false),
+  messageChannel: z.enum(['email', 'whatsapp']).default('whatsapp')
+});
+
+type AutomaticTestFormData = z.infer<typeof automaticTestSchema>;
 
 interface AutomaticTestFormProps {
   onBack: () => void;
-  onSuccess: () => void;
+  onSuccess?: (testId: string) => void;
 }
-
-type FormData = z.infer<typeof addAutomaticTestSchema>;
 
 export function AutomaticTestForm({ onBack, onSuccess }: AutomaticTestFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [servers, setServers] = useState<Server[]>([]);
   const [loadingServers, setLoadingServers] = useState(true);
-
-  const form = useForm<FormData>({
-    resolver: zodResolver(addAutomaticTestSchema),
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch
+  } = useForm<AutomaticTestFormData>({
+    resolver: zodResolver(automaticTestSchema),
     defaultValues: {
       testDurationHours: 3,
-      sendMessage: true,
+      sendMessage: false,
       messageChannel: 'whatsapp'
     }
   });
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = form;
   const watchedValues = watch();
 
-  useEffect(() => {
+  // Carregar servidores reais do Supabase
+  React.useEffect(() => {
     async function loadServers() {
       try {
-        const serversWithIntegration = await getServersWithIntegration();
-        setServers(serversWithIntegration);
+        const allServers = await getServers();
+        setServers(allServers);
       } catch (error) {
         console.error('Erro ao carregar servidores:', error);
-        toast.error('Erro ao carregar servidores com integração');
+        toast.error('Erro ao carregar servidores');
       } finally {
         setLoadingServers(false);
       }
@@ -57,84 +72,63 @@ export function AutomaticTestForm({ onBack, onSuccess }: AutomaticTestFormProps)
     loadServers();
   }, []);
 
-  const onSubmit = async (data: FormData) => {
-    setIsLoading(true);
+  const onSubmit = async (data: AutomaticTestFormData) => {
     try {
-      const result = await addAutomaticTestAction(data);
-      if (result.success) {
-        toast.success('Teste automático criado com sucesso!');
-        if (result.credits !== null) {
-          toast.info(`Créditos atualizados: ${result.credits}`);
+      setIsLoading(true);
+      
+      // Validar dados de contato se mensagem estiver habilitada
+      if (data.sendMessage) {
+        if (data.messageChannel === 'email' && !data.email) {
+          toast.error('E-mail é obrigatório quando envio por e-mail está habilitado');
+          return;
         }
-        onSuccess();
-      } else {
-        toast.error(result.error || 'Erro ao criar teste automático');
+        if (data.messageChannel === 'whatsapp' && !data.phone) {
+          toast.error('Telefone é obrigatório quando envio por WhatsApp está habilitado');
+          return;
+        }
       }
+
+      const testConfig = await createAutomaticTest({
+        name: data.testName || `Teste Automático - ${new Date().toLocaleString()}`,
+        type: 'stability',
+        enabled: true,
+        parameters: {},
+        serverId: data.serverId,
+        durationHours: data.testDurationHours,
+        clientInfo: {
+          iptvUsername: data.iptvUsername,
+          email: data.email,
+          phone: data.phone
+        },
+        messaging: data.sendMessage ? {
+          enabled: true,
+          channel: data.messageChannel,
+          recipient: data.messageChannel === 'email' ? data.email! : data.phone!
+        } : {
+          enabled: false
+        }
+      });
+
+      toast.success('Teste automático criado com sucesso!');
+      onSuccess?.(testConfig.id);
     } catch (error) {
       console.error('Erro ao criar teste automático:', error);
-      toast.error('Erro inesperado ao criar teste automático');
+      toast.error('Erro ao criar teste automático. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (loadingServers) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin" />
-        <span className="ml-2">Carregando servidores...</span>
-      </div>
-    );
-  }
-
-  if (servers.length === 0) {
-    return (
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ServerIcon className="w-5 h-5" />
-            Nenhum Servidor Disponível
-          </CardTitle>
-          <CardDescription>
-            Não há servidores com integração configurada para testes automáticos.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Para criar testes automáticos, você precisa ter pelo menos um servidor com:
-          </p>
-          <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-4">
-            <li>Integração configurada (NATV, etc.)</li>
-            <li>Automação de teste habilitada</li>
-            <li>Chave de API válida</li>
-          </ul>
-          <div className="flex gap-2 pt-4">
-            <Button variant="outline" onClick={onBack}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
-            <Button onClick={() => window.location.href = '/servidores'}>
-              Configurar Servidores
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Zap className="w-6 h-6 text-primary" />
+          </div>
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="w-5 h-5" />
-              Teste Automático
-            </CardTitle>
-            <CardDescription>
+            <CardTitle className="text-2xl">Teste Automático</CardTitle>
+            <CardDescription className="text-base">
               Configure os dados para criação automática do teste
             </CardDescription>
           </div>
@@ -220,16 +214,22 @@ export function AutomaticTestForm({ onBack, onSuccess }: AutomaticTestFormProps)
                     <SelectValue placeholder="Selecione um servidor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {servers.map((server) => (
-                      <SelectItem key={server.id} value={server.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{server.name}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {server.integrationType?.toUpperCase()}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {loadingServers ? (
+                      <SelectItem value="" disabled>Carregando servidores...</SelectItem>
+                    ) : servers.length === 0 ? (
+                      <SelectItem value="" disabled>Nenhum servidor encontrado</SelectItem>
+                    ) : (
+                      servers.map((server) => (
+                        <SelectItem key={server.id} value={server.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{server.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {server.integrationType?.toUpperCase() || 'SERVIDOR'}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.serverId && (
@@ -333,3 +333,6 @@ export function AutomaticTestForm({ onBack, onSuccess }: AutomaticTestFormProps)
     </Card>
   );
 }
+
+export default AutomaticTestForm
+

@@ -7,6 +7,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createStandardErrorResponse, attachSecurityHeaders } from '@/middleware/shared/helpers'
+import { createMiddlewareSupabaseClient } from '@/lib/supabase/clients/middleware'
+import { logger } from '@/utils/production-logger'
 
 
 // === LOGS DE DEBUG ADICIONADOS ===
@@ -14,7 +16,7 @@ const DEBUG_AUTH = process.env.NODE_ENV === 'development';
 
 function debugLog(message: string, data?: any) {
   if (DEBUG_AUTH) {
-    console.log(`[MIDDLEWARE DEBUG] ${new Date().toISOString()} - ${message}`, data || '');
+    logger.debug(`[MIDDLEWARE DEBUG] ${new Date().toISOString()} - ${message}`, data || '', "DEBUG");
   }
 }
 
@@ -70,7 +72,9 @@ const PROTECTED_API_ROUTES = [
   '/api/proxy',
   '/api/plan-groups',
   '/api/messages',
-  '/api/push-notifications'
+  '/api/push-notifications',
+  '/api/upload',
+  '/api/reports'
 ]
 
 const ADMIN_API_ROUTES = [
@@ -106,28 +110,8 @@ function isAdminApiRoute(pathname: string): boolean {
 }
 
 // =====================================================
-// SUPABASE CLIENT
+// SUPABASE CLIENT - Usando cliente consolidado
 // =====================================================
-
-function createSupabaseClient(req: NextRequest, response: NextResponse) {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          response.cookies.set({ name, value: '', ...options })
-        },
-      },
-    }
-  )
-}
 
 // =====================================================
 // VERIFICAR ADMIN
@@ -155,7 +139,7 @@ async function isUserAdmin(supabase: any, userId: string): Promise<boolean> {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   
-  console.log(`🔍 Middleware: Verificando rota ${pathname}`)
+  logger.debug(`🔍 Middleware: Verificando rota ${pathname}`, undefined, "DEBUG")
   
   // Criar resposta base
   let response = NextResponse.next({
@@ -170,19 +154,19 @@ export async function middleware(req: NextRequest) {
   
   // Permitir rota raiz
   if (pathname === '/') {
-    console.log(`✅ Middleware: Rota raiz permitida`)
+    logger.debug(`✅ Middleware: Rota raiz permitida`, undefined, "DEBUG")
     return response
   }
   
   // Permitir rotas públicas
   if (isPublicRoute(pathname)) {
-    console.log(`✅ Middleware: Rota pública permitida: ${pathname}`)
+    logger.debug(`✅ Middleware: Rota pública permitida: ${pathname}`, undefined, "DEBUG")
     return response
   }
   
   // Permitir APIs públicas
   if (isPublicApiRoute(pathname)) {
-    console.log(`✅ Middleware: API pública permitida: ${pathname}`)
+    logger.debug(`✅ Middleware: API pública permitida: ${pathname}`, undefined, "DEBUG")
     return response
   }
   
@@ -201,7 +185,7 @@ export async function middleware(req: NextRequest) {
   // 3. VERIFICAR AUTENTICAÇÃO
   // =====================================================
   
-  const supabase = createSupabaseClient(req, response)
+  const { supabase } = createMiddlewareSupabaseClient(req)
   let user = null
   let authError = null
   
@@ -211,7 +195,7 @@ export async function middleware(req: NextRequest) {
     
     if (cookieUser && !cookieError) {
       user = cookieUser
-      console.log(`✅ Middleware: Usuário autenticado via cookie: ${user.email}`)
+      logger.debug(`✅ Middleware: Usuário autenticado via cookie: ${user.email}`, undefined, "DEBUG")
     } else {
       // Se não há cookie, verificar token JWT no header Authorization
       const authHeader = req.headers.get('authorization')
@@ -233,14 +217,14 @@ export async function middleware(req: NextRequest) {
           authError = jwtErr
         }
       } else {
-        console.log(`❌ Middleware: Nenhum token encontrado (cookie ou JWT)`)
+        logger.debug(`❌ Middleware: Nenhum token encontrado (cookie ou JWT, undefined, "DEBUG")`)
         authError = cookieError
       }
     }
     
     // Usuário não autenticado
     if (!user || authError) {
-      console.log(`❌ Middleware: Usuário não autenticado: ${pathname}`)
+      logger.debug(`❌ Middleware: Usuário não autenticado: ${pathname}`, undefined, "DEBUG")
       
       // Para APIs, retornar 401
       if (isProtectedApiRoute(pathname)) {
@@ -266,11 +250,11 @@ export async function middleware(req: NextRequest) {
     // 4. USUÁRIO AUTENTICADO
     // =====================================================
     
-    console.log(`✅ Middleware: Usuário autenticado: ${user.email}`)
+    logger.debug(`✅ Middleware: Usuário autenticado: ${user.email}`, undefined, "DEBUG")
     
     // Redirecionar usuários autenticados das páginas de auth
     if (isAuthRoute(pathname)) {
-      console.log(`🔄 Middleware: Redirecionando usuário autenticado para dashboard`)
+      logger.debug(`🔄 Middleware: Redirecionando usuário autenticado para dashboard`, undefined, "DEBUG")
       const dashboardUrl = req.nextUrl.clone()
       dashboardUrl.pathname = '/dashboard'
       return NextResponse.redirect(dashboardUrl)
@@ -278,7 +262,7 @@ export async function middleware(req: NextRequest) {
     
     // Redirecionar da página inicial para dashboard
     if (pathname === '/') {
-      console.log(`🔄 Middleware: Redirecionando da página inicial para dashboard`)
+      logger.debug(`🔄 Middleware: Redirecionando da página inicial para dashboard`, undefined, "DEBUG")
       const dashboardUrl = req.nextUrl.clone()
       dashboardUrl.pathname = '/dashboard'
       return NextResponse.redirect(dashboardUrl)
@@ -292,7 +276,7 @@ export async function middleware(req: NextRequest) {
       const isAdmin = await isUserAdmin(supabase, user.id)
       
       if (!isAdmin) {
-        console.warn(`🚫 Acesso negado para ${user.email} em ${pathname}`)
+        logger.warn(`🚫 Acesso negado para ${user.email} em ${pathname}`, undefined, "WARN")
         return createStandardErrorResponse(
           'Acesso negado',
           'Permissão de administrador necessária para acessar este recurso.',
@@ -300,7 +284,7 @@ export async function middleware(req: NextRequest) {
         )
       }
       
-      console.log(`👑 Middleware: Acesso de admin autorizado para ${user.email}`)
+      logger.debug(`👑 Middleware: Acesso de admin autorizado para ${user.email}`, undefined, "DEBUG")
     }
     
     // =====================================================
@@ -325,7 +309,7 @@ export async function middleware(req: NextRequest) {
     if (isAdminApiRoute(pathname) || 
         pathname.includes('delete') || 
         pathname.includes('update')) {
-      console.log(`🔐 Log de segurança: ${req.method} ${pathname} por ${user.email}`)
+      logger.debug(`🔐 Log de segurança: ${req.method} ${pathname} por ${user.email}`, undefined, "DEBUG")
     }
     
     return response

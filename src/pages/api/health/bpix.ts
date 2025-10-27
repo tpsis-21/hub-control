@@ -5,7 +5,7 @@
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import { bpixHealthCheckConfig } from '@/config/bpix-production';
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 
 interface HealthCheckResult {
   name: string;
@@ -136,10 +136,7 @@ async function checkDatabaseConnection(): Promise<HealthCheckResult> {
   const startTime = Date.now();
   
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createApiSupabaseClient();
 
     // Testa uma query simples na tabela de pagamentos BPIX
     const { data, error } = await supabase

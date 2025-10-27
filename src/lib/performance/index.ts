@@ -14,6 +14,7 @@ import {
   OptimizationRecommendation
 } from './types';
 import { SecuritySeverity } from '../security-monitoring';
+import { logger } from '@/utils/production-logger'
 
 // Removido re-export do hook client-side para evitar dependência em módulos server
 // export { usePerformanceTracking } from '../performance-monitoring';
@@ -53,7 +54,7 @@ export class PerformanceMonitoringSystem {
     // Iniciar verificação de alertas
     this.startAlertChecking();
     
-    console.log('🚀 Sistema de Monitoramento de Performance iniciado');
+    logger.debug('🚀 Sistema de Monitoramento de Performance iniciado', undefined, "DEBUG");
   }
 
   // Parar sistema de monitoramento
@@ -71,7 +72,7 @@ export class PerformanceMonitoringSystem {
       this.checkInterval = null;
     }
     
-    console.log('⏹️ Sistema de Monitoramento de Performance parado');
+    logger.debug('⏹️ Sistema de Monitoramento de Performance parado', undefined, "DEBUG");
   }
 
   // Iniciar verificação periódica de alertas
@@ -94,7 +95,7 @@ export class PerformanceMonitoringSystem {
 
   // Notificar alerta (placeholder - implementar conforme necessário)
   private notifyAlert(alert: AlertEvent): void {
-    console.warn(`🚨 ALERTA [${alert.severity.toUpperCase()}]: ${alert.message}`);
+    logger.warn(`🚨 ALERTA [${alert.severity.toUpperCase()}]: ${alert.message}`, undefined, "WARN");
     
     // Aqui você pode implementar notificações por:
     // - Email

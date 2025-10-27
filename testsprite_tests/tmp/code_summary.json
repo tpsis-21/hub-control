@@ -1,0 +1,161 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "Next.js 15.5.2",
+    "React 18.3.1",
+    "Supabase",
+    "PostgreSQL",
+    "Tailwind CSS",
+    "Radix UI",
+    "Node.js",
+    "Jest",
+    "ESLint",
+    "Vercel"
+  ],
+  "features": [
+    {
+      "name": "Sistema de Autenticação",
+      "description": "Sistema completo de autenticação com Supabase Auth, gerenciamento de usuários, perfis e permissões RLS",
+      "files": [
+        "src/hooks/useAuth.ts",
+        "src/lib/supabase/clients/server.ts",
+        "src/lib/supabase/clients/api.ts",
+        "src/components/auth",
+        "src/app/auth",
+        "src/app/login",
+        "src/app/register"
+      ]
+    },
+    {
+      "name": "Dashboard Administrativo",
+      "description": "Interface administrativa para gerenciamento de usuários, servidores e configurações do sistema",
+      "files": [
+        "src/app/admin",
+        "src/components/admin",
+        "src/components/admin/ServerConfigForm.tsx"
+      ]
+    },
+    {
+      "name": "Sistema de Monitoramento",
+      "description": "Sistema avançado de monitoramento de performance, saúde do sistema e métricas em tempo real",
+      "files": [
+        "src/lib/performance",
+        "src/lib/monitoring.ts",
+        "src/components/monitoring/system-health-dashboard.tsx",
+        "src/hooks/use-performance-monitoring.ts"
+      ]
+    },
+    {
+      "name": "Sistema de Segurança",
+      "description": "Sistema de segurança com auditoria, compliance, monitoramento de ameaças e políticas RLS",
+      "files": [
+        "src/lib/security",
+        "src/lib/security-monitoring.ts",
+        "src/lib/audit-compliance-system.ts",
+        "src/components/security"
+      ]
+    },
+    {
+      "name": "Sistema de Otimização",
+      "description": "Sistema inteligente de otimização automática com ML, análise de comportamento e otimização de recursos",
+      "files": [
+        "src/lib/auto-optimization.ts",
+        "src/lib/user-behavior-analytics.ts",
+        "src/lib/predictive-analytics.ts",
+        "src/lib/resource-optimization.ts",
+        "src/lib/asset-optimization.ts",
+        "src/components/optimization"
+      ]
+    },
+    {
+      "name": "Sistema de Cache Inteligente",
+      "description": "Sistema de cache multi-camadas com invalidação automática e otimização adaptativa",
+      "files": [
+        "src/lib/intelligent-cache-system.ts",
+        "src/lib/cache.ts"
+      ]
+    },
+    {
+      "name": "Sistema de Notificações",
+      "description": "Sistema de notificações em tempo real com push notifications e alertas por email",
+      "files": [
+        "src/lib/notifications",
+        "src/components/notifications"
+      ]
+    },
+    {
+      "name": "Sistema de Analytics",
+      "description": "Sistema de análise de dados e relatórios com métricas de negócio e dashboards",
+      "files": [
+        "src/lib/analytics-reporting-system.ts",
+        "src/components/analytics"
+      ]
+    },
+    {
+      "name": "Sistema de Automação",
+      "description": "Sistema de workflows e automação de processos com orquestração de tarefas",
+      "files": [
+        "src/lib/automation-workflow-system.ts"
+      ]
+    },
+    {
+      "name": "Integração TheBest",
+      "description": "Sistema de integração com a plataforma TheBest para gerenciamento de pacotes e serviços",
+      "files": [
+        "src/components/integrations/thebest-package-manager.tsx",
+        "src/components/integrations/mapping"
+      ]
+    },
+    {
+      "name": "Sistema de Servidores",
+      "description": "Gerenciamento de servidores, configurações e monitoramento de status",
+      "files": [
+        "src/components/servers",
+        "src/hooks/useServers.ts"
+      ]
+    },
+    {
+      "name": "Sistema de Backup",
+      "description": "Sistema automatizado de backup com múltiplas estratégias e recuperação",
+      "files": [
+        "src/lib/backup.ts",
+        "scripts/setup-backup.js",
+        "scripts/test-backup.js"
+      ]
+    },
+    {
+      "name": "Componentes UI",
+      "description": "Biblioteca de componentes UI reutilizáveis baseados em Radix UI e Tailwind CSS",
+      "files": [
+        "src/components/ui",
+        "src/components/ux"
+      ]
+    },
+    {
+      "name": "Sistema de Testes",
+      "description": "Suite de testes unitários e de integração com Jest e Testing Library",
+      "files": [
+        "src/__tests__",
+        "src/hooks/__tests__",
+        "jest.config.js",
+        "jest.setup.js"
+      ]
+    },
+    {
+      "name": "Middleware de Segurança",
+      "description": "Middleware para autenticação, autorização e proteção de rotas",
+      "files": [
+        "src/middleware.ts",
+        "src/middleware/shared"
+      ]
+    },
+    {
+      "name": "Sistema de Logs",
+      "description": "Sistema de logging estruturado com diferentes níveis e rotação de logs",
+      "files": [
+        "src/lib/logger.ts",
+        "src/utils/production-logger.ts"
+      ]
+    }
+  ]
+}

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 import { createRenewalService } from '@/services/thebest-renewal.service';
+import { logger } from '@/utils/production-logger'
 
-// Configuração do Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Cliente Supabase consolidado para API routes
+const supabase = createApiSupabaseClient();
 
 /**
  * GET /api/thebest/renewals
@@ -24,7 +23,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    console.log('📋 Buscando renovações para usuário:', userId);
+    logger.debug(`📋 Buscando renovações para usuário: ${userId}`);
     
     const renewalService = createRenewalService(supabase);
     const renewals = await renewalService.getRenewalHistory(userId, limit);
@@ -61,11 +60,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    console.log('🔄 Processando renovação manual:', {
-      user_id,
-      package_id,
-      payment_id
-    });
+    logger.debug(`🔄 Processando renovação manual: ${JSON.stringify({ user_id, package_id, payment_id })}`);
     
     const renewalService = createRenewalService(supabase);
     

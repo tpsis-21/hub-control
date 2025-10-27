@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SecuritySeverity } from './security-monitoring';
+import { logger } from '@/utils/production-logger'
 /**
  * Sistema de Análise Preditiva para Performance
  * 
@@ -221,7 +222,7 @@ class MetricsCollector {
         });
         this.observers.set('performance', perfObserver);
       } catch (error) {
-        console.warn('Erro ao configurar PerformanceObserver:', error);
+        logger.warn('Erro ao configurar PerformanceObserver:', error);
       }
     }
 

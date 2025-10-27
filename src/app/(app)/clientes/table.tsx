@@ -97,7 +97,7 @@ export function ClientesTable({ customers, allPlans, allServers }: ClientesTable
         {
             label: 'Ver Perfil',
             icon: <Eye className="mr-2 h-4 w-4" />,
-            onClick: (customer: Client) => router.push(`/clientes/${customer.id}`),
+            onClick: (customer: Client) => router.push(`/clientes/${customer.id}`)
         },
         {
             label: 'Editar',
@@ -141,3 +141,4 @@ export function ClientesTable({ customers, allPlans, allServers }: ClientesTable
         />
     );
 }
+

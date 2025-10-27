@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/utils/production-logger'
 
 interface PushSubscriptionData {
   endpoint: string;
@@ -67,7 +68,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   const registerServiceWorker = useCallback(async (): Promise<ServiceWorkerRegistration | null> => {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service Worker registrado:', registration);
+      logger.debug('Service Worker registrado:', registration);
       return registration;
     } catch (error) {
       console.error('Erro ao registrar Service Worker:', error);

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from '@/lib/supabase/unified-client';
 import { createRenewalService } from '@/services/thebest-renewal.service';
+import { logger } from '@/utils/production-logger'
 
-// Configuração do Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Cliente Supabase consolidado para API routes
+const supabase = createApiSupabaseClient();
 
 /**
  * GET /api/thebest/packages
@@ -18,7 +17,7 @@ export async function GET(request: NextRequest) {
     const classification = searchParams.get('classification');
     const limit = parseInt(searchParams.get('limit') || '100');
     
-    console.log('📦 Buscando pacotes:', { activeOnly, classification, limit });
+    logger.debug(`📦 Buscando pacotes: activeOnly=${activeOnly}, classification=${classification}, limit=${limit}`);
     
     const renewalService = createRenewalService(supabase);
     let packages = await renewalService.getAvailablePackages();
@@ -69,7 +68,7 @@ export async function GET(request: NextRequest) {
       }
     };
     
-    console.log('✅ Pacotes encontrados:', stats.total_packages);
+    logger.debug(`✅ Pacotes encontrados: ${stats.total_packages}`);
     
     return NextResponse.json({
       success: true,
@@ -98,7 +97,7 @@ export async function POST(request: NextRequest) {
     const { action, packages } = body;
     
     if (action === 'import' && packages) {
-      console.log('📥 Importando pacotes via API:', packages.length);
+      logger.debug(`📥 Importando pacotes via API: ${packages.length}`);
       
       // Validar estrutura dos pacotes
       const validPackages = packages.filter((pkg: any) => {
@@ -175,7 +174,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    console.log('🔄 Atualizando status dos pacotes:', { package_ids, is_active });
+    logger.debug(`🔄 Atualizando status dos pacotes: ${JSON.stringify({ package_ids, is_active })}`);
     
     const { data: updatedData, error: updateError } = await supabase
       .from('thebest_packages')

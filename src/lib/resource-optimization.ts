@@ -184,7 +184,7 @@ class ResourceMonitor {
         });
         this.observers.set('performance', perfObserver);
       } catch (error) {
-        console.warn('Erro ao configurar PerformanceObserver:', error);
+        logger.warn('Erro ao configurar PerformanceObserver:', error);
       }
     }
 
@@ -337,7 +337,7 @@ class ResourceMonitor {
       const latency = await this.measureLatency();
       network.latency = latency;
     } catch (error) {
-      console.warn('Erro ao medir latência:', error);
+      logger.warn('Erro ao medir latência:', error);
     }
 
     return network;
@@ -367,7 +367,7 @@ class ResourceMonitor {
         storage.available = (estimate.quota || 0) - (estimate.usage || 0);
         storage.percentage = storage.total > 0 ? (storage.used / storage.total) * 100 : 0;
       } catch (error) {
-        console.warn('Erro ao obter estimativa de armazenamento:', error);
+        logger.warn('Erro ao obter estimativa de armazenamento:', error);
       }
     }
 
@@ -377,7 +377,7 @@ class ResourceMonitor {
       storage.readSpeed = ioSpeed.read;
       storage.writeSpeed = ioSpeed.write;
     } catch (error) {
-      console.warn('Erro ao medir velocidade de I/O:', error);
+      logger.warn('Erro ao medir velocidade de I/O:', error);
     }
 
     return storage;
@@ -607,7 +607,7 @@ class ResourceMonitor {
     
     // Se há muitas mudanças, pode indicar vazamento de memória
     if (significantChanges > 50) {
-      console.warn('Muitas mudanças no DOM detectadas, possível vazamento de memória');
+      logger.warn('Muitas mudanças no DOM detectadas, possível vazamento de memória', undefined, "WARN");
     }
   }
 
@@ -922,7 +922,7 @@ export class ResourceOptimizer {
   }
 
   private async executeRule(rule: OptimizationRule, metrics: ResourceMetrics): Promise<void> {
-    console.log(`Executando regra de otimização: ${rule.name}`);
+    logger.debug(`Executando regra de otimização: ${rule.name}`, undefined, "DEBUG");
     
     const beforeMetrics = metrics;
     const startTime = performance.now();
@@ -1000,7 +1000,7 @@ export class ResourceOptimizer {
           return await this.executeNetworkOptimization(action.parameters);
         
         default:
-          console.warn(`Tipo de ação não implementado: ${action.type}`);
+          logger.warn(`Tipo de ação não implementado: ${action.type}`, undefined, "WARN");
           return false;
       }
     } catch (error) {
@@ -1072,7 +1072,7 @@ export class ResourceOptimizer {
           try {
             await cache.add(resource);
           } catch (error) {
-            console.warn(`Erro ao pre-carregar ${resource}:`, error);
+            logger.warn(`Erro ao pre-carregar ${resource}:`, error);
           }
         }
       }
@@ -1111,7 +1111,7 @@ export class ResourceOptimizer {
       });
     }
     
-    console.log(`DOM cleanup: ${cleaned} elementos processados`);
+    logger.debug(`DOM cleanup: ${cleaned} elementos processados`, undefined, "DEBUG");
     return cleaned > 0;
   }
 
@@ -1137,7 +1137,7 @@ export class ResourceOptimizer {
       }
     });
     
-    console.log(`Image optimization: ${optimized} imagens otimizadas`);
+    logger.debug(`Image optimization: ${optimized} imagens otimizadas`, undefined, "DEBUG");
     return optimized > 0;
   }
 
@@ -1179,19 +1179,19 @@ export class ResourceOptimizer {
       }
     });
     
-    console.log(`Lazy loading: ${processed} elementos processados`);
+    logger.debug(`Lazy loading: ${processed} elementos processados`, undefined, "DEBUG");
     return processed > 0;
   }
 
   private async executeScriptOptimization(params: any): Promise<boolean> {
     // Implementar otimização de scripts
-    console.log('Script optimization executada');
+    logger.debug('Script optimization executada', undefined, "DEBUG");
     return true;
   }
 
   private async executeNetworkOptimization(params: any): Promise<boolean> {
     // Implementar otimização de rede
-    console.log('Network optimization executada');
+    logger.debug('Network optimization executada', undefined, "DEBUG");
     return true;
   }
 
@@ -1288,6 +1288,7 @@ export function getResourceOptimizer(): ResourceOptimizer {
 
 // Hook React para usar otimização de recursos
 import { useState, useEffect } from 'react';
+import { logger } from '@/utils/production-logger'
 
 export function useResourceOptimization() {
   const [metrics, setMetrics] = useState<ResourceMetrics | null>(null);

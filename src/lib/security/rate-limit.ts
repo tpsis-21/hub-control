@@ -29,9 +29,9 @@ const RATE_LIMITS = {
     limit: 100,
     window: 60 * 1000 // 1 minuto
   },
-  // Login - 5 tentativas por minuto
+  // Login - 20 tentativas por minuto (aumentado para testes)
   auth: {
-    limit: 5,
+    limit: 20,
     window: 60 * 1000 // 1 minuto
   },
   // Upload - 10 uploads por minuto

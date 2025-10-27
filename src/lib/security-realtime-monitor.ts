@@ -5,6 +5,7 @@ import { EventEmitter } from 'events';
 import { securityMonitor } from './security-monitor';
 import { createServerSupabaseClient } from "./supabase/clients/server";
 import { getSecurityStats as monitoringGetSecurityStats, SecurityEventType, SecuritySeverity } from './security-monitoring';
+import { logger } from '@/utils/production-logger'
 
 // Interface para eventos de segurança
 export interface SecurityEvent {
@@ -286,7 +287,7 @@ export class SecurityRealtimeMonitor extends EventEmitter {
       securityMonitor.unblockIP(ip);
     }, duration);
     
-    console.log(`IP ${ip} bloqueado por ${duration}ms`);
+    logger.debug(`IP ${ip} bloqueado por ${duration}ms`, undefined, "DEBUG");
   }
   
   // Bloquear usuário
@@ -299,13 +300,13 @@ export class SecurityRealtimeMonitor extends EventEmitter {
       securityMonitor.unblockUser(userId);
     }, duration);
     
-    console.log(`Usuário ${userId} bloqueado por ${duration}ms`);
+    logger.debug(`Usuário ${userId} bloqueado por ${duration}ms`, undefined, "DEBUG");
   }
   
   // Notificar administrador
   private async notifyAdmin(event: SecurityEvent, priority: SecuritySeverity): Promise<void> {
     // Implementar notificação para administradores
-    console.log(`ALERTA DE SEGURANÇA [${priority.toUpperCase()}]:`, {
+    logger.debug(`ALERTA DE SEGURANÇA [${priority.toUpperCase()}]:`, {
       type: event.type,
       ip: event.ip,
       endpoint: event.endpoint,
@@ -343,7 +344,7 @@ export class SecurityRealtimeMonitor extends EventEmitter {
   // Aplicar rate limiting
   private async applyRateLimit(ip: string, duration: number): Promise<void> {
     // Implementar rate limiting específico
-    console.log(`Rate limit aplicado para IP ${ip} por ${duration}ms`);
+    logger.debug(`Rate limit aplicado para IP ${ip} por ${duration}ms`, undefined, "DEBUG");
   }
   
   // Colocar usuário em quarentena

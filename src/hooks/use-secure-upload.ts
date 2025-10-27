@@ -200,6 +200,7 @@ export function useSecureUpload(options: UseSecureUploadOptions = {}): UseSecure
         });
 
         xhr.open('POST', '/api/upload/secure');
+        xhr.withCredentials = true; // Incluir cookies de autenticação
         xhr.timeout = 300000; // 5 minutos
         xhr.send(formData);
       });

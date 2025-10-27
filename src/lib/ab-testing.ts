@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // INTERFACES E TIPOS
@@ -477,7 +478,7 @@ class ABTestManager {
       recommendations.push('Revise as hipóteses e métricas do teste');
     } else {
       const improvement = winner.conversionRate - variants.find(v => v.variantId !== winner.variantId)!.conversionRate;
-      recommendations.push(`Variante "${winner.name}" mostrou melhoria de ${improvement.toFixed(2)}%`);
+      recommendations.push('Variante "' + winner.name + '" mostrou melhoria de ' + improvement.toFixed(2) + '%');
       recommendations.push('Considere implementar esta variante para todos os usuários');
       recommendations.push('Monitore métricas de longo prazo após implementação');
     }
@@ -583,7 +584,7 @@ class ABTestManager {
       
       localStorage.setItem('ab_testing_data', JSON.stringify(data));
     } catch (error) {
-      console.warn('Erro ao salvar dados de A/B testing:', error);
+      logger.warn('Erro ao salvar dados de A/B testing:', 'AB_TESTING', error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -605,7 +606,7 @@ class ABTestManager {
         );
       }
     } catch (error) {
-      console.warn('Erro ao carregar dados de A/B testing:', error);
+      logger.warn('Erro ao carregar dados de A/B testing:', 'AB_TESTING', error instanceof Error ? error.message : String(error));
     }
   }
 }
@@ -730,3 +731,4 @@ export type {
   ABAnalysis,
   TargetAudience
 };
+

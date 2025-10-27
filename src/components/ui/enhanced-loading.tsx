@@ -1,379 +1,483 @@
-"use client";
+/**
+ * Sistema de Loading Aprimorado
+ * Componentes de carregamento modernos com animações suaves e estados inteligentes
+ */
 
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Loader2, Shield, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { Loader2, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 
-// Tipos de loading
-export type LoadingType = 'spinner' | 'dots' | 'pulse' | 'skeleton' | 'progress';
-export type LoadingSize = 'sm' | 'md' | 'lg' | 'xl';
-export type LoadingVariant = 'default' | 'auth' | 'data' | 'upload' | 'processing';
+// ============================================
+// INTERFACES E TIPOS
+// ============================================
 
-// Interface para props do loading
-interface EnhancedLoadingProps {
-  type?: LoadingType;
+export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
+export type LoadingSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+export type LoadingVariant = 'spinner' | 'dots' | 'pulse' | 'skeleton' | 'progress';
+
+export interface LoadingProps {
+  state?: LoadingState;
   size?: LoadingSize;
   variant?: LoadingVariant;
-  message?: string;
-  progress?: number;
+  text?: string;
   className?: string;
+  fullScreen?: boolean;
   overlay?: boolean;
-}
-
-// Interface para props do loading com estados
-interface LoadingWithStatesProps {
-  state: 'loading' | 'success' | 'error' | 'warning';
-  message: string;
   progress?: number;
-  className?: string;
+  duration?: number;
+  onComplete?: () => void;
 }
 
-// Interface para props do skeleton loading
-interface SkeletonLoadingProps {
-  lines?: number;
-  avatar?: boolean;
-  className?: string;
+export interface LoadingStateHookOptions {
+  initialState?: LoadingState;
+  autoReset?: boolean;
+  resetDelay?: number;
+  onStateChange?: (state: LoadingState) => void;
 }
 
-// Componente principal de loading melhorado
-export function EnhancedLoading({
-  type = 'spinner',
-  size = 'md',
-  variant = 'default',
-  message,
-  progress,
-  className,
-  overlay = false
-}: EnhancedLoadingProps) {
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm':
-        return 'h-4 w-4';
-      case 'md':
-        return 'h-6 w-6';
-      case 'lg':
-        return 'h-8 w-8';
-      case 'xl':
-        return 'h-12 w-12';
-      default:
-        return 'h-6 w-6';
+// ============================================
+// HOOK PARA GERENCIAR ESTADO DE LOADING
+// ============================================
+
+export function useLoadingState(options: LoadingStateHookOptions = {}) {
+  const {
+    initialState = 'idle',
+    autoReset = false,
+    resetDelay = 2000,
+    onStateChange
+  } = options;
+
+  const [state, setState] = useState<LoadingState>(initialState);
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState<string>('');
+
+  // Função para atualizar o estado
+  const updateState = useCallback((newState: LoadingState, newMessage?: string) => {
+    setState(newState);
+    if (newMessage !== undefined) {
+      setMessage(newMessage);
     }
-  };
+    onStateChange?.(newState);
 
-  const getVariantIcon = () => {
-    switch (variant) {
-      case 'auth':
-        return <Shield className={cn('animate-pulse', getSizeClasses())} />;
-      case 'data':
-        return <Loader2 className={cn('animate-spin', getSizeClasses())} />;
-      case 'upload':
-        return <Loader2 className={cn('animate-spin', getSizeClasses())} />;
-      case 'processing':
-        return <Loader2 className={cn('animate-spin', getSizeClasses())} />;
-      default:
-        return <Loader2 className={cn('animate-spin', getSizeClasses())} />;
+    // Auto reset para success/error
+    if (autoReset && (newState === 'success' || newState === 'error')) {
+      setTimeout(() => {
+        setState('idle');
+        setMessage('');
+        setProgress(0);
+      }, resetDelay);
     }
-  };
+  }, [autoReset, resetDelay, onStateChange]);
 
-  const renderLoading = () => {
-    switch (type) {
-      case 'spinner':
-        return (
-          <div className="flex flex-col items-center space-y-3">
-            {getVariantIcon()}
-            {message && (
-              <p className="text-sm text-gray-600 text-center">{message}</p>
-            )}
-            {progress !== undefined && (
-              <div className="w-full max-w-xs">
-                <Progress value={progress} className="h-2" />
-                <p className="text-xs text-gray-500 mt-1 text-center">
-                  {Math.round(progress)}%
-                </p>
-              </div>
-            )}
-          </div>
-        );
-
-      case 'dots':
-        return (
-          <div className="flex flex-col items-center space-y-3">
-            <div className="flex space-x-1">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    'rounded-full bg-blue-500',
-                    size === 'sm' ? 'h-2 w-2' : size === 'lg' ? 'h-4 w-4' : 'h-3 w-3'
-                  )}
-                  style={{
-                    animation: `pulse 1.4s ease-in-out ${i * 0.16}s infinite both`
-                  }}
-                />
-              ))}
-            </div>
-            {message && (
-              <p className="text-sm text-gray-600 text-center">{message}</p>
-            )}
-          </div>
-        );
-
-      case 'pulse':
-        return (
-          <div className="flex flex-col items-center space-y-3">
-            <div className={cn(
-              'rounded-full bg-blue-500 animate-pulse',
-              getSizeClasses()
-            )} />
-            {message && (
-              <p className="text-sm text-gray-600 text-center">{message}</p>
-            )}
-          </div>
-        );
-
-      case 'progress':
-        return (
-          <div className="w-full max-w-md space-y-3">
-            {message && (
-              <p className="text-sm text-gray-600 text-center">{message}</p>
-            )}
-            <Progress value={progress || 0} className="h-3" />
-            <p className="text-xs text-gray-500 text-center">
-              {Math.round(progress || 0)}%
-            </p>
-          </div>
-        );
-
-      case 'skeleton':
-        return <SkeletonLoading />;
-
-      default:
-        return (
-          <div className="flex items-center space-x-2">
-            <Loader2 className={cn('animate-spin', getSizeClasses())} />
-            {message && (
-              <p className="text-sm text-gray-600">{message}</p>
-            )}
-          </div>
-        );
-    }
-  };
-
-  const content = (
-    <div className={cn('flex items-center justify-center', className)}>
-      {renderLoading()}
-    </div>
-  );
-
-  if (overlay) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-        <div className="rounded-lg bg-white p-6 shadow-lg">
-          {content}
-        </div>
-      </div>
-    );
-  }
-
-  return content;
-}
-
-// Componente de loading com estados (loading, success, error, warning)
-export function LoadingWithStates({
-  state,
-  message,
-  progress,
-  className
-}: LoadingWithStatesProps) {
-  const getStateIcon = () => {
-    switch (state) {
-      case 'loading':
-        return <Loader2 className="h-6 w-6 animate-spin text-blue-500" />;
-      case 'success':
-        return <CheckCircle className="h-6 w-6 text-green-500" />;
-      case 'error':
-        return <XCircle className="h-6 w-6 text-red-500" />;
-      case 'warning':
-        return <AlertTriangle className="h-6 w-6 text-yellow-500" />;
-      default:
-        return <Loader2 className="h-6 w-6 animate-spin text-blue-500" />;
-    }
-  };
-
-  const getStateColor = () => {
-    switch (state) {
-      case 'loading':
-        return 'text-blue-600';
-      case 'success':
-        return 'text-green-600';
-      case 'error':
-        return 'text-red-600';
-      case 'warning':
-        return 'text-yellow-600';
-      default:
-        return 'text-blue-600';
-    }
-  };
-
-  return (
-    <div className={cn('flex flex-col items-center space-y-3', className)}>
-      {getStateIcon()}
-      <p className={cn('text-sm font-medium text-center', getStateColor())}>
-        {message}
-      </p>
-      {state === 'loading' && progress !== undefined && (
-        <div className="w-full max-w-xs">
-          <Progress value={progress} className="h-2" />
-          <p className="text-xs text-gray-500 mt-1 text-center">
-            {Math.round(progress)}%
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Componente de skeleton loading
-export function SkeletonLoading({
-  lines = 3,
-  avatar = false,
-  className
-}: SkeletonLoadingProps) {
-  return (
-    <div className={cn('space-y-3', className)}>
-      {avatar && (
-        <div className="flex items-center space-x-3">
-          <div className="h-10 w-10 rounded-full bg-gray-200 animate-pulse" />
-          <div className="space-y-2 flex-1">
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4" />
-            <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
-          </div>
-        </div>
-      )}
-      
-      <div className="space-y-2">
-        {Array.from({ length: lines }).map((_, i) => (
-          <div
-            key={i}
-            className={cn(
-              'h-4 bg-gray-200 rounded animate-pulse',
-              i === lines - 1 ? 'w-3/4' : 'w-full'
-            )}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Componente de loading para botões
-export function ButtonLoading({ size = 'sm' }: { size?: LoadingSize }) {
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm':
-        return 'h-3 w-3';
-      case 'md':
-        return 'h-4 w-4';
-      case 'lg':
-        return 'h-5 w-5';
-      case 'xl':
-        return 'h-6 w-6';
-      default:
-        return 'h-4 w-4';
-    }
-  };
-
-  return (
-    <Loader2 className={cn('animate-spin', getSizeClasses())} />
-  );
-}
-
-// Componente de loading para páginas inteiras
-export function PageLoading({ message = 'Carregando...' }: { message?: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center space-y-4">
-        <div className="relative">
-          <div className="h-16 w-16 rounded-full border-4 border-gray-200 border-t-blue-500 animate-spin mx-auto" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Shield className="h-6 w-6 text-blue-500" />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold text-gray-900">Hub Control</h2>
-          <p className="text-sm text-gray-600">{message}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Hook para gerenciar estados de loading
-export function useLoadingState() {
-  const [loading, setLoading] = React.useState(false);
-  const [progress, setProgress] = React.useState(0);
-  const [message, setMessage] = React.useState('');
-
-  const startLoading = (initialMessage = 'Carregando...') => {
-    setLoading(true);
+  // Funções de conveniência
+  const startLoading = useCallback((message?: string) => {
+    updateState('loading', message);
     setProgress(0);
-    setMessage(initialMessage);
-  };
+  }, [updateState]);
 
-  const updateProgress = (newProgress: number, newMessage?: string) => {
-    setProgress(newProgress);
-    if (newMessage) setMessage(newMessage);
-  };
+  const setSuccess = useCallback((message?: string) => {
+    updateState('success', message);
+    setProgress(100);
+  }, [updateState]);
 
-  const stopLoading = () => {
-    setLoading(false);
+  const setError = useCallback((message?: string) => {
+    updateState('error', message);
     setProgress(0);
+  }, [updateState]);
+
+  const reset = useCallback(() => {
+    setState('idle');
     setMessage('');
-  };
+    setProgress(0);
+  }, []);
+
+  // Simular progresso automático
+  const simulateProgress = useCallback((duration: number = 3000) => {
+    if (state !== 'loading') return;
+
+    const interval = 50;
+    const increment = 100 / (duration / interval);
+    let currentProgress = 0;
+
+    const timer = setInterval(() => {
+      currentProgress += increment;
+      if (currentProgress >= 95) {
+        clearInterval(timer);
+        setProgress(95); // Parar em 95% até completar manualmente
+      } else {
+        setProgress(currentProgress);
+      }
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [state]);
 
   return {
-    loading,
+    state,
     progress,
     message,
     startLoading,
-    updateProgress,
-    stopLoading
+    setSuccess,
+    setError,
+    reset,
+    updateState,
+    setProgress,
+    setMessage,
+    simulateProgress,
+    isLoading: state === 'loading',
+    isSuccess: state === 'success',
+    isError: state === 'error',
+    isIdle: state === 'idle'
   };
 }
 
-// Estilos CSS para animações personalizadas
-export const loadingStyles = `
-  @keyframes pulse {
-    0%, 80%, 100% {
-      transform: scale(0);
+// ============================================
+// COMPONENTES DE LOADING
+// ============================================
+
+// Spinner animado
+export function LoadingSpinner({ 
+  size = 'md', 
+  className,
+  ...props 
+}: { size?: LoadingSize; className?: string }) {
+  const sizeClasses = {
+    xs: 'w-3 h-3',
+    sm: 'w-4 h-4',
+    md: 'w-6 h-6',
+    lg: 'w-8 h-8',
+    xl: 'w-12 h-12'
+  };
+
+  return (
+    <Loader2 
+      className={cn('animate-spin', sizeClasses[size], className)} 
+      {...props}
+    />
+  );
+}
+
+// Dots animados
+export function LoadingDots({ 
+  size = 'md', 
+  className 
+}: { size?: LoadingSize; className?: string }) {
+  const sizeClasses = {
+    xs: 'w-1 h-1',
+    sm: 'w-1.5 h-1.5',
+    md: 'w-2 h-2',
+    lg: 'w-3 h-3',
+    xl: 'w-4 h-4'
+  };
+
+  const dotClass = cn('rounded-full bg-current animate-pulse', sizeClasses[size]);
+
+  return (
+    <div className={cn('flex space-x-1', className)}>
+      <div className={cn(dotClass, 'animation-delay-0')} />
+      <div className={cn(dotClass, 'animation-delay-150')} />
+      <div className={cn(dotClass, 'animation-delay-300')} />
+    </div>
+  );
+}
+
+// Pulse animado
+export function LoadingPulse({ 
+  size = 'md', 
+  className 
+}: { size?: LoadingSize; className?: string }) {
+  const sizeClasses = {
+    xs: 'w-8 h-8',
+    sm: 'w-12 h-12',
+    md: 'w-16 h-16',
+    lg: 'w-20 h-20',
+    xl: 'w-24 h-24'
+  };
+
+  return (
+    <div className={cn('relative', className)}>
+      <div className={cn(
+        'rounded-full bg-blue-400 opacity-75 animate-ping absolute',
+        sizeClasses[size]
+      )} />
+      <div className={cn(
+        'rounded-full bg-blue-500',
+        sizeClasses[size]
+      )} />
+    </div>
+  );
+}
+
+// Skeleton loader
+export function LoadingSkeleton({ 
+  className,
+  lines = 3,
+  ...props 
+}: { 
+  className?: string; 
+  lines?: number;
+}) {
+  return (
+    <div className={cn('animate-pulse space-y-2', className)} {...props}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className={cn(
+            'h-4 bg-gray-200 rounded',
+            i === lines - 1 ? 'w-3/4' : 'w-full'
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Barra de progresso
+export function LoadingProgress({ 
+  progress = 0, 
+  className,
+  showPercentage = false,
+  animated = true
+}: { 
+  progress?: number; 
+  className?: string;
+  showPercentage?: boolean;
+  animated?: boolean;
+}) {
+  const clampedProgress = Math.min(Math.max(progress, 0), 100);
+
+  return (
+    <div className={cn('w-full', className)}>
+      <div className="flex justify-between items-center mb-1">
+        {showPercentage && (
+          <span className="text-sm font-medium text-gray-700">
+            {Math.round(clampedProgress)}%
+          </span>
+        )}
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2">
+        <div
+          className={cn(
+            'bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out',
+            animated && 'animate-pulse'
+          )}
+          style={{ width: `${clampedProgress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE PRINCIPAL ENHANCED LOADING
+// ============================================
+
+export function EnhancedLoading({
+  state = 'loading',
+  size = 'md',
+  variant = 'spinner',
+  text,
+  className,
+  fullScreen = false,
+  overlay = false,
+  progress = 0,
+  duration = 0,
+  onComplete
+}: LoadingProps) {
+  const [currentProgress, setCurrentProgress] = useState(progress);
+
+  // Simular progresso se duration for fornecido
+  useEffect(() => {
+    if (duration > 0 && state === 'loading') {
+      const interval = 50;
+      const increment = 100 / (duration / interval);
+      let prog = 0;
+
+      const timer = setInterval(() => {
+        prog += increment;
+        if (prog >= 100) {
+          clearInterval(timer);
+          setCurrentProgress(100);
+          onComplete?.();
+        } else {
+          setCurrentProgress(prog);
+        }
+      }, interval);
+
+      return () => clearInterval(timer);
+    } else {
+      setCurrentProgress(progress);
     }
-    40% {
-      transform: scale(1);
+  }, [duration, state, progress, onComplete]);
+
+  // Renderizar componente baseado na variante
+  const renderLoadingComponent = () => {
+    switch (variant) {
+      case 'dots':
+        return <LoadingDots size={size} />;
+      case 'pulse':
+        return <LoadingPulse size={size} />;
+      case 'skeleton':
+        return <LoadingSkeleton />;
+      case 'progress':
+        return <LoadingProgress progress={currentProgress} showPercentage />;
+      default:
+        return <LoadingSpinner size={size} />;
     }
-  }
+  };
+
+  // Renderizar ícone baseado no estado
+  const renderStateIcon = () => {
+    switch (state) {
+      case 'success':
+        return <CheckCircle className="w-6 h-6 text-green-500" />;
+      case 'error':
+        return <XCircle className="w-6 h-6 text-red-500" />;
+      case 'loading':
+        return renderLoadingComponent();
+      default:
+        return null;
+    }
+  };
+
+  // Classes do container
+  const containerClasses = cn(
+    'flex flex-col items-center justify-center space-y-2',
+    {
+      'fixed inset-0 z-50': fullScreen,
+      'absolute inset-0': overlay && !fullScreen,
+      'bg-white/80 backdrop-blur-sm': overlay || fullScreen,
+    },
+    className
+  );
+
+  // Classes do texto
+  const textClasses = cn(
+    'text-sm font-medium',
+    {
+      'text-gray-600': state === 'loading',
+      'text-green-600': state === 'success',
+      'text-red-600': state === 'error',
+    }
+  );
+
+  return (
+    <div className={containerClasses}>
+      {renderStateIcon()}
+      {text && (
+        <p className={textClasses}>
+          {text}
+        </p>
+      )}
+      {variant === 'progress' && state === 'loading' && (
+        <div className="w-full max-w-xs">
+          <LoadingProgress 
+            progress={currentProgress} 
+            showPercentage 
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE DE LOADING PARA BOTÕES
+// ============================================
+
+export interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  loading?: boolean;
+  loadingText?: string;
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+}
+
+export function LoadingButton({
+  children,
+  loading = false,
+  loadingText,
+  disabled,
+  className,
+  variant = 'default',
+  size = 'default',
+  ...props
+}: LoadingButtonProps) {
+  const baseClasses = 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background';
   
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  
-  @keyframes bounce {
-    0%, 20%, 53%, 80%, 100% {
-      transform: translate3d(0,0,0);
-    }
-    40%, 43% {
-      transform: translate3d(0, -30px, 0);
-    }
-    70% {
-      transform: translate3d(0, -15px, 0);
-    }
-    90% {
-      transform: translate3d(0, -4px, 0);
-    }
-  }
-`;
+  const variantClasses = {
+    default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+    destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+    outline: 'border border-input hover:bg-accent hover:text-accent-foreground',
+    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+    ghost: 'hover:bg-accent hover:text-accent-foreground',
+    link: 'underline-offset-4 hover:underline text-primary'
+  };
+
+  const sizeClasses = {
+    default: 'h-10 py-2 px-4',
+    sm: 'h-9 px-3 rounded-md',
+    lg: 'h-11 px-8 rounded-md',
+    icon: 'h-10 w-10'
+  };
+
+  return (
+    <button
+      className={cn(
+        baseClasses,
+        variantClasses[variant],
+        sizeClasses[size],
+        className
+      )}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading && (
+        <LoadingSpinner 
+          size="sm" 
+          className="mr-2" 
+        />
+      )}
+      {loading ? (loadingText || 'Carregando...') : children}
+    </button>
+  );
+}
+
+// ============================================
+// COMPONENTE DE LOADING PARA PÁGINAS
+// ============================================
+
+export function LoadingPage({ 
+  message = 'Carregando página...',
+  showProgress = false,
+  progress = 0
+}: {
+  message?: string;
+  showProgress?: boolean;
+  progress?: number;
+}) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center space-y-4">
+        <LoadingSpinner size="xl" className="mx-auto text-blue-600" />
+        <h2 className="text-lg font-semibold text-gray-900">{message}</h2>
+        {showProgress && (
+          <div className="w-64 mx-auto">
+            <LoadingProgress 
+              progress={progress} 
+              showPercentage 
+              animated 
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// EXPORTAÇÕES
+// ============================================
+
+export default EnhancedLoading;

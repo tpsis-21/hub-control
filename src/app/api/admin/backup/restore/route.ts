@@ -2,9 +2,9 @@
 // Endpoint seguro para restaurar backups com confirmação dupla
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 import { getBackupSystem } from '@/lib/backup-system';
-import { withSecurity } from '@/middleware/security-middleware';
+import { withUnifiedMiddleware } from '@/middleware/unified-middleware';
 import { rateLimitCustom, buildRateLimitHeaders } from '@/lib/security/rate-limit';
 // import { logSecurityEvent } from '@/lib/security';
 import { createStandardErrorResponse, createStandardSuccessResponse, attachSecurityHeaders } from '@/middleware/shared/helpers';
@@ -31,7 +31,7 @@ setInterval(() => {
 // Verificar se usuário é super administrador
 async function verifySuperAdminAccess(request: NextRequest): Promise<{ user: any; error?: string }> {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
@@ -411,8 +411,26 @@ async function GET(request: NextRequest) {
   }
 }
 
-// Exportar as funções HTTP
-export { POST, PUT, GET };
+// Exportar as funções HTTP com middleware unificado
+const POST_WITH_MIDDLEWARE = withUnifiedMiddleware(POST, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const PUT_WITH_MIDDLEWARE = withUnifiedMiddleware(PUT, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const GET_WITH_MIDDLEWARE = withUnifiedMiddleware(GET, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+export { POST_WITH_MIDDLEWARE as POST, PUT_WITH_MIDDLEWARE as PUT, GET_WITH_MIDDLEWARE as GET };
 
 // Função auxiliar (corrigir referência)
 async function verifyAdminAccess(request: NextRequest) {

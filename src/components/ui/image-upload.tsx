@@ -1,15 +1,14 @@
-"use client";
+'use client';
 
-import { useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, X, Image as ImageIcon, AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useImageUpload, useAvatarUpload } from "@/hooks/use-secure-upload";
-import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Upload, X, ImageIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useAvatarUpload, useImageUpload } from '@/hooks/use-secure-upload';
 
 interface ImageUploadProps {
   value?: string;
@@ -34,7 +33,9 @@ export function ImageUpload({
   const uploadHook = type === 'avatar' 
     ? useAvatarUpload({
         onSuccess: (result) => {
+          console.log('🔍 [DEBUG] Avatar upload success:', result);
           if (result.data?.publicUrl) {
+            console.log('🔍 [DEBUG] Calling onChange with URL:', result.data.publicUrl);
             onChange(result.data.publicUrl);
           }
         },
@@ -42,7 +43,9 @@ export function ImageUpload({
       })
     : useImageUpload({
         onSuccess: (result) => {
+          console.log('🔍 [DEBUG] Image upload success:', result);
           if (result.data?.publicUrl) {
+            console.log('🔍 [DEBUG] Calling onChange with URL:', result.data.publicUrl);
             onChange(result.data.publicUrl);
           }
         },
@@ -56,22 +59,40 @@ export function ImageUpload({
     if (!file) return;
 
     try {
+      console.log('🔄 [ImageUpload] Iniciando upload:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        uploadType: type
+      });
+      
       // Upload usando o sistema seguro
-      await upload(file, 'image');
+      const result = await upload(file, 'image');
+      
+      console.log('📤 [ImageUpload] Resultado do upload:', {
+        success: result?.success,
+        publicUrl: result?.data?.publicUrl,
+        uploadType: type
+      });
+      
+      console.log('✅ [ImageUpload] Upload finalizado');
     } catch (error) {
-      console.error('Erro no upload:', error);
+      console.error('❌ [ImageUpload] Erro no upload (catch):', error);
     } finally {
       // Limpar o input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      console.log('🏁 [ImageUpload] Upload process finalizado');
     }
   };
 
   const handleRemove = () => {
+    console.log('🗑️ [ImageUpload] Removendo imagem, chamando onRemove');
     if (onRemove) {
       onRemove();
     }
+    console.log('🗑️ [ImageUpload] Remoção concluída');
   };
 
   if (type === 'avatar') {

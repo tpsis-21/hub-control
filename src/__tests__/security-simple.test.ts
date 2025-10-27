@@ -1,15 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
-
-// Configuração do Supabase para testes
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+import { logger } from '@/utils/production-logger';
+import { createApiSupabaseClient } from '@/lib/supabase/unified-client';
 
 describe('🔒 Testes de Segurança - Hub Control', () => {
   let supabase: any;
 
   beforeAll(() => {
-    if (supabaseUrl && supabaseKey) {
-      supabase = createClient(supabaseUrl, supabaseKey);
+    try {
+      supabase = createApiSupabaseClient(true); // Service role para testes
+    } catch (error) {
+      logger.warn('Supabase não configurado para testes:', error);
     }
   });
 
@@ -78,7 +77,7 @@ describe('🔒 Testes de Segurança - Hub Control', () => {
         expect(supabase).toBeDefined();
         expect(supabaseUrl).toContain('supabase.co');
       } else {
-        console.log('⚠️ Variáveis de ambiente Supabase não configuradas');
+        logger.debug('⚠️ Variáveis de ambiente Supabase não configuradas', undefined, "DEBUG");
         expect(true).toBe(true); // Teste passa mesmo sem configuração
       }
     });

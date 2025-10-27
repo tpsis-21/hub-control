@@ -7,6 +7,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createStandardErrorResponse, createStandardSuccessResponse } from '@/middleware/shared/helpers'
+import { logger } from '@/utils/production-logger'
 
 // =====================================================
 // FUNÇÕES AUXILIARES
@@ -59,7 +60,7 @@ async function createAuthClient() {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚪 Iniciando logout')
+    logger.debug('🚪 Iniciando logout', undefined, "DEBUG")
     
     // =====================================================
     // 1. CRIAR CLIENTE SUPABASE
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     // 3. SUCESSO
     // =====================================================
     
-    console.log('✅ Logout realizado com sucesso')
+    logger.debug('✅ Logout realizado com sucesso', undefined, "DEBUG")
     
     return createStandardSuccessResponse(null, 'Logout realizado com sucesso')
     

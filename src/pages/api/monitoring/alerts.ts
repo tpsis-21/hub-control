@@ -158,7 +158,7 @@ async function handleGetAlerts(
       },
     });
   } catch (error) {
-    requestLogger.error('Erro ao listar alertas', error);
+    requestLogger.error('Erro ao listar alertas', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }
@@ -254,7 +254,7 @@ async function handlePostAlerts(
         });
     }
   } catch (error) {
-    requestLogger.error('Erro ao processar ação em alerta', error);
+    requestLogger.error('Erro ao processar ação em alerta', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }
@@ -306,7 +306,7 @@ async function handlePutAlerts(
       data: { rule },
     });
   } catch (error) {
-    requestLogger.error('Erro ao atualizar regra de alerta', error);
+    requestLogger.error('Erro ao atualizar regra de alerta', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }
@@ -338,7 +338,7 @@ async function handleDeleteAlerts(
       message: 'Regra de alerta removida com sucesso',
     });
   } catch (error) {
-    requestLogger.error('Erro ao remover regra de alerta', error);
+    requestLogger.error('Erro ao remover regra de alerta', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }

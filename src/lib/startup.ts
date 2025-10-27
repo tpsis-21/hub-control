@@ -14,9 +14,10 @@ export async function initializeServices() {
     messageQueueService.startProcessing();
     LoggerService.info('MessageQueueService iniciado com sucesso');
 
-    // Inicializar o serviço de lembretes
-    ReminderService.startReminderService();
-    LoggerService.info('ReminderService iniciado com sucesso');
+    // Inicializar o serviço de lembretes - TEMPORARIAMENTE DESABILITADO
+    // ReminderService.startReminderService();
+    // LoggerService.info('ReminderService iniciado com sucesso');
+    LoggerService.info('ReminderService temporariamente desabilitado para manutenção');
 
     LoggerService.info('Todos os serviços foram inicializados com sucesso');
   } catch (error) {
@@ -36,9 +37,10 @@ export async function shutdownServices() {
     messageQueueService.stopProcessing();
     LoggerService.info('MessageQueueService parado');
 
-    // Parar o serviço de lembretes
-    ReminderService.stopReminderService();
-    LoggerService.info('ReminderService parado');
+    // Parar o serviço de lembretes - TEMPORARIAMENTE DESABILITADO
+    // ReminderService.stopReminderService();
+    // LoggerService.info('ReminderService parado');
+    LoggerService.info('ReminderService não estava em execução (desabilitado)');
 
     LoggerService.info('Todos os serviços foram parados com sucesso');
   } catch (error) {

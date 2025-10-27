@@ -72,7 +72,7 @@ export default async function handler(
     console.error('Erro na API de performance:', error);
     return res.status(500).json({ 
       error: 'Erro interno do servidor',
-      details: error.message 
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
 }
@@ -110,7 +110,7 @@ async function handleRunTest(
   } catch (error) {
     return res.status(500).json({
       error: 'Erro ao executar teste de performance',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
 }
@@ -133,7 +133,7 @@ async function handleListTests(
   } catch (error) {
     return res.status(500).json({
       error: 'Erro ao listar testes',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
 }
@@ -163,7 +163,7 @@ async function handleGetTest(
   } catch (error) {
     return res.status(500).json({
       error: 'Erro ao buscar teste',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
 }
@@ -187,7 +187,7 @@ async function handleDeleteTest(
   } catch (error) {
     return res.status(500).json({
       error: 'Erro ao deletar teste',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
 }
@@ -210,7 +210,7 @@ async function handleCleanup(
   } catch (error) {
     return res.status(500).json({
       error: 'Erro na limpeza',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
 }

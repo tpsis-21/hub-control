@@ -1,6 +1,6 @@
 // @/app/api/activities/recent/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from '@/lib/supabase/clients/server';
 import { LoggerService } from '@/services/logger.service';
 import { memoryCache, generateCacheKey } from '@/lib/cache';
 import { systemMonitor, MonitoringUtils } from '@/lib/monitoring';
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Processar e sanitizar as atividades
-    const processedActivities = activities?.map(activity => ({
+    const processedActivities = activities?.map((activity: any) => ({
       id: activity.id,
       created_at: activity.created_at,
       action: activity.action || 'Ação desconhecida',

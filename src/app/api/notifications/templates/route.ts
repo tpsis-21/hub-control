@@ -2,9 +2,9 @@
 // Endpoints para gerenciar templates de notificação
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 // import { notificationSystem } from '@/lib/notifications';
-import { applySecurityMiddleware } from '@/middleware/security-middleware';
+import { withUnifiedMiddleware } from '@/middleware/unified-middleware';
 // import { logSecurityEvent } from '@/lib/security';
 import { createStandardErrorResponse, createStandardSuccessResponse, attachSecurityHeaders } from '@/middleware/shared/helpers';
 import { z } from 'zod';
@@ -114,23 +114,9 @@ async function checkUserPermissions(supabase: any, action: string): Promise<{
 }
 
 // GET - Listar templates
-export async function GET(request: NextRequest) {
+async function GET(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
-
-      enablePayloadScan: false,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return attachSecurityHeaders(
-        securityCheck.response || createStandardErrorResponse('Acesso negado', 'Você não tem permissão para acessar este recurso.', 403)
-      )
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission, role } = await checkUserPermissions(supabase, 'read');
 
     if (!hasPermission) {
@@ -175,12 +161,12 @@ export async function GET(request: NextRequest) {
     //   query = query.eq('is_active', filters.isActive);
     // }
     // if (filters.search) {
-    //   query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    //   query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%;
     // }
     //
     // // Aplicar paginação
     // if (filters.offset) {
-    //   query = query.range(filters.offset, (filters.offset + (filters.limit || 20)) - 1);
+    //   query = query.range(filters.offset`, (filters.offset + (filters.limit || 20)) - 1);
     // } else if (filters.limit) {
     //   query = query.limit(filters.limit);
     // } else {
@@ -238,23 +224,9 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Criar novo template
-export async function POST(request: NextRequest) {
+async function POST(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
-
-      enablePayloadScan: true,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return attachSecurityHeaders(
-        securityCheck.response || createStandardErrorResponse('Acesso negado', 'Você não tem permissão para acessar este recurso.', 403)
-      )
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'create');
 
     if (!hasPermission) {
@@ -388,23 +360,9 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Atualizar template
-export async function PUT(request: NextRequest) {
+async function PUT(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
-
-      enablePayloadScan: true,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return attachSecurityHeaders(
-        securityCheck.response || createStandardErrorResponse('Acesso negado', 'Você não tem permissão para acessar este recurso.', 403)
-      )
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'update');
 
     if (!hasPermission) {
@@ -536,23 +494,9 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE - Deletar template
-export async function DELETE(request: NextRequest) {
+async function DELETE(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
-
-      enablePayloadScan: false,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return attachSecurityHeaders(
-        securityCheck.response || createStandardErrorResponse('Acesso negado', 'Você não tem permissão para acessar este recurso.', 403)
-      )
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'delete');
 
     if (!hasPermission) {
@@ -649,3 +593,31 @@ export async function DELETE(request: NextRequest) {
     )
   }
 }
+
+// Handlers com middleware unificado
+const GET_WITH_MIDDLEWARE = withUnifiedMiddleware(GET, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const POST_WITH_MIDDLEWARE = withUnifiedMiddleware(POST, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const PUT_WITH_MIDDLEWARE = withUnifiedMiddleware(PUT, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const DELETE_WITH_MIDDLEWARE = withUnifiedMiddleware(DELETE, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+// Exportações renomeadas
+export { GET_WITH_MIDDLEWARE as GET, POST_WITH_MIDDLEWARE as POST, PUT_WITH_MIDDLEWARE as PUT, DELETE_WITH_MIDDLEWARE as DELETE };

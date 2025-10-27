@@ -12,6 +12,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // TIPOS E INTERFACES
@@ -289,7 +290,7 @@ export function usePerformanceMonitoring({
         lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
         observersRef.current.performanceObserver = lcpObserver;
       } catch (error) {
-        console.warn('LCP observer não suportado:', error);
+        logger.warn('LCP observer não suportado:', error instanceof Error ? error : new Error(String(error)));
       }
       
       // FID (First Input Delay)
@@ -304,7 +305,7 @@ export function usePerformanceMonitoring({
         });
         fidObserver.observe({ entryTypes: ['first-input'] });
       } catch (error) {
-        console.warn('FID observer não suportado:', error);
+        logger.warn('FID observer não suportado:', error instanceof Error ? error : new Error(String(error)));
       }
       
       // CLS (Cumulative Layout Shift)
@@ -321,8 +322,8 @@ export function usePerformanceMonitoring({
         });
         clsObserver.observe({ entryTypes: ['layout-shift'] });
       } catch (error) {
-        console.warn('CLS observer não suportado:', error);
-      }
+         logger.warn('CLS observer não suportado:', error instanceof Error ? error : new Error(String(error)));
+       }
     }
     
     // Métricas de navegação
@@ -592,7 +593,7 @@ function determineSeverity(error: ErrorEvent | PromiseRejectionEvent): ErrorMetr
   const message = 'message' in error ? error.message : error.reason?.toString() || '';
   
   // Erros críticos
-  if (message.includes('ChunkLoadError') || 
+  if (message.includes('ChunkLoadError') ||
       message.includes('Loading chunk') ||
       message.includes('Network Error') ||
       message.includes('Failed to fetch')) {

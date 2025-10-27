@@ -1,6 +1,7 @@
 // @/lib/client-status-updater.ts
 import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
 import { isPast, parseISO } from 'date-fns';
+import { logger } from '@/utils/production-logger'
 
 /**
  * Atualiza automaticamente o status dos clientes baseado na data de expiração
@@ -29,7 +30,7 @@ export async function updateExpiredClientsStatus(): Promise<{
     }
     
     // Filtrar clientes expirados
-    const expiredClients = clients.filter(client => {
+    const expiredClients = clients.filter((client: any) => {
       const expirationDate = parseISO(client.expiration_date);
       return isPast(expirationDate);
     });
@@ -39,7 +40,7 @@ export async function updateExpiredClientsStatus(): Promise<{
     }
     
     // Atualizar status dos clientes expirados
-    const clientIds = expiredClients.map(client => client.id);
+    const clientIds = expiredClients.map((client: any) => client.id);
     
     const { error: updateError } = await supabase
       .from('clients')
@@ -54,7 +55,7 @@ export async function updateExpiredClientsStatus(): Promise<{
       return { success: false, updatedCount: 0, error: updateError.message };
     }
     
-    console.log(`Status atualizado para ${expiredClients.length} clientes expirados`);
+    logger.debug(`Status atualizado para ${expiredClients.length} clientes expirados`, undefined, "DEBUG");
     return { success: true, updatedCount: expiredClients.length };
     
   } catch (error) {
@@ -129,7 +130,7 @@ export function scheduleStatusUpdates() {
   const interval = setInterval(async () => {
     const result = await updateExpiredClientsStatus();
     if (result.success && result.updatedCount > 0) {
-      console.log(`Atualização automática: ${result.updatedCount} clientes marcados como inativos`);
+      logger.debug(`Atualização automática: ${result.updatedCount} clientes marcados como inativos`, undefined, "DEBUG");
     }
   }, 5 * 60 * 1000); // 5 minutos
   

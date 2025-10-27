@@ -83,10 +83,7 @@ export class MiddlewareCookieManager {
   set(name: string, value: string, options?: CookieOptions): void {
     const finalOptions = { ...cookieConfig, ...options };
     
-    // Atualizar cookies na request
-    this.request.cookies.set({ name, value, ...finalOptions });
-    
-    // Atualizar cookies na response
+    // Apenas atualizar cookies na response (request cookies são read-only)
     this.response.cookies.set({ name, value, ...finalOptions });
     
     supabaseLogger.cookieOperation('set', name, 'middleware');
@@ -95,10 +92,7 @@ export class MiddlewareCookieManager {
   remove(name: string, options?: CookieOptions): void {
     const finalOptions = { ...cookieConfig, ...options };
     
-    // Remover da request
-    this.request.cookies.set({ name, value: '', ...finalOptions });
-    
-    // Remover da response
+    // Apenas remover da response (request cookies são read-only)
     this.response.cookies.set({ name, value: '', ...finalOptions });
     
     supabaseLogger.cookieOperation('remove', name, 'middleware');

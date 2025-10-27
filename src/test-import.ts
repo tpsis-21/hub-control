@@ -1,6 +1,7 @@
 import { Server } from './lib/types';
+import { logger } from '@/utils/production-logger'
 
-console.log('Import test successful');
+logger.debug('Import test successful', undefined, "DEBUG");
 
 export const testServer: Server = {
   id: 'test',

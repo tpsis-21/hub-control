@@ -33,6 +33,7 @@ import type { Plan, PlanGroup } from "@/lib/types";
 import { editPlanAction } from "./actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { editPlanSchema } from "@/lib/schemas";
+import { logger } from '@/utils/production-logger'
 
 
 type EditPlanFormProps = {
@@ -65,15 +66,15 @@ export function EditPlanForm({ plan, planGroups, children }: EditPlanFormProps) 
   });
 
   function onSubmit(values: z.infer<typeof editPlanSchema>) {
-    console.log('🔍 EditPlanForm - onSubmit chamado com valores:', JSON.stringify(values, null, 2));
+    logger.debug('🔍 EditPlanForm - onSubmit chamado com valores:', JSON.stringify(values, null, 2));
     startTransition(async () => {
       try {
-        console.log('🔍 EditPlanForm - Chamando editPlanAction...');
+        logger.debug('🔍 EditPlanForm - Chamando editPlanAction...');
         const result = await editPlanAction(values);
-        console.log('🔍 EditPlanForm - Resultado recebido:', JSON.stringify(result, null, 2));
+        logger.debug('🔍 EditPlanForm - Resultado recebido:', JSON.stringify(result, null, 2));
         
         if (result.success) {
-          console.log('✅ EditPlanForm - Sucesso na edição');
+          logger.debug('✅ EditPlanForm - Sucesso na edição');
           toast({
             title: "Sucesso!",
             description: `Plano ${result.data?.name || ''} atualizado.`,
@@ -348,3 +349,4 @@ export function EditPlanForm({ plan, planGroups, children }: EditPlanFormProps) 
     </Dialog>
   );
 }
+

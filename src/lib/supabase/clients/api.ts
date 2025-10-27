@@ -1,25 +1,9 @@
 // src/lib/supabase/clients/api.ts
 // Cliente Supabase consolidado para uso em API routes
 
-import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../../database.types';
-import { supabaseConfig } from '../config';
 import { UserManager } from '../auth/user';
-import { supabaseLogger } from '../utils/logger';
-
-// Cliente Supabase para manipuladores de rota (API)
-let apiClient: ReturnType<typeof createClient<Database>> | null = null;
-
-export function createApiSupabaseClient() {
-  if (!apiClient) {
-    apiClient = createClient<Database>(
-      supabaseConfig.url,
-      supabaseConfig.anonKey
-    );
-    supabaseLogger.clientCreated('api');
-  }
-  return apiClient;
-}
+import { createApiSupabaseClient } from '../unified-client';
 
 // Manager de usuário para cliente API
 const apiUserManager = new UserManager(createApiSupabaseClient());
@@ -71,13 +55,13 @@ export async function isUserApprovedById(userId: string): Promise<boolean> {
   return await apiUserManager.isUserApproved(userId);
 }
 
-// === EXPORTS PARA COMPATIBILIDADE ===
+// === EXPORTAÇÕES ===
 
-// Manter compatibilidade com imports existentes
 export {
+  createApiSupabaseClient,
   createApiSupabaseClient as createClient,
   createApiSupabaseClient as supabase,
 };
 
-// Export do cliente padrão
+// Exportação padrão
 export default createApiSupabaseClient();

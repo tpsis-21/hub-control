@@ -306,7 +306,7 @@ class OptimizationConfigManager {
         return { ...DEFAULT_CONFIG, ...parsed };
       }
     } catch (error) {
-      console.warn('Erro ao carregar configuração:', error);
+      logger.warn('Erro ao carregar configuração:', error);
     }
     
     return { ...DEFAULT_CONFIG };
@@ -321,7 +321,7 @@ class OptimizationConfigManager {
     try {
       localStorage.setItem(this.storageKey, JSON.stringify(this.config));
     } catch (error) {
-      console.warn('Erro ao salvar configuração:', error);
+      logger.warn('Erro ao salvar configuração:', error);
     }
   }
   
@@ -496,6 +496,7 @@ export const optimizationConfig = new OptimizationConfigManager();
 // ============================================
 
 import { useState, useEffect } from 'react';
+import { logger } from '@/utils/production-logger'
 
 export function useOptimizationConfig() {
   const [config, setConfig] = useState<GlobalOptimizationConfig>(optimizationConfig.getConfig());

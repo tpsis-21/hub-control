@@ -536,4 +536,4 @@ export function BPIXConfig() {
   )
 }
 
-export default BPIXConfig
+export default BPIXConfig;

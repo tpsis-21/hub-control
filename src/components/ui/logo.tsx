@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
+import { logger } from '@/utils/production-logger'
 
 interface LogoProps {
   variant?: 'full' | 'icon'
@@ -99,7 +100,7 @@ export function Logo({ variant = 'full', size = 'md', className, fallbackToSvg =
       quality={95}
       onError={() => {
         // Fallback para SVG se PNG não carregar
-        console.warn('Logo PNG não encontrada, usando SVG como fallback')
+        logger.warn('Logo PNG não encontrada, usando SVG como fallback', undefined, "WARN")
       }}
     />
   )

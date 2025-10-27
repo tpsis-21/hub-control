@@ -575,14 +575,14 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
   // Efeito para carregar dados iniciais
   useEffect(() => {
     refresh();
-  }, []);
+  }, [refresh]);
 
   // Efeito para recarregar quando filtros mudarem
   useEffect(() => {
     if (!loading) {
       loadNotifications();
     }
-  }, [filters, searchTerm]);
+  }, [filters, searchTerm, loading, loadNotifications]);
 
   // Efeito para auto-refresh
   useEffect(() => {

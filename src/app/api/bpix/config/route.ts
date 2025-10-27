@@ -3,45 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { bpixService, BPIXConfig } from '@/services/bpix.service'
 import { ErrorService, ErrorType } from '@/services/error.service'
 import { LoggerService } from '@/services/logger.service'
-import { createServerClient } from '@supabase/ssr'
+import { createApiSupabaseClient } from '@/lib/supabase/unified-client'
 import { cookies } from 'next/headers'
 
 // Função auxiliar para obter o usuário autenticado
 async function getAuthenticatedUser() {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-          set(name: string, value: string, options: any) {
-            cookieStore.set({
-              name,
-              value,
-              ...options,
-              httpOnly: true,
-              secure: process.env.NODE_ENV === 'production',
-              sameSite: 'lax',
-              path: '/'
-            })
-          },
-          remove(name: string, options: any) {
-            cookieStore.set({
-              name,
-              value: '',
-              ...options,
-              maxAge: 0,
-              path: '/'
-            })
-          },
-        },
-      }
-    )
-
+    const supabase = createApiSupabaseClient(false)
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error || !user) {
@@ -288,36 +256,19 @@ export async function DELETE(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser()
     
-    // Desativa a configuração no banco de dados
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
-    const { error } = await supabase
-      .from('integration_configs')
-      .update({ is_active: false })
-      .eq('provider', 'bpix')
-      .eq('created_by', user.id)
-
-    if (error) {
-      throw ErrorService.createError(
-        ErrorType.DATABASE,
-        'Erro ao remover configuração BPIX',
-        'DELETE_CONFIG_ERROR',
-        { supabaseError: error }
-      )
-    }
-
-    LoggerService.info('Configuração BPIX removida', 'BPIX Config API', {
-      user_id: user.id
-    })
-
+    // SEGURANÇA: Redirecionar para API administrativa segura
+    // Esta operação agora deve ser feita através da API /api/admin/bpix-config
     return NextResponse.json({
-      success: true,
-      message: 'Configuração BPIX removida com sucesso'
-    })
+      success: false,
+      message: 'Esta operação foi movida para /api/admin/bpix-config por motivos de segurança',
+      error: 'OPERATION_MOVED',
+      redirect: '/api/admin/bpix-config'
+    }, { status: 301 });
+
+    // CÓDIGO REMOVIDO POR SEGURANÇA - não usar service role no frontend
+    // const supabase = createApiSupabaseClient(true)
+
+    // CÓDIGO REMOVIDO - operação movida para API administrativa segura
   } catch (error) {
     const appError = ErrorService.fromNativeError(error)
     ErrorService.logError(appError, 'BPIX Config API - DELETE')

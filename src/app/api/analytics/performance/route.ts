@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createUnifiedMiddleware } from '@/middleware/unified-middleware';
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // SCHEMAS DE VALIDAÇÃO
@@ -220,7 +221,7 @@ class PerformanceAnalytics {
     }
 
     // Log do alerta
-    console.warn('🚨 Alerta de Performance:', alert);
+    logger.warn('🚨 Alerta de Performance:', alert);
   }
 
   // Obter estatísticas

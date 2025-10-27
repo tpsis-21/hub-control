@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { logger } from '@/utils/production-logger'
 
 // Interfaces para tipagem
 interface SecurityTestResult {
@@ -634,12 +635,12 @@ describe('🔒 Testes Avançados de Segurança', () => {
       expect(overallScore).toBeLessThanOrEqual(100);
       
       // Log do relatório
-      console.log('\n🔒 RELATÓRIO DE SEGURANÇA AVANÇADO:');
-      console.log(`📊 Score Geral: ${overallScore.toFixed(1)}/100`);
-      console.log(`🛡️ LDAP Injection: ${ldapTest ? '❌ Detectado' : '✅ Protegido'}`);
-      console.log(`🔍 XXE Protection: ${xxeTest ? '❌ Vulnerável' : '✅ Protegido'}`);
-      console.log(`🔐 Security Headers: ${headersTest.score.toFixed(1)}%`);
-      console.log(`🔍 Attack Patterns: ${attackTest.score.toFixed(1)}%`);
+      logger.debug('\n🔒 RELATÓRIO DE SEGURANÇA AVANÇADO:', undefined, "DEBUG");
+      logger.debug(`📊 Score Geral: ${overallScore.toFixed(1)}/100`, undefined, "DEBUG");
+      logger.debug(`🛡️ LDAP Injection: ${ldapTest ? '❌ Detectado' : '✅ Protegido'}`, undefined, "DEBUG");
+      logger.debug(`🔍 XXE Protection: ${xxeTest ? '❌ Vulnerável' : '✅ Protegido'}`, undefined, "DEBUG");
+      logger.debug(`🔐 Security Headers: ${headersTest.score.toFixed(1)}%`, undefined, "DEBUG");
+      logger.debug(`🔍 Attack Patterns: ${attackTest.score.toFixed(1)}%`, undefined, "DEBUG");
     });
   });
 });
@@ -678,8 +679,8 @@ describe('🔗 Testes de Integração de Segurança', () => {
     expect(headersResult.passed).toBe(false);
     expect(rateLimitTriggered).toBe(true);
     
-    console.log('\n🛡️ TESTE DE INTEGRAÇÃO COMPLETO:');
-    console.log('✅ Todas as proteções de segurança funcionaram corretamente');
+    logger.debug('\n🛡️ TESTE DE INTEGRAÇÃO COMPLETO:', undefined, "DEBUG");
+    logger.debug('✅ Todas as proteções de segurança funcionaram corretamente', undefined, "DEBUG");
   });
 });
 

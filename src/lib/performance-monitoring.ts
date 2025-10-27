@@ -10,7 +10,7 @@
  */
 
 import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
-import { useEffect } from 'react';
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // INTERFACES E TIPOS
@@ -108,7 +108,7 @@ class PerformanceMonitor {
     // Enviar métricas periodicamente
     this.startPeriodicSending();
     
-    console.log('🔍 Performance Monitor inicializado');
+    logger.debug('🔍 Performance Monitor inicializado', undefined, "DEBUG");
   }
 
   // ============================================
@@ -282,7 +282,7 @@ class PerformanceMonitor {
     
     // Log APIs lentas
     if (metric.duration > 2000) {
-      console.warn(`🐌 API lenta detectada: ${metric.endpoint} (${metric.duration.toFixed(2)}ms)`);
+      logger.warn(`🐌 API lenta detectada: ${metric.endpoint} (${metric.duration.toFixed(2)}ms)`, undefined, "WARN");
     }
   }
 
@@ -296,7 +296,7 @@ class PerformanceMonitor {
     const usagePercent = (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100;
     
     if (usagePercent > 80) {
-      console.warn(`🧠 Alto uso de memória: ${usagePercent.toFixed(1)}%`);
+      logger.warn(`🧠 Alto uso de memória: ${usagePercent.toFixed(1)}%`, undefined, "WARN");
     }
   }
 
@@ -360,7 +360,7 @@ class PerformanceMonitor {
       this.clearMetrics();
       
     } catch (error) {
-      console.warn('Falha ao enviar métricas de performance:', error);
+      logger.warn('Falha ao enviar métricas de performance:', error);
     }
   }
 
@@ -419,21 +419,21 @@ const performanceMonitor = getPerformanceMonitor();
 // HOOKS E UTILITÁRIOS
 // ============================================
 
-// Hook para monitoramento de componentes
-export function usePerformanceTracking(componentName: string) {
-  useEffect(() => {
-    const startTime = performance.now();
-    
-    return () => {
-      const duration = performance.now() - startTime;
-      performanceMonitor.trackCustomMetric(
-        `component-${componentName}`,
-        duration,
-        duration < 100 ? 'good' : duration < 300 ? 'needs-improvement' : 'poor'
-      );
-    };
-  }, [componentName]);
-}
+// Hook para monitoramento de componentes (movido para performance-tracker.tsx)
+// export function usePerformanceTracking(componentName: string) {
+//   useEffect(() => {
+//     const startTime = performance.now();
+//     
+//     return () => {
+//       const duration = performance.now() - startTime;
+//       performanceMonitor.trackCustomMetric(
+//         `component-${componentName}`,
+//         duration,
+//         duration < 100 ? 'good' : duration < 300 ? 'needs-improvement' : 'poor'
+//       );
+//     };
+//   }, [componentName]);
+// }
 
 // ============================================
 // NOTA: Componente React foi movido para:

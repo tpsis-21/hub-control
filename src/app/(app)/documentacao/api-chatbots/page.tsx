@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Code, Globe, Key, MessageSquare, Users, Zap, AlertTriangle, CheckCircle, Activity, Server, Shield } from "lucide-react";
 import Link from "next/link";
+import { logger } from '@/utils/production-logger'
 
 export default function ApiChatbotsDocumentationPage() {
   return (

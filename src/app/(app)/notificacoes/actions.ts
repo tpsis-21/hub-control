@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 // Removido: import { db } from "@/lib/firebase";
 // Removido: import { collection, getDocs, doc, writeBatch } from "firebase/firestore";
 import type { Reminder, Instruction, OtherTemplate } from './types';
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
 
 // --- as definições de collections removidas pois não são mais usadas ---
 
@@ -56,7 +56,7 @@ function mapPropertiesToSnakeCase(obj: any): any {
 }
 
 async function getCollectionData(table: string, defaultData: any[]): Promise<any[]> {
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     const { data, error } = await (supabase as any).from(table).select('*');
     if (!data || data.length === 0) {
         // Se a tabela estiver vazia, popular com os dados padrão
@@ -89,7 +89,7 @@ export async function getEventTemplates(defaults: OtherTemplate[]): Promise<Othe
 async function updateCollection(table: string, data: any[], schema: any): Promise<{ success: boolean, error?: string }> {
     try {
         const validatedData = schema.parse(data);
-        const supabase = await createApiSupabaseClient();
+        const supabase = await createServerSupabaseClientForActions();
         
         // Para notificações do sistema, usar a tabela notification_templates em vez de notifications
         // A tabela notifications é para notificações ativas do sistema de notificações
@@ -130,3 +130,4 @@ export async function saveUsageInstructions(data: Instruction[]) {
 export async function saveEventTemplates(data: OtherTemplate[]) {
     return updateCollection('notificationEventTemplates', data, otherTemplateSchema);
 }
+

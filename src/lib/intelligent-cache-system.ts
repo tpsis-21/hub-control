@@ -9,6 +9,7 @@ import { realtimeSecurityMonitor } from './security';
 import { SecurityEventType, SecuritySeverity } from './security-monitoring';
 import { createHash } from 'crypto';
 import { LRUCache } from 'lru-cache';
+import { logger } from '@/utils/production-logger'
 
 // Tipos de cache
 export enum CacheType {
@@ -696,7 +697,7 @@ export class IntelligentCacheSystem {
   private scheduleBackgroundRefresh(key: string): void {
     // Implementação placeholder - agendar refresh assíncrono
     setTimeout(async () => {
-      console.log(`Background refresh para chave: ${key}`);
+      logger.debug(`Background refresh para chave: ${key}`, undefined, "DEBUG");
       // Aqui seria chamada a função que recarrega os dados
     }, 1000);
   }
@@ -972,7 +973,7 @@ export class IntelligentCacheSystem {
     for (const pattern of popularPatterns) {
       const result = await this.get(pattern.key);
       if (result.status === CacheStatus.MISS) {
-        console.log(`Pré-carregando dados para chave popular: ${pattern.key}`);
+        logger.debug(`Pré-carregando dados para chave popular: ${pattern.key}`, undefined, "DEBUG");
         // Aqui seria implementada a lógica para recarregar os dados
       }
     }
@@ -988,7 +989,7 @@ export class IntelligentCacheSystem {
   // Otimizar distribuição entre camadas
   private async optimizeLayerDistribution(): Promise<void> {
     // Implementação placeholder para otimização de distribuição
-    console.log('Otimizando distribuição entre camadas...');
+    logger.debug('Otimizando distribuição entre camadas...', undefined, "DEBUG");
   }
   
   // Iniciar persistência
@@ -1003,7 +1004,7 @@ export class IntelligentCacheSystem {
   // Persistir cache
   private async persistCache(): Promise<void> {
     try {
-      console.log('Persistindo cache...');
+      logger.debug('Persistindo cache...', undefined, "DEBUG");
       // Implementação placeholder para persistência
     } catch (error) {
       console.error('Erro ao persistir cache:', error);
@@ -1081,7 +1082,7 @@ export class IntelligentCacheSystem {
       await layer.shutdown();
     }
     
-    console.log('Sistema de cache inteligente finalizado');
+    logger.debug('Sistema de cache inteligente finalizado', undefined, "DEBUG");
   }
 }
 
@@ -1189,7 +1190,7 @@ class RedisCacheLayer extends CacheLayer {
   constructor(config: CacheLayerConfig) {
     super(config);
     // Inicializar cliente Redis
-    console.log(`Inicializando camada Redis: ${config.name}`);
+    logger.debug(`Inicializando camada Redis: ${config.name}`, undefined, "DEBUG");
   }
   
   async get<T>(key: string): Promise<CacheResult<T>> {
@@ -1218,7 +1219,7 @@ class RedisCacheLayer extends CacheLayer {
   
   async shutdown(): Promise<void> {
     // Fechar conexão Redis
-    console.log(`Fechando conexão Redis: ${this.name}`);
+    logger.debug(`Fechando conexão Redis: ${this.name}`, undefined, "DEBUG");
   }
 }
 
@@ -1226,7 +1227,7 @@ class RedisCacheLayer extends CacheLayer {
 class DatabaseCacheLayer extends CacheLayer {
   constructor(config: CacheLayerConfig) {
     super(config);
-    console.log(`Inicializando camada de banco: ${config.name}`);
+    logger.debug(`Inicializando camada de banco: ${config.name}`, undefined, "DEBUG");
   }
   
   async get<T>(key: string): Promise<CacheResult<T>> {
@@ -1254,7 +1255,7 @@ class DatabaseCacheLayer extends CacheLayer {
   }
   
   async shutdown(): Promise<void> {
-    console.log(`Fechando conexão de banco: ${this.name}`);
+    logger.debug(`Fechando conexão de banco: ${this.name}`, undefined, "DEBUG");
   }
 }
 

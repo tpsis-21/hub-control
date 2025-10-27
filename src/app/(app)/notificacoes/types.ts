@@ -28,3 +28,4 @@ export type OtherTemplate = {
     whatsappTemplate: string;
     emailTemplate: string;
 };
+

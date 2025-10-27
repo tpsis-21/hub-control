@@ -192,7 +192,7 @@ export function BPIXDashboard() {
 
   const filteredPayments = payments?.filter(payment => {
     const matchesSearch = payment.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.external_reference?.toLowerCase().includes(searchTerm.toLowerCase())
+                         payment.reference?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || payment.status === statusFilter
     return matchesSearch && matchesStatus
   }) || []

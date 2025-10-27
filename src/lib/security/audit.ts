@@ -3,6 +3,7 @@
 
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { logger } from '@/utils/production-logger'
 
 /**
  * Interface para logs de auditoria

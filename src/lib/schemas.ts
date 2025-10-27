@@ -206,3 +206,4 @@ export const settingsSchema = z.object({
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });
+

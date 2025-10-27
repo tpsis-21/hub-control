@@ -7,6 +7,7 @@
 
 import { z } from 'zod'
 import DOMPurify from 'dompurify'
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // SCHEMAS DE VALIDAÇÃO BÁSICA
@@ -209,7 +210,7 @@ export const envConfigSchema = z.object({
 export function validateEnvironmentConfig() {
   try {
     const config = envConfigSchema.parse(process.env)
-    console.log('✅ Configurações de ambiente validadas com sucesso')
+    logger.debug('✅ Configurações de ambiente validadas com sucesso')
     return config
   } catch (error) {
     if (error instanceof z.ZodError) {

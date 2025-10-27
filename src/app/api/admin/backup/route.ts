@@ -2,9 +2,9 @@
 // Endpoints seguros para controlar o sistema de backup
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 import { getBackupSystem, DEFAULT_TABLE_CONFIGS, BackupMetadata } from '@/lib/backup-system';
-import { withSecurity } from '@/middleware/security-middleware';
+import { withUnifiedMiddleware } from '@/middleware/unified-middleware';
 import { rateLimitCustom, buildRateLimitHeaders } from '@/lib/security/rate-limit';
 // import { logSecurityEvent } from '@/lib/security';
 import { createStandardErrorResponse, createStandardSuccessResponse, attachSecurityHeaders } from '@/middleware/shared/helpers'
@@ -12,7 +12,7 @@ import { createStandardErrorResponse, createStandardSuccessResponse, attachSecur
 // Verificar se usuário é administrador
 async function verifyAdminAccess(request: NextRequest): Promise<{ user: any; error?: string }> {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
@@ -301,5 +301,24 @@ async function DELETE(request: NextRequest) {
   }
 }
 
-// Middleware de segurança aplicado diretamente nas funções
-// As funções GET, POST e DELETE já estão definidas acima e serão exportadas automaticamente
+// Handlers com middleware unificado
+const GET_WITH_MIDDLEWARE = withUnifiedMiddleware(GET, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const POST_WITH_MIDDLEWARE = withUnifiedMiddleware(POST, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const DELETE_WITH_MIDDLEWARE = withUnifiedMiddleware(DELETE, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+// Exportações
+export { GET_WITH_MIDDLEWARE as GET, POST_WITH_MIDDLEWARE as POST, DELETE_WITH_MIDDLEWARE as DELETE };

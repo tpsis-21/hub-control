@@ -3,53 +3,58 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
 import type { Server } from "@/lib/types";
 import { serverFormSchema, editServerSchema } from "@/lib/schemas";
 
 // Busca todos os servidores do usuário autenticado
 export async function getServers(): Promise<Server[]> {
-    const supabase = await createApiSupabaseClient();
+    try {
+      const supabase = await createServerSupabaseClientForActions();
+      
+      // Obter o usuário autenticado
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('Error getting authenticated user:', authError);
+        return [];
+      }
     
-    // Obter o usuário autenticado
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error('Error getting authenticated user:', authError);
+      // Buscar apenas servidores do usuário autenticado
+      const { data, error } = await supabase
+        .from('servers')
+        .select('*')
+        .eq('user_id', user.id);
+      if (error) {
+        console.error('Error fetching servers:', error);
+        return [];
+      }
+      // Mapear propriedades do banco para o tipo Server
+      const servers = (data || []).map(server => ({
+        id: server.id,
+        name: server.name,
+        url: server.url,
+        apiKey: server.api_key,
+        status: server.status,
+        integrationType: server.integration_type,
+        testAutomation: server.test_automation,
+        renewalAutomation: server.renewal_automation,
+        paymentGateway: server.payment_gateway,
+        sendExpirationReminder: server.send_expiration_reminder,
+        sendUsageInstructions: server.send_usage_instructions,
+        testConfig: server.test_config,
+        credits: server.credits,
+        lastCreditsSync: server.last_credits_sync,
+      }));
+      return servers as unknown as Server[];
+    } catch (error) {
+      console.error('Error in getServers:', error);
       return [];
     }
-    
-    // Buscar apenas servidores do usuário autenticado
-    const { data, error } = await supabase
-      .from('servers')
-      .select('*')
-      .eq('user_id', user.id);
-    if (error) {
-      console.error('Error fetching servers:', error);
-      return [];
-    }
-    // Mapear propriedades do banco para o tipo Server
-    const servers = (data || []).map(server => ({
-      id: server.id,
-      name: server.name,
-      url: server.url,
-      apiKey: server.api_key,
-      status: server.status,
-      integrationType: server.integration_type,
-      testAutomation: server.test_automation,
-      renewalAutomation: server.renewal_automation,
-      paymentGateway: server.payment_gateway,
-      sendExpirationReminder: server.send_expiration_reminder,
-      sendUsageInstructions: server.send_usage_instructions,
-      testConfig: server.test_config,
-      credits: server.credits,
-      lastCreditsSync: server.last_credits_sync,
-    }));
-    return servers as unknown as Server[];
 }
 
 // Adiciona um novo servidor, ajustando automações conforme o tipo de integração
 export async function addServerAction(data: z.infer<typeof serverFormSchema>) {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   // Obter o usuário autenticado
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -85,7 +90,7 @@ export async function addServerAction(data: z.infer<typeof serverFormSchema>) {
 // Edita um servidor existente, garantindo consistência das automações
 export async function editServerAction(data: z.infer<typeof editServerSchema>) {
     const { id, ...updateData } = data;
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     
     // Obter o usuário autenticado
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -137,7 +142,7 @@ export async function editServerAction(data: z.infer<typeof editServerSchema>) {
 
 // Remove um servidor pelo ID (apenas do usuário autenticado)
 export async function deleteServerAction(serverId: string) {
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     
     // Obter o usuário autenticado
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -174,3 +179,4 @@ export async function deleteServerAction(serverId: string) {
     if (error) return { success: false, error: error.message };
     return { success: true };
 }
+

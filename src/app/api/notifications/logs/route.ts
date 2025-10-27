@@ -2,11 +2,12 @@
 // Endpoints para consultar logs de entrega e eventos de notificação
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { applySecurityMiddleware } from '@/middleware/security-middleware';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
+import { withUnifiedMiddleware } from '@/middleware/unified-middleware';
 // import { logSecurityEvent } from '@/lib/security';
 import { createStandardErrorResponse, createStandardSuccessResponse, attachSecurityHeaders } from '@/middleware/shared/helpers';
 import { z } from 'zod';
+import { logger } from '@/utils/production-logger'
 
 // Schema para filtros de logs
 const logFiltersSchema = z.object({
@@ -182,22 +183,9 @@ function generateCSV(logs: any[]): string {
 }
 
 // GET - Consultar logs
-export async function GET(request: NextRequest) {
+async function GET(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
-      enablePayloadScan: false,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return attachSecurityHeaders(
-        securityCheck.response || createStandardErrorResponse('Acesso negado', 'Acesso negado', 403)
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'read_logs');
 
     if (!hasPermission) {
@@ -390,22 +378,9 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Exportar logs
-export async function POST(request: NextRequest) {
+async function POST(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
-      enablePayloadScan: true,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return attachSecurityHeaders(
-        securityCheck.response || createStandardErrorResponse('Acesso negado', 'Acesso negado', 403)
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'export_logs');
 
     if (!hasPermission) {
@@ -556,22 +531,9 @@ export async function POST(request: NextRequest) {
 }
 
 // DELETE - Limpar logs antigos
-export async function DELETE(request: NextRequest) {
+async function DELETE(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
-      enablePayloadScan: false,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return attachSecurityHeaders(
-        securityCheck.response || createStandardErrorResponse('Acesso negado', 'Acesso negado', 403)
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'delete_logs');
 
     if (!hasPermission) {
@@ -605,7 +567,7 @@ export async function DELETE(request: NextRequest) {
       // Simular contagem de registros que seriam deletados
       const simulatedCount = Math.floor(Math.random() * 100) + 1;
       
-      console.log(`Simulando contagem de ${simulatedCount} logs anteriores a ${cutoffDate}`);
+      logger.debug(`Simulando contagem de ${simulatedCount} logs anteriores a ${cutoffDate}`, undefined, "DEBUG");
       
       return attachSecurityHeaders(
         createStandardSuccessResponse({
@@ -621,7 +583,7 @@ export async function DELETE(request: NextRequest) {
     // Por enquanto, simulando a deleção
     const simulatedDeletedCount = Math.floor(Math.random() * 100) + 1;
     
-    console.log(`Simulando deleção de ${simulatedDeletedCount} logs anteriores a ${cutoffDate}`);
+    logger.debug(`Simulando deleção de ${simulatedDeletedCount} logs anteriores a ${cutoffDate}`, undefined, "DEBUG");
     
     // Simular dados de resposta
     const count = simulatedDeletedCount;
@@ -659,3 +621,25 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+// Handlers com middleware unificado
+const GET_WITH_MIDDLEWARE = withUnifiedMiddleware(GET, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const POST_WITH_MIDDLEWARE = withUnifiedMiddleware(POST, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const DELETE_WITH_MIDDLEWARE = withUnifiedMiddleware(DELETE, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+// Exportações
+export { GET_WITH_MIDDLEWARE as GET, POST_WITH_MIDDLEWARE as POST, DELETE_WITH_MIDDLEWARE as DELETE };

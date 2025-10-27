@@ -241,3 +241,4 @@ export function ServersTable({ initialServers }: { initialServers: Server[] }) {
     </>
   );
 }
+

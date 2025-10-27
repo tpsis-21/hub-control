@@ -1,7 +1,8 @@
 // src/services/bpix.service.ts
-import { supabase } from '@/lib/supabase'
+import { createApiSupabaseClient } from '@/lib/supabase/unified-client'
 import { ErrorService, ErrorType } from './error.service'
 import { LoggerService } from './logger.service'
+import { HttpRetry, RetryPresets } from '@/lib/http-retry'
 
 // Interfaces para a API BPIX
 export interface BPIXPayment {
@@ -112,6 +113,7 @@ class BPIXService {
     try {
       this.userId = userId
       
+      const supabase = createApiSupabaseClient()
       const { data, error } = await supabase
         .from('integration_configs')
         .select('*')
@@ -178,6 +180,7 @@ class BPIXService {
         created_by: userId
       }
 
+      const supabase = createApiSupabaseClient()
       // Primeiro, desativa configurações antigas do usuário para este provider
       await supabase
         .from('integration_configs')
@@ -219,77 +222,71 @@ class BPIXService {
       )
     }
 
-    const startTime = Date.now()
     const url = `${this.config.baseUrl}${endpoint}`
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${this.config.token}`,
+      'User-Agent': 'Hub-Control-BPIX/1.0'
+    }
 
-    try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.token}`,
-        'User-Agent': 'Hub-Control-BPIX/1.0'
+    LoggerService.info('BPIX API Request', 'BPIXService', {
+      url,
+      method,
+      data: method === 'GET' ? undefined : data
+    })
+
+    // Usar retry com configuração específica para APIs de pagamento
+    const retryOptions = {
+      ...RetryPresets.standard,
+      timeout: this.config.timeout || 30000,
+      onRetry: (error: any, attempt: number, delay: number) => {
+        LoggerService.warn('BPIX API Retry', 'BPIXService', {
+          url,
+          attempt,
+          delay,
+          error: error.message
+        })
       }
+    }
 
-      const requestOptions: RequestInit = {
-        method,
-        headers,
-        signal: AbortSignal.timeout(this.config.timeout || 30000)
-      }
+    const result = await HttpRetry.fetchWithRetry<any>(url, {
+      method,
+      headers,
+      body: data && (method === 'POST' || method === 'PUT') ? JSON.stringify(data) : undefined
+    }, retryOptions)
 
-      if (data && (method === 'POST' || method === 'PUT')) {
-        requestOptions.body = JSON.stringify(data)
-      }
-
-      LoggerService.info('BPIX API Request', 'BPIXService', {
-        url,
-        method,
-        data: method === 'GET' ? undefined : data
-      })
-
-      const response = await fetch(url, requestOptions)
-      const responseData = await response.json()
-      const duration = Date.now() - startTime
-
-      LoggerService.info('BPIX API Response', 'BPIXService', {
-        url,
-        status: response.status,
-        duration,
-        success: response.ok
-      })
-
-      if (!response.ok) {
-        const errorMessage = responseData.message || responseData.error || `HTTP ${response.status}`
-        throw ErrorService.createError(
-          ErrorType.NETWORK,
-          `Erro na API BPIX: ${errorMessage}`,
-          'BPIX_API_ERROR',
-          { status: response.status, response: responseData }
-        )
-      }
-
-      return {
-        success: true,
-        message: 'Requisição realizada com sucesso',
-        data: responseData
-      }
-    } catch (error) {
-      const duration = Date.now() - startTime
+    if (!result.success) {
+      // Determinar tipo de erro baseado na mensagem
+      let errorCode = 'BPIX_REQUEST_ERROR'
+      let errorType = ErrorType.NETWORK
       
-      LoggerService.error('BPIX API Error', 'BPIXService', {
-        url,
-        method,
-        duration,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      })
-
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw ErrorService.createError(
-          ErrorType.NETWORK,
-          'Timeout na requisição para API BPIX',
-          'BPIX_TIMEOUT'
-        )
+      if (result.error?.includes('timeout') || result.error?.includes('AbortError')) {
+        errorCode = 'BPIX_TIMEOUT'
+      } else if (result.error?.includes('422') || result.error?.includes('400')) {
+        errorCode = 'BPIX_VALIDATION_ERROR'
+        errorType = ErrorType.VALIDATION
       }
 
-      throw ErrorService.fromNativeError(error)
+      const appError = ErrorService.createError(
+        errorType,
+        result.error || 'Erro na requisição BPIX',
+        errorCode,
+        { attempts: result.attempts, totalTime: result.totalTime }
+      )
+      ErrorService.logError(appError, 'BPIX Service - Request Failed')
+      throw appError
+    }
+
+    LoggerService.info('BPIX API Success', 'BPIXService', {
+      url,
+      attempts: result.attempts,
+      totalTime: result.totalTime
+    })
+
+    return {
+      success: true,
+      message: 'Requisição realizada com sucesso',
+      data: result.data
     }
   }
 

@@ -53,6 +53,7 @@ import {
   Users,
   MemoryStick
 } from 'lucide-react';
+import { logger } from '@/utils/production-logger'
 import {
   useAutoOptimization,
   useOptimizationMetrics,
@@ -437,7 +438,7 @@ export const AutoOptimizationDashboard: React.FC = () => {
     try {
       // Simular aplicação da recomendação
       await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Recomendação aplicada:', recommendationId);
+      logger.debug('Recomendação aplicada:', recommendationId);
     } catch (error) {
       console.error('Erro ao aplicar recomendação:', error);
     } finally {
@@ -455,10 +456,10 @@ export const AutoOptimizationDashboard: React.FC = () => {
     
     if (!isSystemRunning) {
       // Simular início da otimização
-      console.log('Sistema de otimização iniciado');
+      logger.debug('Sistema de otimização iniciado');
     } else {
       // Simular parada da otimização
-      console.log('Sistema de otimização parado');
+      logger.debug('Sistema de otimização parado');
     }
   };
 
@@ -466,7 +467,7 @@ export const AutoOptimizationDashboard: React.FC = () => {
     const updatedConfig = { ...localConfig, ...newConfig };
     setLocalConfig(updatedConfig);
     // Simular atualização da configuração
-    console.log('Configuração atualizada:', updatedConfig);
+    logger.debug('Configuração atualizada:', updatedConfig);
   };
 
   if (error) {
@@ -497,7 +498,7 @@ export const AutoOptimizationDashboard: React.FC = () => {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => console.log('Atualizar recomendações')}
+            onClick={() => logger.debug('Atualizar recomendações')}
             disabled={isOptimizing}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isOptimizing ? 'animate-spin' : ''}`} />

@@ -24,6 +24,7 @@ import { useLoading } from "@/hooks/use-loading";
 import { Loading } from "@/components/ui/loading";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { logger } from '@/utils/production-logger'
 
 export default function LGPDPage() {
   const { toast } = useToast();
@@ -90,7 +91,7 @@ export default function LGPDPage() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Aqui seria a implementação real da exclusão
-      console.log('Solicitação de exclusão:', { email, reason: deleteReason });
+      logger.debug('Solicitação de exclusão:', { email, reason: deleteReason });
       
       toast({
         title: "Solicitação enviada",

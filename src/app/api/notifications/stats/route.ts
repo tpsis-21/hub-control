@@ -2,9 +2,9 @@
 // Endpoints para obter estatísticas e métricas de notificações
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 // import { notificationSystem } from '@/lib/notifications';
-import { applySecurityMiddleware } from '@/middleware/security-middleware';
+import { withUnifiedMiddleware } from '@/middleware/unified-middleware';
 // import { logSecurityEvent } from '@/lib/security';
 import { z } from 'zod';
 
@@ -107,24 +107,10 @@ function calculateDateRange(period: string, startDate?: string, endDate?: string
 }
 
 // GET - Obter estatísticas de notificações
-export async function GET(request: NextRequest) {
+async function GET(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
 
-      enablePayloadScan: false,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return securityCheck.response || NextResponse.json(
-        { error: securityCheck.error || 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission, role } = await checkUserPermissions(supabase, 'view_stats');
 
     if (!hasPermission) {
@@ -386,24 +372,10 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Exportar estatísticas
-export async function POST(request: NextRequest) {
+async function POST(request: NextRequest) {
   try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
 
-      enablePayloadScan: true,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return securityCheck.response || NextResponse.json(
-        { error: securityCheck.error || 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'export_stats');
 
     if (!hasPermission) {
@@ -608,3 +580,18 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Exportar funções com middleware unificado
+const GET_WITH_MIDDLEWARE = withUnifiedMiddleware(GET, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const POST_WITH_MIDDLEWARE = withUnifiedMiddleware(POST, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+export { GET_WITH_MIDDLEWARE as GET, POST_WITH_MIDDLEWARE as POST };

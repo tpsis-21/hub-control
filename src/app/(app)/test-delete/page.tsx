@@ -1,12 +1,13 @@
 'use client';
 
 import { testDeletePermissions } from '../planos/actions';
+import { logger } from '@/utils/production-logger'
 
 export default function TestDeletePage() {
     const handleTest = async () => {
-        console.log('Iniciando teste...');
+        logger.debug('Iniciando teste...');
         const result = await testDeletePermissions();
-        console.log('Resultado do teste:', result);
+        logger.debug('Resultado do teste:', result);
     };
 
     return (

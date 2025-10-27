@@ -4,7 +4,7 @@
  */
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 
 interface SystemMetrics {
   timestamp: string;
@@ -106,10 +106,7 @@ function getSystemMetrics(): SystemMetrics {
  */
 async function getBpixMetrics(): Promise<BpixMetrics> {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createApiSupabaseClient();
 
     // Métricas de pagamentos (últimas 24h)
     const { data: payments, error: paymentsError } = await supabase
@@ -134,17 +131,17 @@ async function getBpixMetrics(): Promise<BpixMetrics> {
     // Calcular métricas de pagamentos
     const paymentMetrics = {
       total: payments?.length || 0,
-      successful: payments?.filter(p => p.status === 'completed').length || 0,
-      failed: payments?.filter(p => p.status === 'failed').length || 0,
-      pending: payments?.filter(p => p.status === 'pending').length || 0,
-      total_amount: payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0,
+      successful: payments?.filter((p: any) => p.status === 'completed').length || 0,
+      failed: payments?.filter((p: any) => p.status === 'failed').length || 0,
+      pending: payments?.filter((p: any) => p.status === 'pending').length || 0,
+      total_amount: payments?.reduce((sum: number, p: any) => sum + (p.amount || 0), 0) || 0,
     };
 
     // Calcular métricas de webhooks
     const webhookMetrics = {
       received: webhooks?.length || 0,
-      processed: webhooks?.filter(w => w.status === 'processed').length || 0,
-      failed: webhooks?.filter(w => w.status === 'failed').length || 0,
+      processed: webhooks?.filter((w: any) => w.status === 'processed').length || 0,
+      failed: webhooks?.filter((w: any) => w.status === 'failed').length || 0,
     };
 
     return {
@@ -187,10 +184,7 @@ async function getBpixMetrics(): Promise<BpixMetrics> {
  */
 async function getApplicationMetrics(): Promise<ApplicationMetrics> {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createApiSupabaseClient();
 
     // Métricas de usuários
     const { data: users } = await supabase
@@ -201,11 +195,11 @@ async function getApplicationMetrics(): Promise<ApplicationMetrics> {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    const activeToday = users?.filter(u => 
+    const activeToday = users?.filter((u: any) => 
       u.last_sign_in_at && new Date(u.last_sign_in_at) >= today
     ).length || 0;
 
-    const activeThisWeek = users?.filter(u => 
+    const activeThisWeek = users?.filter((u: any) => 
       u.last_sign_in_at && new Date(u.last_sign_in_at) >= weekAgo
     ).length || 0;
 
@@ -227,11 +221,11 @@ async function getApplicationMetrics(): Promise<ApplicationMetrics> {
       },
       channels: {
         total: channels?.length || 0,
-        active: channels?.filter(c => c.status === 'active').length || 0,
+        active: channels?.filter((c: any) => c.status === 'active').length || 0,
       },
       streams: {
         total: streams?.length || 0,
-        live: streams?.filter(s => s.status === 'live').length || 0,
+        live: streams?.filter((s: any) => s.status === 'live').length || 0,
       },
     };
   } catch (error) {

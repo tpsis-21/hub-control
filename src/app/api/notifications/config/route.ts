@@ -2,10 +2,10 @@
 // Endpoints para gerenciar configurações de canais e destinatários
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 // Temporariamente removido para resolver erro de build
 // import { notificationSystem } from '@/lib/notifications';
-import { withSecurity } from '@/middleware/security-middleware';
+import { withUnifiedMiddleware } from '@/middleware/unified-middleware';
 // Temporariamente comentado para resolver erro de build
 // import { logSecurityEvent } from '@/lib/security';
 import { z } from 'zod';
@@ -129,9 +129,9 @@ async function checkUserPermissions(supabase: any, action: string): Promise<{
 }
 
 // GET - Obter configurações
-export const GET = withSecurity(async function(request: NextRequest) {
+async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission, role } = await checkUserPermissions(supabase, 'read_config');
 
     if (!hasPermission) {
@@ -234,12 +234,12 @@ export const GET = withSecurity(async function(request: NextRequest) {
       { status: 500 }
     );
   }
-});
+}
 
 // POST - Criar configuração de canal ou destinatário
-export const POST = withSecurity(async function(request: NextRequest) {
+async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const body = await request.json();
     const { type, ...data } = body;
 
@@ -397,12 +397,12 @@ export const POST = withSecurity(async function(request: NextRequest) {
       { status: 500 }
     );
   }
-});
+}
 
 // PUT - Atualizar configurações ou preferências
-export const PUT = withSecurity(async function(request: NextRequest) {
+async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const body = await request.json();
     const { type, id, ...updateData } = body;
 
@@ -629,12 +629,12 @@ export const PUT = withSecurity(async function(request: NextRequest) {
       { status: 500 }
     );
   }
-});
+}
 
 // DELETE - Deletar configuração ou destinatário
-export const DELETE = withSecurity(async function(request: NextRequest) {
+async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const url = new URL(request.url);
     const type = url.searchParams.get('type');
     const id = url.searchParams.get('id');
@@ -770,4 +770,31 @@ export const DELETE = withSecurity(async function(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Exportar funções com middleware unificado
+const GET_WITH_MIDDLEWARE = withUnifiedMiddleware(GET, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
 });
+
+const POST_WITH_MIDDLEWARE = withUnifiedMiddleware(POST, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const PUT_WITH_MIDDLEWARE = withUnifiedMiddleware(PUT, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+const DELETE_WITH_MIDDLEWARE = withUnifiedMiddleware(DELETE, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
+
+export { GET_WITH_MIDDLEWARE as GET, POST_WITH_MIDDLEWARE as POST, PUT_WITH_MIDDLEWARE as PUT, DELETE_WITH_MIDDLEWARE as DELETE };

@@ -1,238 +1,278 @@
-'use client'
-
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/lib/supabase/clients/browser'
+import { useAuth } from '@/hooks/useAuth'
 
-interface BPIXConfig {
-  baseUrl: string
-  token: string
-  timeout?: number
+// Tipos
+export interface BPIXConfig {
+  id?: string
+  user_id: string
+  base_url: string
+  auth_token: string
+  timeout: number
+  webhook_url?: string
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
 }
 
-interface BPIXPayment {
+export interface BPIXPayment {
   id: string
   amount: number
-  description: string
+  description?: string
+  reference?: string
   status: 'pending' | 'paid' | 'expired' | 'cancelled'
+  pix_code?: string
   qr_code?: string
-  qr_image?: string
-  external_reference?: string
+  expires_at?: string
+  paid_at?: string
   created_at: string
   updated_at: string
-  expire_at?: string
+}
+
+export interface BPIXInvoice {
+  id: string
+  amount: number
+  description?: string
   customer_name?: string
   customer_email?: string
-  customer_phone?: string
-}
-
-interface BPIXInvoice {
-  id: string
-  amount: number
-  description: string
-  status: 'pending' | 'paid' | 'expired' | 'cancelled'
-  due_date: string
-  customer_name: string
-  customer_email: string
-  customer_phone?: string
   customer_document?: string
+  due_date?: string
+  status: 'pending' | 'paid' | 'overdue' | 'cancelled'
+  payment_url?: string
   created_at: string
   updated_at: string
 }
 
-interface BPIXStats {
+export interface BPIXStats {
   total_payments: number
   total_amount: number
   pending_payments: number
   paid_payments: number
-  expired_payments: number
-  cancelled_payments: number
+  success_rate: number
+  avg_payment_time: number
 }
 
-interface UseBPIXReturn {
-  // Estado
-  config: BPIXConfig | null
-  payments: BPIXPayment[]
-  invoices: BPIXInvoice[]
-  stats: BPIXStats | null
-  loading: boolean
-  error: string | null
+const useBPIX = () => {
+  const { toast } = useToast()
+  const { user } = useAuth()
   
-  // Configuração
-  saveConfig: (config: BPIXConfig) => Promise<boolean>
-  deleteConfig: () => Promise<boolean>
-  testConnection: () => Promise<boolean>
-  
-  // Pagamentos
-  createPayment: (payment: Partial<BPIXPayment>) => Promise<BPIXPayment | null>
-  getPayment: (id: string) => Promise<BPIXPayment | null>
-  listPayments: (filters?: { status?: string; limit?: number; offset?: number }) => Promise<void>
-  
-  // Faturas
-  createInvoice: (invoice: Partial<BPIXInvoice>) => Promise<BPIXInvoice | null>
-  getInvoice: (id: string) => Promise<BPIXInvoice | null>
-  listInvoices: (filters?: { status?: string; limit?: number; offset?: number }) => Promise<void>
-  
-  // Estatísticas
-  loadStats: () => Promise<void>
-  
-  // Utilitários
-  refresh: () => Promise<void>
-  clearError: () => void
-}
-
-export function useBPIX(): UseBPIXReturn {
+  // Estados
   const [config, setConfig] = useState<BPIXConfig | null>(null)
   const [payments, setPayments] = useState<BPIXPayment[]>([])
   const [invoices, setInvoices] = useState<BPIXInvoice[]>([])
   const [stats, setStats] = useState<BPIXStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  const { toast } = useToast()
 
   // Função auxiliar para fazer requisições
   const makeRequest = useCallback(async (url: string, options: RequestInit = {}) => {
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        },
-        ...options
-      })
-      
-      const data = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP ${response.status}`)
-      }
-      
-      return data
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro desconhecido'
-      setError(message)
-      throw err
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
+
+    return response.json()
   }, [])
 
-  // Carrega a configuração
+  // Carrega configuração
   const loadConfig = useCallback(async () => {
+    if (!user?.id) return
+
     try {
       setLoading(true)
       setError(null)
       
-      const data = await makeRequest('/api/bpix/config')
-      
-      if (data.success && data.data.configured) {
-        // Não retornamos o token por segurança
-        setConfig({
-          baseUrl: data.data.baseUrl || '',
-          token: '***', // Mascarado
-          timeout: data.data.timeout || 30000
-        })
-      } else {
-        setConfig(null)
+      // Usar API segura em vez de acesso direto ao banco
+      const response = await fetch('/api/bpix/config', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao buscar configuração BPIX');
       }
+
+      const { data, error } = await response.json();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error
+      }
+
+      setConfig(data)
     } catch (err) {
       console.error('Erro ao carregar configuração BPIX:', err)
-      setConfig(null)
+      setError('Erro ao carregar configuração')
     } finally {
       setLoading(false)
     }
-  }, [makeRequest])
+  }, [user?.id])
 
-  // Salva a configuração
-  const saveConfig = useCallback(async (newConfig: BPIXConfig): Promise<boolean> => {
+  // Salva configuração
+  const saveConfig = useCallback(async (newConfig: Omit<BPIXConfig, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    if (!user?.id) {
+      toast({
+        title: 'Erro',
+        description: 'Usuário não autenticado',
+        variant: 'destructive'
+      })
+      return false
+    }
+
     try {
       setLoading(true)
       setError(null)
-      
-      const method = config ? 'PUT' : 'POST'
-      await makeRequest('/api/bpix/config', {
-        method,
-        body: JSON.stringify(newConfig)
-      })
+
+      const configData = {
+        ...newConfig,
+        user_id: user.id
+      }
+
+      // Usar API segura para salvar configuração
+      const response = await fetch('/api/bpix/config', {
+        method: config?.id ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(configData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao salvar configuração BPIX');
+      }
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw result.error
+      }
+
+      setConfig(result.data)
       
       toast({
         title: 'Sucesso',
         description: 'Configuração BPIX salva com sucesso!'
       })
       
-      await loadConfig()
       return true
     } catch (err) {
       console.error('Erro ao salvar configuração:', err)
       toast({
         title: 'Erro',
-        description: 'Erro ao salvar configuração BPIX',
+        description: 'Erro ao salvar configuração',
         variant: 'destructive'
       })
       return false
     } finally {
       setLoading(false)
     }
-  }, [config, makeRequest, toast, loadConfig])
+  }, [user?.id, config?.id, toast])
 
-  // Remove a configuração
-  const deleteConfig = useCallback(async (): Promise<boolean> => {
+  // Remove configuração
+  const deleteConfig = useCallback(async () => {
+    if (!config?.id) return false
+
     try {
       setLoading(true)
       setError(null)
-      
-      await makeRequest('/api/bpix/config', {
-        method: 'DELETE'
-      })
+
+      // Usar API segura para deletar configuração
+      const response = await fetch('/api/bpix/config', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: config.id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao deletar configuração BPIX');
+      }
+
+      const { error } = await response.json();
+
+      if (error) {
+        throw error
+      }
+
+      setConfig(null)
       
       toast({
         title: 'Sucesso',
         description: 'Configuração BPIX removida com sucesso!'
       })
       
-      setConfig(null)
-      setPayments([])
-      setInvoices([])
-      setStats(null)
-      
       return true
     } catch (err) {
       console.error('Erro ao remover configuração:', err)
       toast({
         title: 'Erro',
-        description: 'Erro ao remover configuração BPIX',
+        description: 'Erro ao remover configuração',
         variant: 'destructive'
       })
       return false
     } finally {
       setLoading(false)
     }
-  }, [makeRequest, toast])
+  }, [config?.id, toast])
 
-  // Testa a conexão
-  const testConnection = useCallback(async (): Promise<boolean> => {
+  // Testa conexão
+  const testConnection = useCallback(async (testConfig?: Partial<BPIXConfig>) => {
+    const configToTest = testConfig || config
+    
+    if (!configToTest?.base_url || !configToTest?.auth_token) {
+      toast({
+        title: 'Erro',
+        description: 'Configure a URL base e token primeiro',
+        variant: 'destructive'
+      })
+      return false
+    }
+
     try {
       setLoading(true)
       setError(null)
       
-      await makeRequest('/api/bpix/config?action=test')
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Conexão com BPIX testada com sucesso!'
+      const data = await makeRequest('/api/bpix?action=test', {
+        method: 'POST',
+        body: JSON.stringify(configToTest)
       })
       
-      return true
+      if (data.success) {
+        toast({
+          title: 'Sucesso',
+          description: 'Conexão com BPIX testada com sucesso!'
+        })
+        return true
+      } else {
+        toast({
+          title: 'Erro',
+          description: data.message || 'Falha no teste de conexão',
+          variant: 'destructive'
+        })
+        return false
+      }
     } catch (err) {
       console.error('Erro ao testar conexão:', err)
       toast({
         title: 'Erro',
-        description: 'Falha ao testar conexão com BPIX',
+        description: 'Erro ao testar conexão',
         variant: 'destructive'
       })
       return false
     } finally {
       setLoading(false)
     }
-  }, [makeRequest, toast])
+  }, [config, makeRequest, toast])
 
   // Cria um pagamento
   const createPayment = useCallback(async (payment: Partial<BPIXPayment>): Promise<BPIXPayment | null> => {
@@ -468,3 +508,5 @@ export function useBPIX(): UseBPIXReturn {
 }
 
 export default useBPIX
+export { useBPIX }
+

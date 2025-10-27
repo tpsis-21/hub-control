@@ -2,10 +2,9 @@
 // Endpoints para gerenciar notificações, templates e configurações
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 // import { notificationSystem } from '@/lib/notifications';
-import { NotificationUtils } from '@/lib/notifications';
-import { applySecurityMiddleware } from '@/middleware/security-middleware';
+import { withUnifiedMiddleware } from '@/middleware/unified-middleware';
 // import { logSecurityEvent } from '@/lib/security';
 import { z } from 'zod';
 
@@ -113,24 +112,11 @@ async function checkUserPermissions(supabase: any, action: string): Promise<{
 }
 
 // GET - Listar notificações
-export async function GET(request: NextRequest) {
-  try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
+export const GET = withUnifiedMiddleware(
+  async (request: NextRequest) => {
+    try {
 
-      enablePayloadScan: false,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return securityCheck.response || NextResponse.json(
-        { error: securityCheck.error || 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission, role } = await checkUserPermissions(supabase, 'read');
 
     if (!hasPermission) {
@@ -269,27 +255,18 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
 
 // POST - Criar nova notificação
-export async function POST(request: NextRequest) {
-  try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
+export const POST = withUnifiedMiddleware(
+  async (request: NextRequest) => {
+    try {
 
-      enablePayloadScan: true,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return securityCheck.response || NextResponse.json(
-        { error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission, role } = await checkUserPermissions(supabase, 'create');
 
     if (!hasPermission) {
@@ -437,27 +414,18 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
 
 // PUT - Atualizar notificação (marcar como lida, etc.)
-export async function PUT(request: NextRequest) {
-  try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
+export const PUT = withUnifiedMiddleware(
+  async (request: NextRequest) => {
+    try {
 
-      enablePayloadScan: true,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return securityCheck.response || NextResponse.json(
-        { error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission, role } = await checkUserPermissions(supabase, 'update');
 
     if (!hasPermission) {
@@ -569,27 +537,18 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, {
+  enablePayloadScan: true,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});
 
 // DELETE - Deletar notificação (apenas admins)
-export async function DELETE(request: NextRequest) {
-  try {
-    // Aplicar middleware de segurança
-    const securityCheck = await applySecurityMiddleware(request, {
+export const DELETE = withUnifiedMiddleware(
+  async (request: NextRequest) => {
+    try {
 
-      enablePayloadScan: false,
-      enableIPBlocking: true,
-      enableUserBlocking: true
-    });
-
-    if (!securityCheck.success) {
-      return securityCheck.response || NextResponse.json(
-        { error: securityCheck.error || 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, hasPermission } = await checkUserPermissions(supabase, 'delete');
 
     if (!hasPermission) {
@@ -669,4 +628,8 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, {
+  enablePayloadScan: false,
+  enableIPBlocking: true,
+  enableUserBlocking: true
+});

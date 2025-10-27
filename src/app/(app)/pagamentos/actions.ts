@@ -1,11 +1,11 @@
 // @/app/(app)/pagamentos/actions.ts
 "use server";
 
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClientForActions } from '@/lib/supabase/clients/server';
 import type { Payment } from "@/lib/types";
 
 export async function getPayments(): Promise<Payment[]> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   const { data, error } = await supabase
     .from('payments')
@@ -25,7 +25,7 @@ export async function getPayments(): Promise<Payment[]> {
 }
 
 export async function getPaymentsByClient(clientId: string): Promise<Payment[]> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   const { data, error } = await supabase
     .from('payments')
@@ -45,7 +45,7 @@ export async function getPaymentsByClient(clientId: string): Promise<Payment[]> 
 }
 
 export async function getPendingManualPayments(): Promise<Payment[]> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   const { data, error } = await supabase
     .from('payments')
@@ -66,7 +66,7 @@ export async function getPendingManualPayments(): Promise<Payment[]> {
 }
 
 export async function updatePaymentStatus(paymentId: string, status: 'Pago' | 'Pendente' | 'Atrasado' | 'Aguardando' | 'Confirmado' | 'Recusado' | 'Pendente de ativação manual' | 'Ativado'): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   const { error } = await supabase
     .from('payments')
@@ -85,7 +85,7 @@ export async function updatePaymentStatus(paymentId: string, status: 'Pago' | 'P
 }
 
 export async function activatePayment(paymentId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   try {
     // Atualizar status do pagamento
@@ -143,7 +143,7 @@ export async function createInAppNotification(notification: {
   message: string;
   data?: any;
 }): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   const { error } = await supabase
     .from('in_app_notifications')
@@ -165,30 +165,18 @@ export async function createInAppNotification(notification: {
   return { success: true };
 }
 
-export async function getInAppNotifications(userId: string): Promise<any[]> {
-  const supabase = await createApiSupabaseClient();
-  
-  const { data, error } = await supabase
-    .from('in_app_notifications')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(20);
-
-  if (error) {
-    console.error('Erro ao buscar notificações:', error);
-    return [];
-  }
-
-  return data || [];
-}
+// Removida a função getInAppNotifications para evitar problemas de Server Action
+// Use a API route /api/notifications/in-app ao invés desta função
 
 export async function markNotificationAsRead(notificationId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   
   const { error } = await supabase
     .from('in_app_notifications')
-    .update({ read: true })
+    .update({ 
+      read: true,
+      updated_at: new Date().toISOString()
+    })
     .eq('id', notificationId);
 
   if (error) {

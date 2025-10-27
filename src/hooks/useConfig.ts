@@ -1,6 +1,6 @@
 // src/hooks/useConfig.ts
 import { useEffect, useState, useCallback } from "react";
-import { ConfigService, type AppConfig } from "@/services/config.service";
+import { ConfigService, type AppConfig } from "../services/config.service";
 
 /**
  * Hook para acessar e gerenciar configurações da aplicação

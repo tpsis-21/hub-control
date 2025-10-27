@@ -74,3 +74,4 @@ export function ArticleManagement({ initialArticles }: { initialArticles: Knowle
         </>
     );
 }
+

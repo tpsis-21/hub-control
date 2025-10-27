@@ -1,0 +1,10 @@
+// Export default para compatibilidade
+export default {
+  SessionTracker,
+  BehaviorAnalyzer,
+  getSessionTracker,
+  getBehaviorAnalyzer,
+  sessionTracker,
+  behaviorAnalyzer,
+  useUserBehaviorAnalytics
+};

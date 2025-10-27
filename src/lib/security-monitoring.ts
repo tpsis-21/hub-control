@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod'
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // TIPOS E INTERFACES
@@ -177,7 +178,7 @@ class SecurityEventStore {
         console.error(message, event.details)
         break
       case 'warn':
-        console.warn(message, event.details)
+        logger.warn(message, event.details)
         break
       default:
         console.log(message, event.details)

@@ -7,13 +7,13 @@ import { revalidatePath } from "next/cache";
 // Removido: import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import type { KnowledgeBaseArticle } from "@/lib/types";
 import { articleSchema, editArticleSchema } from "@/lib/schemas";
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
 
 // --- definição de articlesCollection removida pois não é mais usada ---
 
 // Substituir todas as operações Firestore por chamadas Supabase
 export async function getArticles(): Promise<KnowledgeBaseArticle[]> {
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     const { data, error } = await supabase.from('knowledge_base_articles').select('*').order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return (data || []).map(article => ({
@@ -30,7 +30,7 @@ export async function getArticles(): Promise<KnowledgeBaseArticle[]> {
 }
 
 export async function addArticleAction(data: z.infer<typeof articleSchema>) {
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     
     const articleData = {
         title: data.title,
@@ -72,7 +72,7 @@ export async function addArticleAction(data: z.infer<typeof articleSchema>) {
 
 export async function editArticleAction(data: z.infer<typeof editArticleSchema>) {
     const { id, serverIds, visibleToAllServers, ...updateData } = data;
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     
     const dbUpdateData = {
         ...updateData,
@@ -110,10 +110,11 @@ export async function editArticleAction(data: z.infer<typeof editArticleSchema>)
 }
 
 export async function deleteArticleAction(articleId: string) {
-    const supabase = await createApiSupabaseClient();
+    const supabase = await createServerSupabaseClientForActions();
     const { error } = await supabase.from('knowledge_base_articles').delete().eq('id', articleId);
     revalidatePath('/ajuda');
     revalidatePath('/cliente');
     if (error) return { success: false, error: error.message };
     return { success: true };
 }
+

@@ -384,3 +384,4 @@ export function DashboardContent({ clients, plans, servers }: DashboardContentPr
     </div>
   );
 }
+

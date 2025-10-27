@@ -15,11 +15,6 @@ export type {
   PageView,
   UserInteraction,
   DeviceInfo,
-  BrowserInfo,
-  NetworkInfo,
-  ErrorEvent,
-  ConversionEvent,
-  PagePerformanceMetrics,
   BehaviorPattern,
   UserSegment,
   AnalyticsReport

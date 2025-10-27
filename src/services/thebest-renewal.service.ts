@@ -1,8 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 import { Database } from '@/lib/database.types';
 import thebestService from './thebest.service';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { logger } from '@/utils/production-logger'
 
-type SupabaseClient = ReturnType<typeof createClient<Database>>;
+type ApiSupabaseClient = SupabaseClient<Database>;
 
 interface PaymentData {
   userId: string;
@@ -33,9 +35,9 @@ interface TheBestPackage {
 }
 
 class TheBestRenewalService {
-  private supabase: SupabaseClient;
+  private supabase: ApiSupabaseClient;
 
-  constructor(supabase: SupabaseClient) {
+  constructor(supabase: ApiSupabaseClient) {
     this.supabase = supabase;
   }
 
@@ -46,7 +48,7 @@ class TheBestRenewalService {
    */
   async processAutoRenewal(paymentData: PaymentData): Promise<RenewalResult> {
     try {
-      console.log('🔄 Iniciando renovação automática para:', {
+      logger.debug('🔄 Iniciando renovação automática para:', {
         userId: paymentData.userId,
         packageId: paymentData.packageId,
         paymentId: paymentData.paymentId
@@ -377,9 +379,10 @@ class TheBestRenewalService {
 // Instância singleton
 let renewalServiceInstance: TheBestRenewalService | null = null;
 
-export function createRenewalService(supabase: SupabaseClient) {
+export function createRenewalService(supabase?: ApiSupabaseClient) {
   if (!renewalServiceInstance) {
-    renewalServiceInstance = new TheBestRenewalService(supabase);
+    const client = supabase || createApiSupabaseClient();
+    renewalServiceInstance = new TheBestRenewalService(client);
   }
   return renewalServiceInstance;
 }

@@ -11,6 +11,7 @@ import { SecurityEventType, SecuritySeverity } from './security-monitoring';
 import { intelligentCacheSystem } from './intelligent-cache-system';
 import { realtimeNotificationSystem, NotificationType } from '@/lib/notifications';
 import { createHash } from 'crypto';
+import { logger } from '@/utils/production-logger'
 
 // Tipos de métricas de analytics
 export enum AnalyticsMetricType {
@@ -462,12 +463,60 @@ export class AnalyticsReportingSystem {
   private cleanupInterval: NodeJS.Timeout | null = null;
   private lastAlerts: Map<string, Date> = new Map();
   
+  // Iniciar processamento
+  private startProcessing(): void {
+    this.processingInterval = setInterval(() => {
+      this.flushEvents();
+    }, this.config.collection.batchInterval);
+  }
+  
+  // Iniciar limpeza
+  private startCleanup(): void {
+    this.cleanupInterval = setInterval(async () => {
+      await this.cleanup();
+    }, 24 * 60 * 60 * 1000); // Diário
+  }
+
+  // Limpeza de dados antigos
+  private async cleanup(): Promise<void> {
+    try {
+      const supabase = createApiSupabaseClient();
+      
+      // Limpar eventos brutos antigos
+      const rawCutoff = new Date();
+      rawCutoff.setDate(rawCutoff.getDate() - this.config.storage.retention.raw);
+      
+      await supabase
+        .from('analytics_events')
+        .delete()
+        .lt('timestamp', rawCutoff.toISOString());
+      
+      logger.debug('Limpeza de dados de analytics concluída', undefined, "DEBUG");
+      
+    } catch (error) {
+      console.error('Erro na limpeza de dados:', error);
+    }
+  }
+
   constructor(config: Partial<AnalyticsSystemConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    // Inicialização será feita após a definição dos métodos
+    this.initialize();
+  }
+
+
+  
+
+
+  // Método de inicialização
+  private async initialize(): Promise<void> {
     this.startProcessing();
     this.startCleanup();
-    this.loadReports();
-    this.loadDashboards();
+    // Carregar dados de forma assíncrona sem bloquear o construtor
+    setTimeout(async () => {
+      await this.loadReports();
+      await this.loadDashboards();
+    }, 0);
   }
   
   // Registrar evento de analytics
@@ -486,7 +535,7 @@ export class AnalyticsReportingSystem {
     
     try {
       const event: AnalyticsEvent = {
-        id: this.generateEventId(),
+        id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type,
         timestamp: new Date(),
         userId: options.userId,
@@ -638,7 +687,7 @@ export class AnalyticsReportingSystem {
       
       // Incrementar contador
       const current = await intelligentCacheSystem.get<number>(cacheKey);
-      const newValue = (current.value || 0) + event.value;
+      const newValue = (current.status === 'hit' && current.value ? current.value : 0) + event.value;
       
       await intelligentCacheSystem.set(
         cacheKey,
@@ -1002,7 +1051,7 @@ export class AnalyticsReportingSystem {
   // Criar relatório
   async createReport(config: Omit<ReportConfig, 'id' | 'metadata'> & { metadata?: Partial<ReportConfig['metadata']> }): Promise<string> {
     try {
-      const reportId = this.generateReportId();
+      const reportId = `rpt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       const report: ReportConfig = {
         ...config,
@@ -1125,41 +1174,7 @@ export class AnalyticsReportingSystem {
   private generateReportId(): string {
     return `rpt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
-  // Iniciar processamento
-  private startProcessing(): void {
-    this.processingInterval = setInterval(() => {
-      this.flushEvents();
-    }, this.config.collection.batchInterval);
-  }
-  
-  // Iniciar limpeza
-  private startCleanup(): void {
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, 24 * 60 * 60 * 1000); // Diário
-  }
-  
-  // Limpeza de dados antigos
-  private async cleanup(): Promise<void> {
-    try {
-      const supabase = createApiSupabaseClient();
-      
-      // Limpar eventos brutos antigos
-      const rawCutoff = new Date();
-      rawCutoff.setDate(rawCutoff.getDate() - this.config.storage.retention.raw);
-      
-      await supabase
-        .from('analytics_events')
-        .delete()
-        .lt('timestamp', rawCutoff.toISOString());
-      
-      console.log('Limpeza de dados de analytics concluída');
-      
-    } catch (error) {
-      console.error('Erro na limpeza de dados:', error);
-    }
-  }
+
   
   // Obter estatísticas do sistema
   getSystemStats(): {
@@ -1190,7 +1205,7 @@ export class AnalyticsReportingSystem {
     // Flush eventos pendentes
     await this.flushEvents();
     
-    console.log('Sistema de analytics e relatórios finalizado');
+    logger.debug('Sistema de analytics e relatórios finalizado', undefined, "DEBUG");
   }
 }
 

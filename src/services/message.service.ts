@@ -2,6 +2,7 @@
 import { getSettings } from '@/app/(app)/configuracoes/actions';
 import { LoggerService } from './logger.service';
 import type { Transporter } from 'nodemailer';
+import { HttpRetry, RetryPresets } from '@/lib/http-retry';
 
 // Importação dinâmica do nodemailer para evitar problemas no lado cliente
 let nodemailer: any = null;
@@ -152,7 +153,25 @@ export class MessageService {
         };
       }
 
-      const response = await fetch(settings.whatsappApiEndpoint, {
+      LoggerService.info('Sending WhatsApp message', 'MessageService', {
+        to: message.to
+      });
+
+      // Usar retry com configuração específica para APIs de mensagem
+      const retryOptions = {
+        ...RetryPresets.standard,
+        timeout: 15000, // Timeout menor para mensagens
+        onRetry: (error: any, attempt: number, delay: number) => {
+          LoggerService.warn('WhatsApp API Retry', 'MessageService', {
+            to: message.to,
+            attempt,
+            delay,
+            error: error.message
+          })
+        }
+      };
+
+      const result = await HttpRetry.fetchWithRetry<any>(settings.whatsappApiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,22 +181,22 @@ export class MessageService {
           to: message.to,
           message: message.message
         })
-      });
+      }, retryOptions);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao enviar WhatsApp');
       }
-
-      const result = await response.json();
 
       LoggerService.info('Mensagem WhatsApp enviada com sucesso', 'MessageService', {
         to: message.to,
-        messageId: result.messageId || result.id
+        messageId: result.data?.messageId || result.data?.id,
+        attempts: result.attempts,
+        totalTime: result.totalTime
       });
 
       return {
         success: true,
-        messageId: result.messageId || result.id
+        messageId: result.data?.messageId || result.data?.id
       };
     } catch (error) {
       LoggerService.error('Erro ao enviar mensagem WhatsApp', 'MessageService', {

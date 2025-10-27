@@ -74,7 +74,7 @@ import {
   AnalyticsReport,
   BehaviorPattern,
   UserSegment,
-  OptimizationRecommendation
+  UXRecommendation
 } from '@/lib/user-behavior-analytics';
 
 // ============================================
@@ -195,17 +195,7 @@ const PatternCard: React.FC<{ pattern: BehaviorPattern }> = ({ pattern }) => {
             </span>
           </div>
           
-          <div className="mt-4">
-            <h4 className="text-sm font-medium mb-2">Recomendações:</h4>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              {pattern.recommendations.map((rec, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>{rec}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+
         </div>
       </CardContent>
     </Card>
@@ -217,24 +207,23 @@ const SegmentCard: React.FC<{ segment: UserSegment }> = ({ segment }) => {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{segment.name}</CardTitle>
-        <CardDescription>{segment.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Usuários:</span>
-            <span className="font-medium">{segment.userCount}</span>
+            <span className="font-medium">{segment.users.length}</span>
           </div>
           
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
               <span>Duração Média:</span>
-              <span>{Math.round(segment.characteristics.averageSessionDuration / 1000)}s</span>
+              <span>{Math.round(segment.characteristics.avgSessionDuration / 1000)}s</span>
             </div>
             
             <div className="flex justify-between text-xs">
               <span>Páginas por Sessão:</span>
-              <span>{segment.characteristics.averagePageViews.toFixed(1)}</span>
+              <span>{segment.characteristics.avgPageViews.toFixed(1)}</span>
             </div>
             
             <div className="flex justify-between text-xs">
@@ -248,25 +237,14 @@ const SegmentCard: React.FC<{ segment: UserSegment }> = ({ segment }) => {
             </div>
           </div>
           
-          {segment.behaviorPatterns.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Padrões Identificados:</h4>
-              <div className="space-y-1">
-                {segment.behaviorPatterns.slice(0, 3).map((pattern, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {pattern.name}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
+
         </div>
       </CardContent>
     </Card>
   );
 };
 
-const RecommendationCard: React.FC<{ recommendation: OptimizationRecommendation }> = ({ recommendation }) => {
+const RecommendationCard: React.FC<{ recommendation: UXRecommendation }> = ({ recommendation }) => {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'critical': return 'bg-red-100 text-red-800';
@@ -431,7 +409,7 @@ export const UserBehaviorDashboard: React.FC = () => {
     if (!allSessions.length) return [];
     
     const deviceCounts = allSessions.reduce((acc, session) => {
-      const device = session.deviceInfo.type;
+      const device = session.device.type;
       acc[device] = (acc[device] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -582,31 +560,31 @@ export const UserBehaviorDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total de Sessões"
-          value={formatNumber(activeReport.totalSessions)}
+          value={formatNumber(activeReport.summary.totalSessions)}
           icon={<Users className="h-4 w-4" />}
           description="Sessões no período selecionado"
         />
         
         <MetricCard
           title="Usuários Únicos"
-          value={formatNumber(activeReport.uniqueUsers)}
+          value={formatNumber(activeReport.summary.totalUsers)}
           icon={<Eye className="h-4 w-4" />}
           description="Usuários únicos identificados"
         />
         
         <MetricCard
           title="Duração Média"
-          value={formatDuration(activeReport.averageSessionDuration)}
+          value={formatDuration(activeReport.summary.averageSessionDuration)}
           icon={<Clock className="h-4 w-4" />}
           description="Tempo médio por sessão"
         />
         
         <MetricCard
-          title="Taxa de Rejeição"
-          value={`${activeReport.bounceRate.toFixed(1)}%`}
-          icon={<TrendingDown className="h-4 w-4" />}
-          description="Usuários que saem rapidamente"
-          trend={activeReport.bounceRate > 60 ? 'down' : 'up'}
+          title="Taxa de Conversão"
+          value={`${activeReport.summary.conversionRate.toFixed(1)}%`}
+          icon={<Target className="h-4 w-4" />}
+          description="Taxa de conversão geral"
+          trend={activeReport.summary.conversionRate > 2 ? 'up' : 'down'}
         />
       </div>
 
@@ -683,16 +661,15 @@ export const UserBehaviorDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {activeReport.topPages.slice(0, 5).map((page, index) => (
+                {activeReport.summary.topPages.slice(0, 5).map((page, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="font-medium truncate">{page.title || page.url}</p>
-                      <p className="text-sm text-muted-foreground truncate">{page.url}</p>
+                      <p className="font-medium truncate">{page.url}</p>
                     </div>
                     <div className="text-right ml-4">
                       <p className="font-medium">{page.views} visualizações</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatDuration(page.averageTimeOnPage)}
+                        {formatDuration(page.avgTime)}
                       </p>
                     </div>
                   </div>
@@ -734,37 +711,37 @@ export const UserBehaviorDashboard: React.FC = () => {
                     <div className="flex justify-between mb-2">
                       <span className="text-sm">Taxa de Conversão</span>
                       <span className="text-sm font-medium">
-                        {activeReport.conversionRate.toFixed(1)}%
+                        {activeReport.summary.conversionRate.toFixed(1)}%
                       </span>
                     </div>
-                    <Progress value={activeReport.conversionRate} className="h-2" />
+                    <Progress value={activeReport.summary.conversionRate} className="h-2" />
                   </div>
                   
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm">Taxa de Rejeição</span>
                       <span className="text-sm font-medium">
-                        {activeReport.bounceRate.toFixed(1)}%
+                        {activeReport.summary.bounceRate.toFixed(1)}%
                       </span>
                     </div>
-                    <Progress value={activeReport.bounceRate} className="h-2" />
+                    <Progress value={activeReport.summary.bounceRate} className="h-2" />
                   </div>
                   
                   <div className="pt-4 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Sessões Totais:</span>
-                      <span className="text-sm font-medium">{activeReport.totalSessions}</span>
+                      <span className="text-sm font-medium">{activeReport.summary.totalSessions}</span>
                     </div>
                     
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Usuários Únicos:</span>
-                      <span className="text-sm font-medium">{activeReport.uniqueUsers}</span>
+                      <span className="text-sm font-medium">{activeReport.summary.totalUsers}</span>
                     </div>
                     
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Duração Média:</span>
                       <span className="text-sm font-medium">
-                        {formatDuration(activeReport.averageSessionDuration)}
+                        {formatDuration(activeReport.summary.averageSessionDuration)}
                       </span>
                     </div>
                   </div>
@@ -777,8 +754,8 @@ export const UserBehaviorDashboard: React.FC = () => {
         {/* Segmentos */}
         <TabsContent value="segments" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {activeReport.userSegments.map((segment, index) => (
-              <SegmentCard key={index} segment={segment} />
+            {activeReport.patterns?.map((pattern, index) => (
+              <PatternCard key={index} pattern={pattern} />
             ))}
           </div>
         </TabsContent>
@@ -786,7 +763,7 @@ export const UserBehaviorDashboard: React.FC = () => {
         {/* Padrões */}
         <TabsContent value="patterns" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {activeReport.behaviorPatterns.map((pattern, index) => (
+            {activeReport.patterns.map((pattern, index) => (
               <PatternCard key={index} pattern={pattern} />
             ))}
           </div>
@@ -836,14 +813,14 @@ export const UserBehaviorDashboard: React.FC = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Dispositivo:</p>
                 <p className="font-medium">
-                  {currentSession.deviceInfo.type} ({currentSession.deviceInfo.screenWidth}x{currentSession.deviceInfo.screenHeight})
+                  {currentSession.device.type} ({currentSession.device.viewport.width}x{currentSession.device.viewport.height})
                 </p>
               </div>
               
               <div>
                 <p className="text-sm text-muted-foreground">Navegador:</p>
                 <p className="font-medium">
-                  {currentSession.browserInfo.name} {currentSession.browserInfo.version}
+                  {currentSession.device.browser}
                 </p>
               </div>
               

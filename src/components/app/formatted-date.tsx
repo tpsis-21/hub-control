@@ -42,3 +42,4 @@ export function FormattedDate({ dateString, format: formatString }: FormattedDat
   // Retorna a data formatada.
   return <>{formattedDate}</>;
 }
+

@@ -1,3 +1,4 @@
+import { logger } from '@/utils/production-logger'
 // src/lib/supabase/utils/logger.ts
 // Sistema de logs centralizado para operações Supabase
 
@@ -46,7 +47,7 @@ class SupabaseLogger {
 
   warn(message: string, context?: LogContext): void {
     if (this.shouldLog('warn')) {
-      console.warn(this.formatMessage('warn', message, context));
+      logger.warn(this.formatMessage('warn', message, context));
     }
   }
 
@@ -59,7 +60,7 @@ class SupabaseLogger {
 
   debug(message: string, context?: LogContext): void {
     if (this.shouldLog('debug')) {
-      console.debug(this.formatMessage('debug', message, context));
+      console.log(this.formatMessage('debug', message, context));
     }
   }
 

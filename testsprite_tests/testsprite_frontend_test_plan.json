@@ -1,0 +1,384 @@
+[
+  {
+    "id": "TC001",
+    "title": "Dashboard metrics real-time update",
+    "description": "Verify that the dashboard displays real-time updated metrics, trends, and client status correctly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate as a valid user and navigate to the dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the metrics widgets display current data reflecting real-time status."
+      },
+      {
+        "type": "action",
+        "description": "Simulate changes in client status and data updates on the backend."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the dashboard updates metrics and graphs within 2 seconds to reflect the changes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that dynamic client status indicators update accordingly."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Client CRUD operations",
+    "description": "Verify full Create, Read, Update, and Delete operations on client entities with proper data handling and UI feedback.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as an administrator and access the client management interface."
+      },
+      {
+        "type": "action",
+        "description": "Create a new client with valid data and save."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the client is listed with correct details and confirmation message is shown."
+      },
+      {
+        "type": "action",
+        "description": "View client details, including payment history."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that all client information including payment history is displayed accurately."
+      },
+      {
+        "type": "action",
+        "description": "Update the client information and save changes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated client details persist and UI reflects the change."
+      },
+      {
+        "type": "action",
+        "description": "Delete the client record."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify client is removed from the list and deletion confirmation is shown."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to create a client with missing required fields."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors prevent creation and appropriate error messages display."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Trial user creation and conversion",
+    "description": "Ensure that trial users can be created automatically and converted to active clients properly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger chatbot to create a new trial user."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the trial user is created with correct trial period and is listed in the system."
+      },
+      {
+        "type": "action",
+        "description": "Monitor the trial period countdown and test system handling of trial expiration."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify system notifies user of trial status and disables trial functions upon expiration."
+      },
+      {
+        "type": "action",
+        "description": "Convert the trial user to an active client using the conversion feature."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that trial user record is updated to active client status and all related data migrates correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "IPTV Server configuration and health monitoring",
+    "description": "Validate CRUD operations and real-time health monitoring of IPTV servers including API integrations.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Access server management panel and create a new IPTV server configuration with URL and settings."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new server is saved and appears in the server list."
+      },
+      {
+        "type": "action",
+        "description": "Edit existing server configuration and save changes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify changes persist correctly."
+      },
+      {
+        "type": "action",
+        "description": "Simulate server status changes and errors via API integration."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify real-time monitoring dashboard updates health status and alerts appropriately."
+      },
+      {
+        "type": "action",
+        "description": "Delete a server configuration."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify server is removed and no longer monitored."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Multi-channel notifications with dynamic templates",
+    "description": "Verify notifications are correctly sent via WhatsApp, Email, and Push channels using dynamic templates and automations.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger manual notification send with predefined dynamic template to a user via WhatsApp."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user receives correct WhatsApp notification with expected dynamic content."
+      },
+      {
+        "type": "action",
+        "description": "Trigger email notification send via automation rule."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify accurate email content, correct template variables, and proper delivery."
+      },
+      {
+        "type": "action",
+        "description": "Trigger push notification to user's device."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify push notification is received timely and content is accurate."
+      },
+      {
+        "type": "action",
+        "description": "Test notification failure scenarios such as invalid contact or delivery failure."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify errors are logged, retries attempted as configured, and user/admin alerted appropriately."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Security policies and compliance enforcement",
+    "description": "Test enforcement of security policies including MFA, RLS, audit logging, and GDPR/LGPD compliance.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as user with MFA enabled; validate that MFA prompt appears and blocks access without verification."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify MFA verification succeeds and grants access."
+      },
+      {
+        "type": "action",
+        "description": "Access datasets with RLS policies configured for different user roles."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify users can only access data they are permitted to as per RLS policies."
+      },
+      {
+        "type": "action",
+        "description": "Perform sensitive operations and verify audit logs are generated with correct details."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify audit trail accuracy including user, time, operation, and affected data."
+      },
+      {
+        "type": "action",
+        "description": "Test data privacy features to verify GDPR/LGPD compliance such as consent handling and data anonymization."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify compliance features work correctly and data protections are enforced."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Application performance and intelligent cache validation",
+    "description": "Validate application performance with cache active and automatic cache invalidation working correctly.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Load various application pages, including dashboard and client management, under normal and peak load conditions."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify page load times are below 2 seconds consistently."
+      },
+      {
+        "type": "action",
+        "description": "Modify underlying data and monitor cache invalidation and reflected UI changes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify cache is invalidated automatically and data displayed is fresh and correct."
+      },
+      {
+        "type": "action",
+        "description": "Evaluate multi-layer cache system behavior with simulated cache hits and misses."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify cache levels interact correctly and optimize data retrieval efficiently."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Automation workflow orchestration",
+    "description": "Test system workflows and automation processes for trigger, execution, failure handling and proper completion.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Define and enable a sample automation workflow involving notifications and client status updates."
+      },
+      {
+        "type": "action",
+        "description": "Trigger workflow via system event or manual initiation."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all workflow steps execute in correct sequence and with expected outcomes."
+      },
+      {
+        "type": "action",
+        "description": "Simulate failure in one workflow step."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify workflow error handling activates, logs error, retries if configured, or fails gracefully."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "IPTV server backup and recovery",
+    "description": "Validate backup process for IPTV server configurations and ability to recover data from backup.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger automated backup process manually and scheduled."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify backup files are created with expected completeness and metadata."
+      },
+      {
+        "type": "action",
+        "description": "Simulate data loss or corruption in server configurations."
+      },
+      {
+        "type": "action",
+        "description": "Perform data recovery using backup."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify restored data matches last backup state accurately and system stability is maintained."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Login and authentication error handling",
+    "description": "Ensure authentication system handles correct and incorrect login attempts securely with proper feedback.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login page and input valid username/email and password."
+      },
+      {
+        "type": "action",
+        "description": "Submit login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify login is successful and user redirected appropriately."
+      },
+      {
+        "type": "action",
+        "description": "Attempt login with invalid username/email."
+      },
+      {
+        "type": "action",
+        "description": "Submit login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify login failed and appropriate error message is displayed."
+      },
+      {
+        "type": "action",
+        "description": "Attempt login with valid username but incorrect password."
+      },
+      {
+        "type": "action",
+        "description": "Submit login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify login failed and error message indicates invalid credentials without revealing sensitive info."
+      },
+      {
+        "type": "action",
+        "description": "Attempt login with empty credentials."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors are shown for required fields."
+      }
+    ]
+  }
+]

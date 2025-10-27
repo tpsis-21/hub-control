@@ -1,3 +1,4 @@
+import { logger } from '@/utils/production-logger'
 // src/services/logger.service.ts
 
 /**
@@ -141,13 +142,13 @@ export class LoggerService {
     
     switch (entry.level) {
       case LogLevel.DEBUG:
-        console.debug(formatted);
+        logger.debug(formatted);
         break;
       case LogLevel.INFO:
-        console.info(formatted);
+        logger.info(formatted, undefined, "INFO");
         break;
       case LogLevel.WARN:
-        console.warn(formatted);
+        logger.warn(formatted);
         break;
       case LogLevel.ERROR:
         console.error(formatted);
@@ -185,7 +186,7 @@ export class LoggerService {
       });
     } catch (error) {
       // Falha silenciosa para evitar loops de log
-      console.warn('Failed to send log to remote endpoint:', error);
+      logger.warn('Failed to send log to remote endpoint:', error);
     }
   }
 

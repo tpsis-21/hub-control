@@ -23,7 +23,8 @@ import {
 import { getDefaultChannelConfigs, getDefaultTemplates } from './notifications/config';
 import { rateLimitCustom } from '@/lib/security/rate-limit';
 import { validateChannelConfig } from './notifications/channel-configs';
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from './supabase/clients/api';
+import { logger } from '@/utils/production-logger'
 
 export class NotificationSystem {
   private static instance: NotificationSystem;
@@ -38,10 +39,7 @@ export class NotificationSystem {
 
   public constructor() {
     // Inicializar cliente Supabase
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    );
+    this.supabase = createApiSupabaseClient();
 
     // Inicializar configurações padrão
     getDefaultChannelConfigs().forEach(config => {
@@ -271,7 +269,7 @@ export class NotificationSystem {
   // Implementações específicas dos canais (simplificadas)
   private async sendEmail(notification: Notification, recipients: Recipient[]): Promise<void> {
     // Implementação do envio de email
-    console.log(`Enviando email: ${notification.title} para ${recipients.length} destinatários`);
+    logger.debug(`Enviando email: ${notification.title} para ${recipients.length} destinatários`, undefined, "DEBUG");
   }
 
   private async sendWebhook(notification: Notification, recipients: Recipient[]): Promise<void> {
@@ -314,9 +312,9 @@ export class NotificationSystem {
           }
 
           if (attempt > 1) {
-            console.log(`Webhook enviado com sucesso para ${webhookUrl} após ${attempt} tentativas`);
+            logger.debug(`Webhook enviado com sucesso para ${webhookUrl} após ${attempt} tentativas`, undefined, "DEBUG");
           } else {
-            console.log(`Webhook enviado com sucesso para ${webhookUrl}`);
+            logger.debug(`Webhook enviado com sucesso para ${webhookUrl}`, undefined, "DEBUG");
           }
           lastError = null;
           break; // sucesso, sai do loop de tentativas
@@ -341,7 +339,7 @@ export class NotificationSystem {
 
   private async sendInApp(notification: Notification, recipients: Recipient[]): Promise<void> {
     // Implementação da notificação in-app
-    console.log(`Enviando notificação in-app: ${notification.title} para ${recipients.length} destinatários`);
+    logger.debug(`Enviando notificação in-app: ${notification.title} para ${recipients.length} destinatários`, undefined, "DEBUG");
   }
 
   // Métodos auxiliares
@@ -410,7 +408,7 @@ export class NotificationSystem {
     channel: NotificationChannel,
     notifications: Notification[]
   ): Promise<void> {
-    console.log(`Enviando lote de ${notifications.length} notificações via ${channel}`);
+    logger.debug(`Enviando lote de ${notifications.length} notificações via ${channel}`, undefined, "DEBUG");
     // Implementar envio em lote
   }
 

@@ -4,9 +4,11 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../../database.types';
+import { createBrowserSupabaseClient } from '../unified-client';
 import { supabaseConfig, defaultAuthConfig, storageConfig } from '../config';
 import { UserManager, signInWithEmail, signUpWithEmail, signOut } from '../auth/user';
 import { supabaseLogger } from '../utils/logger';
+import { logger } from '@/utils/production-logger'
 
 
 // === LOGS DE DEBUG ADICIONADOS ===
@@ -14,7 +16,7 @@ const DEBUG_AUTH = process.env.NODE_ENV === 'development';
 
 function debugLog(message: string, data?: any) {
   if (DEBUG_AUTH) {
-    console.log(`[SUPABASE CLIENT DEBUG] ${new Date().toISOString()} - ${message}`, data || '');
+    logger.debug(`[SUPABASE CLIENT DEBUG] ${new Date().toISOString()} - ${message}`, data || '', "DEBUG");
   }
 }
 // === FIM DOS LOGS DE DEBUG ===
@@ -85,17 +87,7 @@ export async function getClientUser() {
     return user;
   } catch (error) {
     console.error('❌ getClientUser: Erro ao obter usuário:', error);
-    console.error('🔍 getClientUser: Detalhes completos do erro:', {
-      name: (error as Error)?.name,
-      message: (error as Error)?.message,
-      stack: (error as Error)?.stack,
-      cause: (error as Error)?.cause,
-      code: (error as any)?.code,
-      details: (error as any)?.details,
-      hint: (error as any)?.hint,
-      toString: (error as any)?.toString()
-    });
-    throw error;
+    return null;
   }
 }
 
@@ -167,6 +159,7 @@ export async function signOutGeneric() {
 // === FUNÇÕES PRINCIPAIS PARA EXPORTAÇÃO ===
 
 // Funções principais do browser client
+// Nota: createBrowserSupabaseClient é exportado pelo unified-client.ts
 export { createClientSupabaseClient as createBrowserSupabaseClient };
 export { createGenericSupabaseClient as createSSRSupabaseClient };
 export { getClientUser as getBrowserUser };

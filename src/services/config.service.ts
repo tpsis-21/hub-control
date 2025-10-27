@@ -1,3 +1,4 @@
+import { logger } from '../utils/production-logger'
 // src/services/config.service.ts
 
 /**
@@ -178,7 +179,7 @@ export class ConfigService {
         this.config = this.mergeConfigs(this.config, parsedConfig);
       }
     } catch (error) {
-      console.warn('Failed to load config from localStorage:', error);
+      logger.warn('Failed to load config from localStorage:', error);
     }
   }
 
@@ -198,7 +199,7 @@ export class ConfigService {
       
       localStorage.setItem('app_config', JSON.stringify(persistableConfig));
     } catch (error) {
-      console.warn('Failed to save config to localStorage:', error);
+      logger.warn('Failed to save config to localStorage:', error);
     }
   }
 
@@ -230,7 +231,7 @@ export class ConfigService {
       console.error('Configuration validation errors:', errors);
       if (this.config.environment === 'production') {
         throw new Error(`Configuration validation failed: ${errors.join(', ')}`);
-      }
+    }
     }
   }
 
@@ -396,3 +397,6 @@ export class ConfigService {
     }
   }
 }
+
+// Exportar instância padrão para compatibilidade
+export const configService = ConfigService;

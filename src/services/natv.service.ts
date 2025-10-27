@@ -1,5 +1,7 @@
-import { supabase } from '@/lib/supabase'
+import { createApiSupabaseClient } from '@/lib/supabase/unified-client'
 import { ErrorService, ErrorType } from './error.service'
+import { logger } from '@/utils/production-logger'
+import { HttpRetry, RetryPresets } from '@/lib/http-retry'
 
 // Interfaces para a API NATV
 export interface NATVUser {
@@ -96,13 +98,20 @@ class NATVService {
     try {
       this.userId = userId
       
-      const { data, error } = await supabase
-        .from('integration_configs')
-        .select('*')
-        .eq('provider', 'natv')
-        .eq('created_by', userId)
-        .eq('is_active', true)
-        .single()
+      // Usar API segura para buscar configuração NATV
+      const response = await fetch('/api/natv/config', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao buscar configuração NATV');
+      }
+
+      const { data, error } = await response.json();
 
       if (error) {
         const appError = ErrorService.createError(
@@ -130,8 +139,9 @@ class NATVService {
 
   // Carrega configuração do Supabase (método legado - mantido para compatibilidade)
   async loadConfig(): Promise<void> {
-    console.warn('loadConfig() está deprecated. Use loadUserConfig(userId) em vez disso.')
+    logger.warn('loadConfig está deprecated. Use loadUserConfig(userId) em vez disso.')
     // Tenta obter o usuário atual
+    const supabase = createApiSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       await this.loadUserConfig(user.id)
@@ -164,19 +174,19 @@ class NATVService {
         created_by: userId
       }
 
-      // Primeiro, desativa configurações antigas do usuário para este provider
-      await supabase
-        .from('integration_configs')
-        .update({ is_active: false })
-        .eq('provider', 'natv')
-        .eq('created_by', userId)
+      // Usar API segura em vez de acesso direto ao Supabase
+      const response = await fetch('/api/natv/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(configData),
+      })
 
-      // Insere a nova configuração
-      const { error } = await supabase
-        .from('integration_configs')
-        .insert(configData)
-
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}`)
+      }
 
       this.config = config
     } catch (error) {
@@ -188,9 +198,20 @@ class NATVService {
 
   // Salva configuração no Supabase (método legado - mantido para compatibilidade)
   async saveConfig(config: NATVConfig): Promise<void> {
-    console.warn('saveConfig() está deprecated. Use saveUserConfig(userId, config) em vez disso.')
-    // Tenta obter o usuário atual
-    const { data: { user } } = await supabase.auth.getUser()
+    logger.warn('saveConfig está deprecated. Use saveUserConfig(userId, config) em vez disso.')
+    // Usar API segura para obter usuário atual
+    const response = await fetch('/api/auth/user', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error('Usuário não autenticado')
+    }
+
+    const { user } = await response.json()
     if (user) {
       await this.saveUserConfig(user.id, config)
     } else {
@@ -198,119 +219,64 @@ class NATVService {
     }
   }
 
-  // Faz requisição para a API NATV
+  // Faz requisição para a API NATV através do proxy seguro
   private async makeRequest<T>(
     endpoint: string,
     method: 'GET' | 'POST' = 'GET',
     body?: any
   ): Promise<NATVApiResponse<T>> {
     if (!this.config) {
+      const appError = ErrorService.createError(
+        ErrorType.VALIDATION,
+        'Serviço NATV não configurado',
+        'NATV_NOT_CONFIGURED'
+      )
+      ErrorService.logError(appError, 'NATV Service - Not Configured')
       return {
         success: false,
-        message: 'Configuração NATV não encontrada',
-        error: 'Configuração NATV não encontrada ou inativa'
+        message: 'Serviço não configurado',
+        error: 'NATV_NOT_CONFIGURED'
       }
     }
 
+    // Usar proxy seguro em vez de requisição direta
     try {
-      const url = `${this.config.baseUrl}${endpoint}`
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.token}`
-      }
-
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout || 30000)
-
-      const response = await fetch(url, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-        signal: controller.signal
+      const response = await fetch('/api/proxy/natv', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint,
+          method,
+          body,
+          config: {
+            baseUrl: this.config.baseUrl,
+            token: this.config.token,
+            timeout: this.config.timeout || 30000
+          }
+        }),
       })
 
-      clearTimeout(timeoutId)
-
-      if (response.status === 429) {
-        const appError = ErrorService.createError(
-          ErrorType.NETWORK,
-          'Rate limit atingido - muitas requisições',
-          'NATV_RATE_LIMIT',
-          { status: 429 }
-        )
-        ErrorService.logError(appError, 'NATV Service - Rate Limit')
-        return {
-          success: false,
-          message: 'Rate limit atingido',
-          error: 'Muitas requisições - limite de rate limit atingido'
-        }
-      }
-
-      if (response.status === 422) {
-        const errorData = await response.json()
-        const appError = ErrorService.createError(
-          ErrorType.VALIDATION,
-          'Dados inválidos fornecidos para a API NATV',
-          'NATV_VALIDATION_ERROR',
-          { status: 422, responseData: errorData }
-        )
-        ErrorService.logError(appError, 'NATV Service - Validation Error')
-        return {
-          success: false,
-          message: 'Erro de validação',
-          error: 'Dados inválidos',
-          data: errorData
-        }
-      }
-
       if (!response.ok) {
-        const appError = ErrorService.createError(
-          response.status >= 500 ? ErrorType.NETWORK : ErrorType.VALIDATION,
-          `Erro HTTP ${response.status}: ${response.statusText}`,
-          `NATV_HTTP_${response.status}`,
-          { status: response.status, statusText: response.statusText }
-        )
-        ErrorService.logError(appError, 'NATV Service - HTTP Error')
-        return {
-          success: false,
-          message: `Erro HTTP ${response.status}`,
-          error: `${response.status}: ${response.statusText}`
-        }
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}`)
       }
 
-      const data = await response.json()
-      return {
-        success: true,
-        message: 'Requisição realizada com sucesso',
-        data
-      }
+      const result = await response.json()
+      return result
+
     } catch (error) {
-      let appError: any
-      
-      if (error instanceof Error && error.name === 'AbortError') {
-        appError = ErrorService.createError(
-          ErrorType.NETWORK,
-          'Timeout na requisição - tempo limite excedido',
-          'NATV_TIMEOUT',
-          { timeout: this.config?.timeout }
-        )
-        ErrorService.logError(appError, 'NATV Service - Timeout')
-        return {
-          success: false,
-          message: 'Timeout na requisição',
-          error: 'Tempo limite da requisição excedido'
-        }
-      }
-
-      appError = ErrorService.fromNativeError(error)
-      ErrorService.logError(appError, 'NATV Service - Request Error')
+      const appError = ErrorService.fromNativeError(error)
+      ErrorService.logError(appError, 'NATV Service - Proxy Request Failed')
       
       return {
         success: false,
         message: 'Erro na requisição',
-        error: appError.message
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
       }
     }
+
   }
 
   // Cria um novo usuário
@@ -421,6 +387,7 @@ class NATVService {
   // Verifica se o usuário tem configuração NATV ativa
   async hasUserConfig(userId: string): Promise<boolean> {
     try {
+      const supabase = createApiSupabaseClient()
       const { data, error } = await supabase
         .from('integration_configs')
         .select('id')
@@ -444,6 +411,7 @@ class NATVService {
     createdAt?: string
   }> {
     try {
+      const supabase = createApiSupabaseClient()
       const { data, error } = await supabase
         .from('integration_configs')
         .select('base_url, is_active, last_used_at, created_at')
@@ -471,6 +439,7 @@ class NATVService {
   // Remove configuração do usuário
   async removeUserConfig(userId: string): Promise<void> {
     try {
+      const supabase = createApiSupabaseClient()
       const { error } = await supabase
         .from('integration_configs')
         .delete()

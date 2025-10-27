@@ -1,6 +1,6 @@
 // src/app/api/admin/plans/route.ts
 import { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 import { z } from 'zod';
 import type { Database } from '@/lib/database.types';
 import { createStandardErrorResponse, createStandardSuccessResponse, attachSecurityHeaders } from '@/middleware/shared/helpers'
@@ -17,24 +17,9 @@ const planUpdateSchema = z.object({
   plan_group_id: z.string().uuid().optional().nullable(),
 });
 
-// Função para criar cliente admin com service role (apenas no backend)
+// Usar cliente Supabase consolidado para operações admin
 function createAdminClient() {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada');
-  }
-  
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  );
+  return createApiSupabaseClient();
 }
 
 // Função para verificar se o usuário é admin

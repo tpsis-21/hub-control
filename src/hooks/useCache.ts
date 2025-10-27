@@ -1,6 +1,7 @@
 // src/hooks/useCache.ts
 import { useCallback, useEffect, useState } from "react";
 import { CacheService } from "@/services/cache.service";
+import { logger } from '@/utils/production-logger'
 
 /**
  * Hook para gerenciamento de cache em componentes React
@@ -199,13 +200,13 @@ export function usePersistentCache<T>(key: string, ttl?: number) {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed.timestamp && Date.now() - parsed.timestamp < (ttl || 300000)) {
-            cache.setCachedData(parsed.data, ttl);
+            cache.setCachedData(parsed.data);
           } else {
             localStorage.removeItem(`cache_${key}`);
           }
         }
       } catch (error) {
-        console.warn('Failed to load from localStorage:', error);
+        logger.warn('Failed to load from localStorage:', error instanceof Error ? error : new Error(String(error)));
       }
     }
   }, [key, ttl, cache]);
@@ -219,7 +220,7 @@ export function usePersistentCache<T>(key: string, ttl?: number) {
           timestamp: Date.now()
         }));
       } catch (error) {
-        console.warn('Failed to save to localStorage:', error);
+        logger.warn('Failed to save to localStorage:', error instanceof Error ? error : new Error(String(error)));
       }
     }
   }, [key, cache.data]);

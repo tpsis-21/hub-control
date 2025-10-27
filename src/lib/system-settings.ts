@@ -1,5 +1,6 @@
 // src/lib/system-settings.ts
-import { createBrowserSupabaseClient } from './supabase/clients/browser';
+import { createClientSupabaseClient } from './supabase/clients/browser';
+import { logger } from '@/utils/production-logger'
 
 // Configurações padrão do sistema
 const DEFAULT_SETTINGS = {
@@ -18,7 +19,7 @@ export interface SystemSettings {
 // Função para verificar se novos cadastros estão permitidos
 export async function areRegistrationsAllowed(): Promise<boolean> {
   try {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = createClientSupabaseClient();
     const { data, error } = await (supabase as any)
       .from('system_config')
       .select('value')
@@ -40,7 +41,7 @@ export async function areRegistrationsAllowed(): Promise<boolean> {
 // Função para obter todas as configurações do sistema
 export async function getSystemSettings(): Promise<SystemSettings> {
   try {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = createClientSupabaseClient();
     const { data, error } = await (supabase as any)
       .from('system_config')
       .select('key, value')
@@ -78,7 +79,7 @@ export async function getSystemSettings(): Promise<SystemSettings> {
 // Função para atualizar uma configuração do sistema
 export async function updateSystemSetting(key: keyof SystemSettings, value: boolean | number): Promise<boolean> {
   try {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = createClientSupabaseClient();
     const configKey = `app.${key}`;
     
     console.log('Atualizando configuração:', { key: configKey, value, type: typeof value });
@@ -124,7 +125,7 @@ export async function updateSystemSetting(key: keyof SystemSettings, value: bool
 // Função para verificar se o usuário é administrador
 export async function isUserAdmin(): Promise<boolean> {
   try {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = createClientSupabaseClient();
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.user) {

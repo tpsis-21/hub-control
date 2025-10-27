@@ -1,3 +1,4 @@
+import { logger } from '@/utils/production-logger'
 // @/lib/cache.ts
 /**
  * Sistema de cache simples em memória com TTL (Time To Live)
@@ -94,7 +95,7 @@ class MemoryCache {
     keysToDelete.forEach(key => this.cache.delete(key));
     
     if (keysToDelete.length > 0) {
-      console.log(`🧹 Cache cleanup: removidos ${keysToDelete.length} itens expirados`);
+      logger.debug(`🧹 Cache cleanup: removidos ${keysToDelete.length} itens expirados`, undefined, "DEBUG");
     }
   }
 
@@ -163,12 +164,12 @@ export function withCache<T>(
       // Tentar buscar do cache primeiro
       const cached = memoryCache.get<T>(cacheKey);
       if (cached !== null) {
-        console.log(`📦 Cache hit: ${cacheKey}`);
+        logger.debug(`📦 Cache hit: ${cacheKey}`, undefined, "DEBUG");
         return cached;
       }
       
       // Se não estiver no cache, executar a função
-      console.log(`🔄 Cache miss: ${cacheKey}`);
+      logger.debug(`🔄 Cache miss: ${cacheKey}`, undefined, "DEBUG");
       const result = await method.apply(this, args);
       
       // Armazenar no cache

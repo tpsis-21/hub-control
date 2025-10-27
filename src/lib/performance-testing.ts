@@ -1,7 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
 import { performance } from 'perf_hooks';
 import fs from 'fs/promises';
 import path from 'path';
+import { logger } from '@/utils/production-logger';
+import { createApiSupabaseClient } from '@/lib/supabase/unified-client';
 
 // Interfaces para configuração e resultados
 interface PerformanceTestConfig {
@@ -153,10 +154,7 @@ export class PerformanceTester {
 
   constructor(config: PerformanceTestConfig) {
     this.config = config;
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    this.supabase = createApiSupabaseClient(true); // Service role para testes de performance
   }
 
   // Executar teste de performance completo
@@ -170,7 +168,7 @@ export class PerformanceTester {
     const startTime = performance.now();
 
     try {
-      console.log(`🚀 Iniciando teste de performance: ${testId}`);
+      logger.debug(`🚀 Iniciando teste de performance: ${testId}`, undefined, "DEBUG");
       
       // Preparar ambiente de teste
       await this.prepareTestEnvironment();
@@ -213,7 +211,7 @@ export class PerformanceTester {
       // Enviar notificações
       await this.sendNotifications(this.results);
       
-      console.log(`✅ Teste de performance concluído: ${testId}`);
+      logger.debug(`✅ Teste de performance concluído: ${testId}`, undefined, "DEBUG");
       return this.results;
       
     } catch (error) {
@@ -498,7 +496,7 @@ export class PerformanceTester {
 
   // Métodos auxiliares
   private generateTestId(): string {
-    return `perf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `perf-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 
   private async checkConnectivity(): Promise<void> {
@@ -638,7 +636,7 @@ export class PerformanceTester {
       `Recomendações:\n${results.recommendations.join('\n')}`;
     
     // Implementar envio de notificações (email, Slack, etc.)
-    console.log(message);
+    logger.debug(message, undefined, "DEBUG");
   }
 
   // Métodos públicos para gerenciamento

@@ -18,7 +18,7 @@ import {
 import { CreditCard, LogOut, Settings, User as UserIcon, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { getBrowserUser, createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
+import { getBrowserUser, createBrowserSupabaseClient } from "@/lib/supabase/unified-client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
@@ -154,3 +154,4 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
+

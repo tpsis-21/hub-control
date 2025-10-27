@@ -14,6 +14,7 @@ import {
   attachRateLimitHeaders
 } from '@/middleware/shared/helpers'
 import { getClientIP } from '@/lib/security/rate-limit'
+import { logger } from '@/utils/production-logger'
 
 // =====================================================
 // CONFIGURAÇÕES E VALIDAÇÕES
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
     const ip = getClientIP(request)
     const rateCheck = await applyRateLimit(request, { requests: 3, windowMs: 15 * 60 * 1000, namespace: 'auth:register' })
     if (!rateCheck.success) {
-      console.warn(`🚫 Rate limit excedido para registro IP: ${ip}`)
+      logger.warn(`🚫 Rate limit excedido para registro IP: ${ip}`, undefined, "WARN")
       return rateCheck.response!
     }
     
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
     try {
       validatedData = registerSchema.parse(rawData)
     } catch (validationError: any) {
-      console.warn('🚫 Dados inválidos para registro:', validationError.errors)
+      logger.warn('🚫 Dados inválidos para registro:', validationError.errors)
       return createStandardErrorResponse(
         'VALIDATION_ERROR',
         'Dados de entrada inválidos',
@@ -148,7 +149,7 @@ export async function POST(request: NextRequest) {
     
     const { email, password, full_name } = validatedData
     
-    console.log('📝 Tentativa de registro para:', email, 'IP:', ip)
+    logger.debug(`📝 Tentativa de registro para: ${email} IP: ${ip}`)
     
     // =====================================================
     // 3. CRIAR CONTA NO SUPABASE
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
     // 5. SUCESSO - LIMPAR RATE LIMIT E RETORNAR DADOS
     // =====================================================
     
-    console.log('✅ Registro bem-sucedido para:', data.user?.email)
+    logger.debug('✅ Registro bem-sucedido para:', data.user?.email)
     
     // Verificar se o usuário precisa confirmar email
     const needsConfirmation = !data.user?.email_confirmed_at

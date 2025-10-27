@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from 'path';
 
 // Configuração baseada no ambiente
 const isProd = process.env.NODE_ENV === 'production';
@@ -122,81 +123,136 @@ const nextConfig: NextConfig = {
       };
     }
     
-    // Otimizações de produção
+    // ============================================
+    // OTIMIZAÇÕES DE BUNDLE E CODE SPLITTING
+    // ============================================
+    
     if (!dev && !isServer) {
-      // Code splitting otimizado
+      // Configurações avançadas de otimização para produção
       config.optimization = {
         ...config.optimization,
+        
+        // Configuração aprimorada de splitChunks
         splitChunks: {
           chunks: 'all',
+          minSize: 20000,
+          maxSize: 244000,
           cacheGroups: {
-        radix: {
-          test: /[\/]node_modules[\/]@radix-ui[\/]/,
-          name: 'radix-ui',
-          priority: 30,
-          reuseExistingChunk: true,
+            // Vendor chunks principais
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              priority: 10,
+              chunks: 'all',
+              enforce: true,
+            },
+            
+            // Bibliotecas UI (Radix UI)
+            radixUI: {
+              test: /[\\/]node_modules[\\/]@radix-ui[\\/]/,
+              name: 'radix-ui',
+              priority: 20,
+              chunks: 'all',
+              enforce: true,
+            },
+            
+            // Lucide React (ícones)
+            lucide: {
+              test: /[\\/]node_modules[\\/]lucide-react[\\/]/,
+              name: 'lucide-icons',
+              priority: 20,
+              chunks: 'all',
+              enforce: true,
+            },
+            
+            // Recharts (gráficos)
+            recharts: {
+              test: /[\\/]node_modules[\\/]recharts[\\/]/,
+              name: 'recharts',
+              priority: 20,
+              chunks: 'all',
+              enforce: true,
+            },
+            
+            // Date-fns (utilitários de data)
+            dateFns: {
+              test: /[\\/]node_modules[\\/]date-fns[\\/]/,
+              name: 'date-fns',
+              priority: 20,
+              chunks: 'all',
+              enforce: true,
+            },
+            
+            // React Hook Form + Zod
+            forms: {
+              test: /[\\/]node_modules[\\/](react-hook-form|zod)[\\/]/,
+              name: 'forms',
+              priority: 20,
+              chunks: 'all',
+              enforce: true,
+            },
+            
+            // Supabase
+            supabase: {
+              test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+              name: 'supabase',
+              priority: 20,
+              chunks: 'all',
+              enforce: true,
+            },
+            
+            // Componentes UI comuns
+            uiComponents: {
+              test: /[\\/]src[\\/]components[\\/]ui[\\/]/,
+              name: 'ui-components',
+              priority: 15,
+              chunks: 'all',
+              minChunks: 2,
+            },
+            
+            // Utilitários e libs comuns
+            common: {
+              test: /[\\/]src[\\/](lib|utils|hooks)[\\/]/,
+              name: 'common',
+              priority: 15,
+              chunks: 'all',
+              minChunks: 2,
+            },
+            
+            // Chunk padrão
+            default: {
+              minChunks: 2,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
+          },
         },
-        icons: {
-          test: /[\/]node_modules[\/](lucide-react)[\/]/,
-          name: 'icons',
-          priority: 25,
-          reuseExistingChunk: true,
-        },
-        charts: {
-          test: /[\/]node_modules[\/](recharts)[\/]/,
-          name: 'charts',
-          priority: 25,
-          reuseExistingChunk: true,
-        },
-        dateUtils: {
-          test: /[\/]node_modules[\/](date-fns)[\/]/,
-          name: 'date-utils',
-          priority: 20,
-          reuseExistingChunk: true,
-        },
-        forms: {
-          test: /[\/]node_modules[\/](react-hook-form|zod)[\/]/,
-          name: 'forms',
-          priority: 20,
-          reuseExistingChunk: true,
-        },
-        supabase: {
-          test: /[\/]node_modules[\/]@supabase[\/]/,
-          name: 'supabase',
-          priority: 20,
-          reuseExistingChunk: true,
-        },
-        vendor: {
-          test: /[\/]node_modules[\/]/,
-          name: 'vendors',
-          priority: 10,
-          reuseExistingChunk: true,
-        },
-        ui: {
-          test: /[\/]src[\/]components[\/]ui[\/]/,
-          name: 'ui-components',
-          priority: 20,
-          reuseExistingChunk: true,
-        },
-        common: {
-          name: 'common',
-          minChunks: 2,
-          priority: 5,
-          reuseExistingChunk: true,
-        },
-      },
-        },
+        
+        // Configuração de minimização
+        minimize: true,
+        
+        // Configuração de module concatenation (scope hoisting)
+        concatenateModules: true,
+        
+        // Configuração de side effects
+        sideEffects: false,
+        
+        // Otimização de módulos
+        moduleIds: 'deterministic',
+        chunkIds: 'deterministic',
       };
-      
-      // Otimização de módulos
-      config.optimization.moduleIds = 'deterministic';
-      config.optimization.chunkIds = 'deterministic';
     }
     
     // Alias para imports mais limpos
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@': require('path').resolve(__dirname, 'src'),
+      '@': path.resolve(__dirname, 'src'),
+      '@/components': path.resolve(__dirname, 'src/components'),
+      '@/lib': path.resolve(__dirname, 'src/lib'),
+      '@/hooks': path.resolve(__dirname, 'src/hooks'),
+      '@/utils': path.resolve(__dirname, 'src/utils'),
+      '@/types': path.resolve(__dirname, 'src/types'),
+      '@/styles': path.resolve(__dirname, 'src/styles'),
     };
     
     // Ignorar arquivos desnecessários

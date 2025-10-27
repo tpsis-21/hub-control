@@ -2,9 +2,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { createBrowserSupabaseClient } from "@/lib/supabase/clients/browser";
+import { createClientSupabaseClient } from "@/lib/supabase/clients/browser";
 import { User, Session } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/utils/production-logger'
 
 interface AuthState {
   user: User | null;
@@ -82,7 +83,7 @@ export function useAuth(): AuthContextType {
   });
   
   const router = useRouter();
-  const supabase = createBrowserSupabaseClient();
+  const supabase = createClientSupabaseClient();
 
   const updateAuthState = useCallback((session: Session | null, user: User | null) => {
     const isAuthenticated = !!(session && user);
@@ -170,7 +171,7 @@ export function useAuth(): AuthContextType {
     // Escuta mudanças na autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
+        logger.debug('Auth state changed:', event);
         
         switch (event) {
           case 'SIGNED_IN':

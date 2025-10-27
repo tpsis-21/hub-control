@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ResponsiveTable, StatusBadge, ActionButton } from '../responsive-table';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { logger } from '@/utils/production-logger'
 
 // Mock the useIsMobile hook
 jest.mock('@/hooks/use-mobile');

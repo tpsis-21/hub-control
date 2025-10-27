@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod'
+import { logger } from '@/utils/production-logger'
 
 // ============================================
 // SCHEMAS DE VALIDAÇÃO POR AMBIENTE
@@ -99,7 +100,7 @@ export interface ValidatedEnv {
 export function validateEnvironment(): ValidatedEnv {
   const env = (process.env.NODE_ENV as 'development' | 'test' | 'staging' | 'production') || 'development'
   
-  console.log(`🔍 Validando configurações de ambiente: ${env}`)
+  logger.debug(`🔍 Validando configurações de ambiente: ${env}`, undefined, "DEBUG")
   
   try {
     let validatedEnv: ValidatedEnv
@@ -107,10 +108,10 @@ export function validateEnvironment(): ValidatedEnv {
     const isProdLike = env === 'production' || env === 'staging'
     if (isProdLike) {
        validatedEnv = productionEnvSchema.parse(process.env)
-       console.log('✅ Configurações de produção validadas com sucesso')
+       logger.debug('✅ Configurações de produção validadas com sucesso', undefined, "DEBUG")
      } else {
        validatedEnv = developmentEnvSchema.parse(process.env)
-       console.log('✅ Configurações de desenvolvimento validadas com sucesso')
+       logger.debug('✅ Configurações de desenvolvimento validadas com sucesso', undefined, "DEBUG")
      }
     
     // Verificações adicionais de segurança
@@ -269,8 +270,8 @@ function performSecurityChecks(env: ValidatedEnv): void {
   
   // 6. Exibir avisos e erros
   if (warnings.length > 0) {
-    console.warn('⚠️  Avisos de configuração:')
-    warnings.forEach(warning => console.warn(`  - ${warning}`))
+    logger.warn('⚠️  Avisos de configuração:', 'CONFIG')
+    warnings.forEach(warning => logger.warn(`  - ${warning}`, 'CONFIG'));
   }
   
   if (errors.length > 0) {
@@ -280,7 +281,7 @@ function performSecurityChecks(env: ValidatedEnv): void {
   }
   
   if (warnings.length === 0 && errors.length === 0) {
-    console.log('🔒 Verificações de segurança aprovadas')
+    logger.debug('🔒 Verificações de segurança aprovadas', undefined, "DEBUG")
   }
 }
 

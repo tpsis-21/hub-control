@@ -204,283 +204,33 @@ class UXMetricsCollector {
 
   // Configurar observer de viewport
   private setupViewportObserver(): void {
-    const handleResize = () => {
-      this.context.viewport = {
-        width: window.innerWidth,
-        height: window.innerHeight
-      };
-      
-      this.recordMetric({
-        type: 'mobile_usability',
-        value: this.calculateMobileUsability(),
-        context: this.context
+    if ('ResizeObserver' in window) {
+      const observer = new ResizeObserver(() => {
+        this.updateContext();
       });
-    };
-    
-    window.addEventListener('resize', handleResize);
-    this.observers.set('viewport', handleResize);
-  }
-
-  // Coletar métrica de performance
-  private collectPerformanceMetric(entry: PerformanceEntry): void {
-    switch (entry.entryType) {
-      case 'navigation':
-        const navEntry = entry as PerformanceNavigationTiming;
-        this.recordMetric({
-          type: 'page_load_time',
-          value: navEntry.loadEventEnd - (((navEntry as any).navigationStart) ?? performance.timeOrigin),
-          context: this.context
-        });
-        break;
-        
-      case 'paint':
-        if (entry.name === 'first-contentful-paint') {
-          this.recordMetric({
-            type: 'page_load_time',
-            value: entry.startTime,
-            context: this.context,
-            metadata: { type: 'fcp' }
-          });
-        }
-        break;
-        
-      case 'largest-contentful-paint':
-        this.recordMetric({
-          type: 'page_load_time',
-          value: entry.startTime,
-          context: this.context,
-          metadata: { type: 'lcp' }
-        });
-        break;
-    }
-  }
-
-  // Registrar interação
-  private recordInteraction(event: Event): void {
-    const target = event.target as HTMLElement;
-    const elementSelector = this.getElementSelector(target);
-    
-    const interaction: UserInteraction = {
-      id: this.generateId(),
-      type: event.type as InteractionType,
-      element: elementSelector,
-      timestamp: Date.now(),
-      context: this.context
-    };
-    
-    // Adicionar coordenadas para cliques
-    if (event instanceof MouseEvent) {
-      interaction.coordinates = {
-        x: event.clientX,
-        y: event.clientY
-      };
-    }
-    
-    // Medir delay de clique
-    if (event.type === 'click') {
-      const delay = this.measureClickDelay(target);
-      if (delay > 100) { // Delay significativo
-        this.recordMetric({
-          type: 'click_delay',
-          value: delay,
-          context: this.context,
-          metadata: { element: elementSelector }
-        });
-      }
-    }
-    
-    this.interactions.push(interaction);
-    this.analyzeInteraction(interaction);
-  }
-
-  // Registrar erro
-  private recordError(event: ErrorEvent): void {
-    this.recordIssue({
-      severity: SecuritySeverity.HIGH,
-      type: 'javascript_error',
-      description: `Erro JavaScript: ${event.message}`,
-      page: window.location.pathname,
-      frequency: 1,
-      impact: 8,
-      suggestions: [
-        'Verificar console do navegador',
-        'Implementar tratamento de erro',
-        'Adicionar logs de debug'
-      ]
-    });
-  }
-
-  // Registrar rejeição de promise
-  private recordPromiseRejection(event: PromiseRejectionEvent): void {
-    this.recordIssue({
-      severity: SecuritySeverity.MEDIUM,
-      type: 'promise_rejection',
-      description: `Promise rejeitada: ${event.reason}`,
-      page: window.location.pathname,
-      frequency: 1,
-      impact: 6,
-      suggestions: [
-        'Adicionar .catch() às promises',
-        'Implementar tratamento de erro global',
-        'Verificar chamadas de API'
-      ]
-    });
-  }
-
-  // Verificar acessibilidade
-  private checkAccessibility(): void {
-    const issues: string[] = [];
-    
-    // Verificar imagens sem alt
-    const imagesWithoutAlt = document.querySelectorAll('img:not([alt])');
-    if (imagesWithoutAlt.length > 0) {
-      issues.push(`${imagesWithoutAlt.length} imagens sem texto alternativo`);
-    }
-    
-    // Verificar botões sem texto
-    const buttonsWithoutText = document.querySelectorAll('button:empty:not([aria-label])');
-    if (buttonsWithoutText.length > 0) {
-      issues.push(`${buttonsWithoutText.length} botões sem texto ou aria-label`);
-    }
-    
-    // Verificar contraste (simplificado)
-    const score = this.calculateAccessibilityScore();
-    
-    this.recordMetric({
-      type: 'accessibility_score',
-      value: score,
-      context: this.context,
-      metadata: { issues }
-    });
-    
-    if (score < 80) {
-      this.recordIssue({
-        severity: SecuritySeverity.MEDIUM,
-        type: 'accessibility',
-        description: `Score de acessibilidade baixo: ${score}/100`,
-        page: window.location.pathname,
-        frequency: 1,
-        impact: 7,
-        suggestions: [
-          'Adicionar texto alternativo às imagens',
-          'Melhorar contraste de cores',
-          'Adicionar labels aos formulários',
-          'Implementar navegação por teclado'
-        ]
-      });
-    }
-  }
-
-  // Calcular usabilidade mobile
-  private calculateMobileUsability(): number {
-    const viewport = this.context.viewport;
-    let score = 100;
-    
-    // Penalizar se muito pequeno
-    if (viewport.width < 320) score -= 30;
-    
-    // Verificar elementos muito pequenos para toque
-    const smallElements = document.querySelectorAll('button, a, input').length;
-    const touchFriendlyElements = document.querySelectorAll('[style*="min-height: 44px"], [style*="min-height: 48px"]').length;
-    
-    if (smallElements > 0) {
-      const ratio = touchFriendlyElements / smallElements;
-      score -= (1 - ratio) * 20;
-    }
-    
-    return Math.max(0, score);
-  }
-
-  // Calcular score de acessibilidade
-  private calculateAccessibilityScore(): number {
-    let score = 100;
-    
-    // Verificações básicas
-    const imagesWithoutAlt = document.querySelectorAll('img:not([alt])').length;
-    const buttonsWithoutText = document.querySelectorAll('button:empty:not([aria-label])').length;
-    const inputsWithoutLabel = document.querySelectorAll('input:not([aria-label]):not([placeholder])').length;
-    
-    score -= imagesWithoutAlt * 5;
-    score -= buttonsWithoutText * 10;
-    score -= inputsWithoutLabel * 8;
-    
-    return Math.max(0, score);
-  }
-
-  // Medir delay de clique
-  private measureClickDelay(element: HTMLElement): number {
-    const start = performance.now();
-    
-    // Simular processamento
-    requestAnimationFrame(() => {
-      const delay = performance.now() - start;
-      return delay;
-    });
-    
-    return 0; // Simplificado para o exemplo
-  }
-
-  // Analisar interação
-  private analyzeInteraction(interaction: UserInteraction): void {
-    // Detectar padrões problemáticos
-    if (interaction.type === 'click') {
-      const recentClicks = this.interactions
-        .filter(i => i.type === 'click' && i.element === interaction.element)
-        .filter(i => (Date.now() - i.timestamp) < 5000); // Últimos 5 segundos
       
-      if (recentClicks.length > 3) {
-        this.recordIssue({
-          severity: SecuritySeverity.MEDIUM,
-          type: 'multiple_clicks',
-          description: 'Usuário clicando múltiplas vezes no mesmo elemento',
-          element: interaction.element,
-          page: window.location.pathname,
-          frequency: recentClicks.length,
-          impact: 5,
-          suggestions: [
-            'Adicionar feedback visual ao clique',
-            'Desabilitar botão após clique',
-            'Melhorar responsividade da interface'
-          ]
-        });
-      }
+      observer.observe(document.body);
+      this.observers.set('viewport', observer);
     }
   }
 
-  // Registrar métrica
-  private recordMetric(data: Omit<UXMetric, 'id' | 'timestamp'>): void {
-    const metric: UXMetric = {
-      id: this.generateId(),
-      timestamp: Date.now(),
-      ...data
-    };
-    
-    this.metrics.push(metric);
-  }
-
-  // Registrar issue
-  private recordIssue(data: Omit<UXIssue, 'id' | 'timestamp'>): void {
-    const issue: UXIssue = {
-      id: this.generateId(),
-      timestamp: Date.now(),
-      ...data
-    };
-    
-    this.issues.push(issue);
+  // Gerar ID de sessão
+  private generateSessionId(): string {
+    return 'ux_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
 
   // Obter contexto atual
   private getContext(): UXContext {
     if (typeof window === 'undefined') {
       return {
-        page: '/',
-        userAgent: 'server',
-        viewport: { width: 1920, height: 1080 },
+        page: '',
+        userAgent: '',
+        viewport: { width: 0, height: 0 },
         deviceType: 'desktop',
         sessionId: this.sessionId
       };
     }
-    
+
     return {
       page: window.location.pathname,
       userAgent: navigator.userAgent,
@@ -494,7 +244,12 @@ class UXMetricsCollector {
     };
   }
 
-  // Detectar tipo de dispositivo
+  // Atualizar contexto
+  private updateContext(): void {
+    this.context = this.getContext();
+  }
+
+  // Determinar tipo de dispositivo
   private getDeviceType(): 'mobile' | 'tablet' | 'desktop' {
     if (typeof window === 'undefined') return 'desktop';
     
@@ -506,87 +261,361 @@ class UXMetricsCollector {
 
   // Obter tipo de conexão
   private getConnectionType(): string | undefined {
-    const connection = (navigator as any).connection;
-    return connection?.effectiveType;
+    if (typeof navigator !== 'undefined' && 'connection' in navigator) {
+      const connection = (navigator as any).connection;
+      return connection?.effectiveType || connection?.type;
+    }
+    return undefined;
   }
 
-  // Gerar seletor de elemento
+  // Coletar métrica de performance
+  private collectPerformanceMetric(entry: PerformanceEntry): void {
+    let metricType: UXMetricType;
+    let value: number;
+
+    switch (entry.entryType) {
+      case 'navigation':
+        const navEntry = entry as PerformanceNavigationTiming;
+        metricType = 'page_load_time';
+        value = navEntry.loadEventEnd - (navEntry.fetchStart || 0);
+        break;
+      case 'paint':
+        if (entry.name === 'first-contentful-paint') {
+          metricType = 'page_load_time';
+          value = entry.startTime;
+        } else {
+          return;
+        }
+        break;
+      case 'largest-contentful-paint':
+        metricType = 'page_load_time';
+        value = entry.startTime;
+        break;
+      default:
+        return;
+    }
+
+    this.addMetric(metricType, value, {
+      entryType: entry.entryType,
+      name: entry.name
+    });
+  }
+
+  // Registrar interação
+  private recordInteraction(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target) return;
+
+    const interaction: UserInteraction = {
+      id: this.generateId(),
+      type: event.type as InteractionType,
+      element: this.getElementSelector(target),
+      timestamp: Date.now(),
+      context: { ...this.context }
+    };
+
+    // Adicionar coordenadas para eventos de mouse
+    if (event instanceof MouseEvent) {
+      interaction.coordinates = {
+        x: event.clientX,
+        y: event.clientY
+      };
+    }
+
+    this.interactions.push(interaction);
+    this.analyzeInteraction(interaction);
+  }
+
+  // Registrar erro
+  private recordError(event: ErrorEvent): void {
+    this.addIssue({
+      id: this.generateId(),
+      severity: SecuritySeverity.HIGH,
+      type: 'javascript_error',
+      description: event.message,
+      page: this.context.page,
+      frequency: 1,
+      impact: 8,
+      suggestions: [
+        'Verificar logs do console',
+        'Implementar tratamento de erro',
+        'Adicionar fallback para funcionalidade'
+      ],
+      timestamp: Date.now()
+    });
+  }
+
+  // Registrar rejeição de promise
+  private recordPromiseRejection(event: PromiseRejectionEvent): void {
+    this.addIssue({
+      id: this.generateId(),
+      severity: SecuritySeverity.MEDIUM,
+      type: 'promise_rejection',
+      description: String(event.reason),
+      page: this.context.page,
+      frequency: 1,
+      impact: 6,
+      suggestions: [
+        'Adicionar .catch() às promises',
+        'Implementar tratamento de erro assíncrono',
+        'Verificar chamadas de API'
+      ],
+      timestamp: Date.now()
+    });
+  }
+
+  // Verificar acessibilidade
+  private checkAccessibility(): void {
+    if (typeof document === 'undefined') return;
+
+    // Verificar imagens sem alt text
+    const imagesWithoutAlt = document.querySelectorAll('img:not([alt])');
+    if (imagesWithoutAlt.length > 0) {
+      this.addIssue({
+        id: this.generateId(),
+        severity: SecuritySeverity.MEDIUM,
+        type: 'accessibility',
+        description: `${imagesWithoutAlt.length} imagens sem texto alternativo`,
+        page: this.context.page,
+        frequency: imagesWithoutAlt.length,
+        impact: 5,
+        suggestions: [
+          'Adicionar atributo alt às imagens',
+          'Usar texto descritivo para imagens informativas',
+          'Usar alt="" para imagens decorativas'
+        ],
+        timestamp: Date.now()
+      });
+    }
+
+    // Verificar contraste de cores (simplificado)
+    this.checkColorContrast();
+  }
+
+  // Verificar contraste de cores
+  private checkColorContrast(): void {
+    // Implementação simplificada - em produção usaria uma biblioteca especializada
+    const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, a, button');
+    let lowContrastCount = 0;
+
+    textElements.forEach(element => {
+      const styles = window.getComputedStyle(element);
+      const color = styles.color;
+      const backgroundColor = styles.backgroundColor;
+      
+      // Verificação simplificada - em produção seria mais robusta
+      if (this.hasLowContrast(color, backgroundColor)) {
+        lowContrastCount++;
+      }
+    });
+
+    if (lowContrastCount > 0) {
+      this.addIssue({
+        id: this.generateId(),
+        severity: SecuritySeverity.LOW,
+        type: 'accessibility',
+        description: `${lowContrastCount} elementos com possível baixo contraste`,
+        page: this.context.page,
+        frequency: lowContrastCount,
+        impact: 3,
+        suggestions: [
+          'Verificar contraste de cores com ferramentas especializadas',
+          'Usar cores que atendam às diretrizes WCAG',
+          'Testar com usuários com deficiência visual'
+        ],
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  // Verificar se há baixo contraste (implementação simplificada)
+  private hasLowContrast(color: string, backgroundColor: string): boolean {
+    // Implementação muito simplificada - apenas para demonstração
+    return color === backgroundColor || 
+           (color.includes('rgb(128') && backgroundColor.includes('rgb(128'));
+  }
+
+  // Obter seletor do elemento
   private getElementSelector(element: HTMLElement): string {
-    if (element.id) return `#${element.id}`;
-    if (element.className) return `.${element.className.split(' ')[0]}`;
+    if (element.id) {
+      return `#${element.id}`;
+    }
+    
+    if (element.className) {
+      return `.${element.className.split(' ')[0]}`;
+    }
+    
     return element.tagName.toLowerCase();
   }
 
   // Gerar ID único
   private generateId(): string {
-    return Math.random().toString(36).substring(2, 15);
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
   }
 
-  // Gerar ID de sessão
-  private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+  // Adicionar métrica
+  public addMetric(type: UXMetricType, value: number, metadata?: Record<string, any>): void {
+    const metric: UXMetric = {
+      id: this.generateId(),
+      type,
+      value,
+      timestamp: Date.now(),
+      context: { ...this.context },
+      metadata
+    };
+
+    this.metrics.push(metric);
+    this.analyzeMetric(metric);
+  }
+
+  // Adicionar issue
+  public addIssue(issue: UXIssue): void {
+    // Verificar se já existe issue similar
+    const existingIssue = this.issues.find(i => 
+      i.type === issue.type && 
+      i.description === issue.description && 
+      i.page === issue.page
+    );
+
+    if (existingIssue) {
+      existingIssue.frequency++;
+      existingIssue.timestamp = Date.now();
+    } else {
+      this.issues.push(issue);
+    }
+  }
+
+  // Analisar métrica
+  private analyzeMetric(metric: UXMetric): void {
+    // Detectar problemas baseados em métricas
+    switch (metric.type) {
+      case 'page_load_time':
+        if (metric.value > 3000) { // > 3 segundos
+          this.addIssue({
+            id: this.generateId(),
+            severity: SecuritySeverity.MEDIUM,
+            type: 'performance',
+            description: 'Tempo de carregamento lento',
+            page: metric.context.page,
+            frequency: 1,
+            impact: 7,
+            suggestions: [
+              'Otimizar imagens e recursos',
+              'Implementar lazy loading',
+              'Reduzir tamanho do bundle JavaScript'
+            ],
+            timestamp: Date.now()
+          });
+        }
+        break;
+      
+      case 'click_delay':
+        if (metric.value > 300) { // > 300ms
+          this.addIssue({
+            id: this.generateId(),
+            severity: SecuritySeverity.LOW,
+            type: 'responsiveness',
+            description: 'Resposta lenta ao clique',
+            page: metric.context.page,
+            frequency: 1,
+            impact: 4,
+            suggestions: [
+              'Otimizar event handlers',
+              'Reduzir processamento no thread principal',
+              'Implementar debouncing quando apropriado'
+            ],
+            timestamp: Date.now()
+          });
+        }
+        break;
+    }
+  }
+
+  // Analisar interação
+  private analyzeInteraction(interaction: UserInteraction): void {
+    // Detectar padrões problemáticos
+    const recentInteractions = this.interactions
+      .filter(i => Date.now() - i.timestamp < 10000) // Últimos 10 segundos
+      .filter(i => i.type === interaction.type && i.element === interaction.element);
+
+    // Detectar cliques repetitivos (possível frustração)
+    if (interaction.type === 'click' && recentInteractions.length > 3) {
+      this.addIssue({
+        id: this.generateId(),
+        severity: SecuritySeverity.MEDIUM,
+        type: 'usability',
+        description: 'Cliques repetitivos detectados',
+        element: interaction.element,
+        page: interaction.context.page,
+        frequency: recentInteractions.length,
+        impact: 6,
+        suggestions: [
+          'Verificar se o elemento está funcionando corretamente',
+          'Adicionar feedback visual ao clique',
+          'Implementar loading states'
+        ],
+        timestamp: Date.now()
+      });
+    }
   }
 
   // Gerar relatório
-  generateReport(period?: { start: number; end: number }): UXReport {
+  public generateReport(): UXReport {
     const now = Date.now();
-    const reportPeriod = period || {
-      start: this.startTime,
-      end: now
-    };
-    
-    const filteredMetrics = this.metrics.filter(
-      m => m.timestamp >= reportPeriod.start && m.timestamp <= reportPeriod.end
-    );
-    
-    const filteredInteractions = this.interactions.filter(
-      i => i.timestamp >= reportPeriod.start && i.timestamp <= reportPeriod.end
-    );
-    
-    const filteredIssues = this.issues.filter(
-      i => i.timestamp >= reportPeriod.start && i.timestamp <= reportPeriod.end
-    );
-    
+    const oneHourAgo = now - (60 * 60 * 1000);
+
+    const recentMetrics = this.metrics.filter(m => m.timestamp > oneHourAgo);
+    const recentInteractions = this.interactions.filter(i => i.timestamp > oneHourAgo);
+    const recentIssues = this.issues.filter(i => i.timestamp > oneHourAgo);
+
     return {
-      period: reportPeriod,
-      metrics: filteredMetrics,
-      interactions: filteredInteractions,
-      issues: filteredIssues,
-      insights: this.generateInsights(filteredMetrics, filteredInteractions),
-      recommendations: this.generateRecommendations(filteredIssues, filteredMetrics)
+      period: { start: oneHourAgo, end: now },
+      metrics: recentMetrics,
+      interactions: recentInteractions,
+      issues: recentIssues,
+      insights: this.generateInsights(recentMetrics, recentInteractions, recentIssues),
+      recommendations: this.generateRecommendations(recentIssues, recentMetrics)
     };
   }
 
   // Gerar insights
-  private generateInsights(metrics: UXMetric[], interactions: UserInteraction[]): UXInsight[] {
+  private generateInsights(metrics: UXMetric[], interactions: UserInteraction[], issues: UXIssue[]): UXInsight[] {
     const insights: UXInsight[] = [];
-    
-    // Insight sobre tempo de carregamento
+
+    // Insight sobre performance
     const loadTimes = metrics.filter(m => m.type === 'page_load_time');
     if (loadTimes.length > 0) {
       const avgLoadTime = loadTimes.reduce((sum, m) => sum + m.value, 0) / loadTimes.length;
-      
       insights.push({
         type: 'performance',
-        description: `Tempo médio de carregamento: ${avgLoadTime.toFixed(0)}ms`,
+        description: `Tempo médio de carregamento: ${Math.round(avgLoadTime)}ms`,
         impact: avgLoadTime > 3000 ? 'negative' : avgLoadTime < 1000 ? 'positive' : 'neutral',
-        confidence: 0.9,
-        data: { avgLoadTime, samples: loadTimes.length }
+        confidence: 0.8,
+        data: { avgLoadTime, sampleSize: loadTimes.length }
       });
     }
-    
+
     // Insight sobre interações
     const clickInteractions = interactions.filter(i => i.type === 'click');
     if (clickInteractions.length > 0) {
-      const uniqueElements = new Set(clickInteractions.map(i => i.element)).size;
-      const clicksPerElement = clickInteractions.length / uniqueElements;
-      
       insights.push({
         type: 'engagement',
-        description: `Média de ${clicksPerElement.toFixed(1)} cliques por elemento`,
-        impact: clicksPerElement > 3 ? 'negative' : 'neutral',
+        description: `${clickInteractions.length} cliques registrados`,
+        impact: clickInteractions.length > 50 ? 'positive' : 'neutral',
         confidence: 0.7,
-        data: { totalClicks: clickInteractions.length, uniqueElements }
+        data: { clickCount: clickInteractions.length }
+      });
+    }
+
+    // Insight sobre issues
+    const criticalIssues = issues.filter(i => i.severity === SecuritySeverity.CRITICAL || i.severity === SecuritySeverity.HIGH);
+    if (criticalIssues.length > 0) {
+      insights.push({
+        type: 'issues',
+        description: `${criticalIssues.length} problemas críticos detectados`,
+        impact: 'negative',
+        confidence: 0.9,
+        data: { criticalIssueCount: criticalIssues.length }
       });
     }
     
@@ -604,7 +633,7 @@ class UXMetricsCollector {
         priority: SecuritySeverity.HIGH,
         category: 'Correção de Bugs',
         title: 'Corrigir erros críticos',
-        description: `${highSeverityIssues.length} erros de alta severidade detectados`,
+        description: highSeverityIssues.length + ' erros de alta severidade detectados',
         implementation: 'Revisar logs de erro e implementar tratamento adequado',
         expectedImpact: 'Redução significativa na taxa de erro e melhoria na satisfação do usuário'
       });
@@ -763,12 +792,6 @@ export function useUXMetric(metricType: UXMetricType) {
 }
 
 // ============================================
-// ============================================
-// NOTA: Componentes React foram movidos para:
-// src/components/ux/ux-dashboard.tsx
-// ============================================
-
-// ============================================
 // EXPORTAÇÕES
 // ============================================
 
@@ -787,3 +810,5 @@ export type {
 };
 
 export default UXMetricsCollector;
+
+

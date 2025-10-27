@@ -24,6 +24,7 @@ import {
   NotificationRecipient
 } from '@/types/notifications';
 import { getEnabledChannels, getChannelConfig, toRealtimeChannelConfig } from './notifications/channel-configs';
+import { logger } from '@/utils/production-logger'
 
 // Estratégias de entrega
 export enum DeliveryStrategy {
@@ -1137,7 +1138,7 @@ export class RealtimeNotificationSystem {
         .delete()
         .lt('created_at', cutoffDate.toISOString());
       
-      console.log('Limpeza de notificações antigas concluída');
+      logger.debug('Limpeza de notificações antigas concluída');
       
     } catch (error) {
       console.error('Erro na limpeza de notificações:', error);
@@ -1240,7 +1241,7 @@ export class RealtimeNotificationSystem {
       await provider.shutdown();
     }
     
-    console.log('Sistema de notificações em tempo real finalizado');
+    logger.debug('Sistema de notificações em tempo real finalizado');
   }
 }
 
@@ -1263,61 +1264,61 @@ abstract class NotificationProvider {
 // Implementações de provedores (placeholders)
 class EmailProvider extends NotificationProvider {
   async send(notification: Notification, channelConfig: NotificationChannelConfig): Promise<boolean> {
-    console.log(`Enviando email: ${notification.subject}`);
+    logger.debug(`Enviando email: ${notification.subject}`);
     // Implementação real do envio de email
     return true;
   }
   
   async shutdown(): Promise<void> {
-    console.log('Fechando provedor de email');
+    logger.debug('Fechando provedor de email');
   }
 }
 
 class SMSProvider extends NotificationProvider {
   async send(notification: Notification, channelConfig: NotificationChannelConfig): Promise<boolean> {
-    console.log(`Enviando SMS: ${notification.subject}`);
+    logger.debug(`Enviando SMS: ${notification.subject}`);
     // Implementação real do envio de SMS
     return true;
   }
   
   async shutdown(): Promise<void> {
-    console.log('Fechando provedor de SMS');
+    logger.debug('Fechando provedor de SMS');
   }
 }
 
 class PushProvider extends NotificationProvider {
   async send(notification: Notification, channelConfig: NotificationChannelConfig): Promise<boolean> {
-    console.log(`Enviando push: ${notification.subject}`);
+    logger.debug(`Enviando push: ${notification.subject}`);
     // Implementação real do envio de push
     return true;
   }
   
   async shutdown(): Promise<void> {
-    console.log('Fechando provedor de push');
+    logger.debug('Fechando provedor de push');
   }
 }
 
 class WebhookProvider extends NotificationProvider {
   async send(notification: Notification, channelConfig: NotificationChannelConfig): Promise<boolean> {
-    console.log(`Enviando webhook: ${notification.subject}`);
+    logger.debug(`Enviando webhook: ${notification.subject}`);
     // Implementação real do envio de webhook
     return true;
   }
   
   async shutdown(): Promise<void> {
-    console.log('Fechando provedor de webhook');
+    logger.debug('Fechando provedor de webhook');
   }
 }
 
 class SlackProvider extends NotificationProvider {
   async send(notification: Notification, channelConfig: NotificationChannelConfig): Promise<boolean> {
-    console.log(`Enviando Slack: ${notification.subject}`);
+    logger.debug(`Enviando Slack: ${notification.subject}`);
     // Implementação real do envio para Slack
     return true;
   }
   
   async shutdown(): Promise<void> {
-    console.log('Fechando provedor do Slack');
+    logger.debug('Fechando provedor do Slack');
   }
 }
 
@@ -1333,51 +1334,39 @@ class DiscordProvider extends NotificationProvider {
   }
 }
 
-class TeamsProvider extends NotificationProvider {
-  async send(notification: Notification, channelConfig: NotificationChannelConfig): Promise<boolean> {
-    console.log(`Enviando Teams: ${notification.subject}`);
-    // Implementação real do envio para Teams
-    return true;
-  }
-  
-  async shutdown(): Promise<void> {
-    console.log('Fechando provedor do Teams');
-  }
-}
-
 class InAppProvider extends NotificationProvider {
   async send(notification: Notification, channelConfig: NotificationChannelConfig): Promise<boolean> {
-    console.log(`Enviando in-app: ${notification.subject}`);
+    logger.debug(`Enviando in-app: ${notification.subject}`, undefined, "DEBUG");
     // Implementação real do envio in-app
     return true;
   }
   
   async shutdown(): Promise<void> {
-    console.log('Fechando provedor in-app');
+    logger.debug('Fechando provedor in-app', undefined, "DEBUG");
   }
 }
 
 class BrowserProvider extends NotificationProvider {
   async send(notification: Notification, channelConfig: NotificationChannelConfig): Promise<boolean> {
-    console.log(`Enviando browser: ${notification.subject}`);
+    logger.debug(`Enviando browser: ${notification.subject}`, undefined, "DEBUG");
     // Implementação real do envio para browser
     return true;
   }
   
   async shutdown(): Promise<void> {
-    console.log('Fechando provedor do browser');
+    logger.debug('Fechando provedor do browser', undefined, "DEBUG");
   }
 }
 
 class DesktopProvider extends NotificationProvider {
   async send(notification: Notification, channelConfig: NotificationChannelConfig): Promise<boolean> {
-    console.log(`Enviando desktop: ${notification.subject}`);
+    logger.debug(`Enviando desktop: ${notification.subject}`, undefined, "DEBUG");
     // Implementação real do envio para desktop
     return true;
   }
   
   async shutdown(): Promise<void> {
-    console.log('Fechando provedor do desktop');
+    logger.debug('Fechando provedor do desktop', undefined, "DEBUG");
   }
 }
 

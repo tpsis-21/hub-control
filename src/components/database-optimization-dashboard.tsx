@@ -8,15 +8,19 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { 
-  useDatabaseQueryOptimizer, 
-  formatExecutionTime, 
-  getQueryType, 
-  estimateQueryComplexity,
+import {
+  useDatabaseQueryOptimizer,
   type QueryPerformanceMetrics,
   type SlowQueryAlert,
-  type IndexRecommendation
+  type IndexRecommendation,
+  type DatabaseStatistics,
+  type QueryOptimizationRule
 } from '@/lib/database-query-optimizer';
+import {
+  formatExecutionTime,
+  getQueryType,
+  estimateQueryComplexity
+} from '@/lib/database-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

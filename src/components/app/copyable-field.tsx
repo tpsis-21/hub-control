@@ -41,3 +41,4 @@ export function CopyableField({ icon: Icon, label, value, className }: CopyableF
         </div>
     );
 }
+

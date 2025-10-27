@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api"
+import { createServerSupabaseClient } from "@/lib/supabase/clients/server"
 import { LoggerService } from '@/services/logger.service'
 
 export async function POST(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar configuração SMTP padrão
-    const supabase = await createApiSupabaseClient()
+    const supabase = await createServerSupabaseClient()
     const { data: smtpConfig } = await supabase
       .from('smtp_configs')
       .select('*')

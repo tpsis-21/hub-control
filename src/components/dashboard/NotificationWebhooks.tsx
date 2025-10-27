@@ -387,7 +387,7 @@ const NotificationWebhooks: React.FC = () => {
 
       toast({
         title: 'Sucesso',
-        description: `Webhook ${!webhook.active ? 'ativado' : 'desativado'} com sucesso`
+        description: 'Webhook ' + (!webhook.active ? 'ativado' : 'desativado') + ' com sucesso'
       });
 
       fetchWebhooks();

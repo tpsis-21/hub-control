@@ -1,74 +1,83 @@
-'use client'
-
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Separator } from '@/components/ui/separator'
-import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import { 
   Settings, 
   TestTube, 
+  Users, 
+  Search, 
+  RefreshCw, 
   CheckCircle, 
   XCircle, 
-  AlertCircle,
-  Save,
-  RefreshCw,
+  AlertCircle, 
   ExternalLink,
   Clock,
   Zap,
-  User,
-  Search,
   Activity
 } from 'lucide-react'
-import { natvService, type NATVConfig } from '@/services/natv.service'
-import { toast } from 'sonner'
-import { createClientSupabaseClient } from '@/lib/supabase/clients/browser'
-import { validateIntegrationConfig } from '@/lib/local-validation'
-import { ValidationFeedback, InlineValidation } from '@/components/ui/validation-feedback'
+import { natvService } from '@/services/natv.service'
+import { useAuth } from '@/hooks/useAuth'
+
+interface NATVConfig {
+  token: string
+  baseUrl: string
+  timeout: number
+}
+
+interface OperationData {
+  createUser: {
+    username: string
+    email: string
+    password: string
+    plan: string
+  }
+  activation: {
+    username: string
+    plan: string
+    duration: number
+  }
+  searchUsers: {
+    username: string
+    userId: string
+    limit: number
+  }
+}
+
+interface OperationResult {
+  type: string
+  data?: any
+  error?: string
+}
 
 export function NATVConfig() {
-  const [config, setConfig] = useState<{
-    baseUrl: string
-    token: string
-    username: string
-    password: string
-    timeout: number
-  }>({
-    baseUrl: 'https://revenda.pixbot.link',
+  const { user } = useAuth()
+  const [config, setConfig] = useState<NATVConfig>({
     token: '',
-    username: '',
-    password: '',
+    baseUrl: 'https://revenda.pixbot.link',
     timeout: 30000
   })
-  const [isLoading, setIsLoading] = useState(false)
-  const [isTesting, setIsTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{
-    success: boolean
-    message: string
-    timestamp?: string
-    data?: any
-  } | null>(null)
   const [isConfigured, setIsConfigured] = useState(false)
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [testData, setTestData] = useState({
-    username: '',
-    password: '',
-    searchQuery: ''
-  })
-  const [operationData, setOperationData] = useState({
+  const [isLoading, setIsLoading] = useState(false)
+  const [operationLoading, setOperationLoading] = useState(false)
+  const [operationResult, setOperationResult] = useState<OperationResult | null>(null)
+  const [operationData, setOperationData] = useState<OperationData>({
     createUser: {
       username: '',
-      minutes: 60
+      email: '',
+      password: '',
+      plan: 'basic'
     },
-    activateUser: {
+    activation: {
       username: '',
-      userId: '',
-      months: 1
+      plan: 'basic',
+      duration: 30
     },
     searchUsers: {
       username: '',
@@ -76,247 +85,97 @@ export function NATVConfig() {
       limit: 10
     }
   })
-  const [operationResult, setOperationResult] = useState<any>(null)
-  const [operationLoading, setOperationLoading] = useState(false)
-  const [localValidation, setLocalValidation] = useState(() => 
-    validateIntegrationConfig({
-      apiUrl: config.baseUrl,
-      apiKey: config.token,
-      username: config.username,
-      password: config.password,
-      timeout: config.timeout
-    })
-  )
 
   useEffect(() => {
-    initializeComponent()
+    loadConfig()
   }, [])
 
-  // Validação local em tempo real
-  useEffect(() => {
-    const validation = validateIntegrationConfig({
-      apiUrl: config.baseUrl,
-      apiKey: config.token,
-      username: config.username,
-      password: config.password,
-      timeout: config.timeout
-    })
-    setLocalValidation(validation)
-  }, [config])
-
-  const initializeComponent = async () => {
-    try {
-      const supabase = createClientSupabaseClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (user) {
-        setCurrentUser(user)
-        await loadUserConfig(user.id)
-      } else {
-        toast.error('Usuário não autenticado')
-      }
-    } catch (error) {
-      console.error('Erro ao inicializar componente:', error)
-      toast.error('Erro ao carregar dados do usuário')
-    }
-  }
-
-  const loadUserConfig = async (userId: string) => {
+  const loadConfig = async () => {
+    if (!user?.id) return
+    
     try {
       setIsLoading(true)
-      const hasConfig = await natvService.hasUserConfig(userId)
-      
-      if (hasConfig) {
-        const configInfo = await natvService.getUserConfigInfo(userId)
-        if (configInfo) {
-          setConfig(prev => ({
-            ...prev,
-            baseUrl: configInfo.baseUrl || 'https://revenda.pixbot.link'
-          }))
-          setIsConfigured(true)
-        }
-      } else {
-        setIsConfigured(false)
+      const response = await natvService.getUserConfigInfo(user?.id || '')
+      if (response.hasConfig && response.baseUrl) {
+        setConfig({
+          token: '', // Token não é retornado por segurança
+          baseUrl: response.baseUrl,
+          timeout: 30000
+        })
+        setIsConfigured(true)
       }
     } catch (error) {
-      console.error('Erro ao carregar configuração do usuário:', error)
-      toast.error('Erro ao carregar configuração NATV')
-      setIsConfigured(false)
+      console.error('Erro ao carregar configuração NATV:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const loadConfig = async () => {
-    if (currentUser) {
-      await loadUserConfig(currentUser.id)
-    }
-  }
-
-  const handleSave = async () => {
+  const saveConfig = async () => {
     if (!config.token.trim()) {
       toast.error('Token é obrigatório')
       return
     }
 
-    if (!currentUser) {
-      toast.error('Usuário não autenticado')
-      return
-    }
-
+    if (!user?.id) return
+    
+    setIsLoading(true)
     try {
-      setIsLoading(true)
-      await natvService.saveUserConfig(currentUser.id, config)
+      await natvService.saveUserConfig(user?.id || '', config)
       setIsConfigured(true)
       toast.success('Configuração salva com sucesso!')
+      
+      // Testar conexão
+      const testResult = await natvService.testUserConnection(user?.id || '')
+      if (testResult.success) {
+        toast.success('Conexão testada com sucesso!')
+      } else {
+        toast.error('Configuração salva, mas falha no teste de conexão')
+      }
     } catch (error) {
-      console.error('Erro ao salvar configuração:', error)
       toast.error('Erro ao salvar configuração')
+      console.error('Erro:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleTest = async () => {
-    if (!config.token.trim()) {
-      toast.error('Configure o token antes de testar')
-      return
-    }
-
-    if (!currentUser) {
-      toast.error('Usuário não autenticado')
-      return
-    }
-
+  const testConnection = async () => {
+    if (!user?.id) return
+    
+    setIsLoading(true)
     try {
-      setIsTesting(true)
-      setTestResult(null)
-      
-      // Salva a configuração temporariamente para teste
-      await natvService.saveUserConfig(currentUser.id, config)
-      
-      const result = await natvService.testUserConnection(currentUser.id)
-      
-      setTestResult({
-        success: result.success,
-        message: result.success ? 'Conexão estabelecida com sucesso!' : result.error || 'Erro na conexão',
-        timestamp: new Date().toLocaleString('pt-BR'),
-        data: result.data
-      })
-      
+      const result = await natvService.testUserConnection(user?.id || '')
       if (result.success) {
-        toast.success('Teste de conexão realizado com sucesso!')
+        toast.success('Conexão testada com sucesso!')
+        setOperationResult({ type: 'test', data: result })
       } else {
         toast.error('Falha no teste de conexão')
+        setOperationResult({ type: 'test', error: result.message })
       }
     } catch (error) {
-      console.error('Erro no teste:', error)
-      setTestResult({
-        success: false,
-        message: 'Erro interno no teste de conexão',
-        timestamp: new Date().toLocaleString('pt-BR')
-      })
-      toast.error('Erro no teste de conexão')
+      toast.error('Erro ao testar conexão')
+      setOperationResult({ type: 'test', error: error instanceof Error ? error.message : 'Erro desconhecido' })
     } finally {
-      setIsTesting(false)
-    }
-  }
-
-  const handleCreateUser = async () => {
-    if (!testData.username || !testData.password) {
-      toast.error('Username e password são obrigatórios')
-      return
-    }
-
-    if (!currentUser) {
-      toast.error('Usuário não autenticado')
-      return
-    }
-
-    try {
-      setIsTesting(true)
-      const result = await natvService.createUserWithConfig(currentUser.id, {
-        username: testData.username,
-        password: testData.password,
-        duration: 1 // 1 dia de teste
-      })
-      
-      setTestResult({
-        success: result.success,
-        message: result.message,
-        timestamp: new Date().toLocaleString('pt-BR'),
-        data: result.data
-      })
-      
-      if (result.success) {
-        toast.success('Usuário criado com sucesso!')
-        setTestData(prev => ({ ...prev, username: '', password: '' }))
-      } else {
-        toast.error(result.error || 'Erro ao criar usuário')
-      }
-    } catch (error) {
-      toast.error('Erro ao criar usuário')
-    } finally {
-      setIsTesting(false)
-    }
-  }
-
-  const handleSearchUsers = async () => {
-    if (!testData.searchQuery) {
-      toast.error('Digite um termo para busca')
-      return
-    }
-
-    if (!currentUser) {
-      toast.error('Usuário não autenticado')
-      return
-    }
-
-    try {
-      setIsTesting(true)
-      const result = await natvService.searchUsersWithConfig(currentUser.id, {
-        username: testData.searchQuery
-      })
-      
-      setTestResult({
-        success: result.success,
-        message: result.message,
-        timestamp: new Date().toLocaleString('pt-BR'),
-        data: result.data
-      })
-      
-      if (result.success) {
-        toast.success(`Encontrados ${result.data?.length || 0} usuários`)
-      } else {
-        toast.error(result.error || 'Erro na busca')
-      }
-    } catch (error) {
-      toast.error('Erro na busca de usuários')
-    } finally {
-      setIsTesting(false)
+      setIsLoading(false)
     }
   }
 
   return (
-    <Card>
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <div className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2">
           <Settings className="h-5 w-5" />
-          <CardTitle>Configuração NATV</CardTitle>
-          <Badge variant={isConfigured ? 'default' : 'secondary'}>
-            {isConfigured ? 'Configurado' : 'Não Configurado'}
-          </Badge>
-        </div>
+          Configuração NATV
+        </CardTitle>
         <CardDescription>
-          Configure a integração com a API de Revenda NATV para criação e gerenciamento de usuários de teste.
+          Configure a integração com a API NATV para gerenciamento de usuários e licenças
         </CardDescription>
       </CardHeader>
-      
-      <CardContent className="space-y-6">
+      <CardContent>
         <Tabs defaultValue="config" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="config">Configuração</TabsTrigger>
-            <TabsTrigger value="test">Teste</TabsTrigger>
             <TabsTrigger value="operations">Operações</TabsTrigger>
             <TabsTrigger value="endpoints">Endpoints</TabsTrigger>
             <TabsTrigger value="limits">Limites</TabsTrigger>
@@ -325,7 +184,18 @@ export function NATVConfig() {
           <TabsContent value="config" className="space-y-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="baseUrl">URL Base da API</Label>
+                <Label htmlFor="token">Token *</Label>
+                <Input
+                  id="token"
+                  type="password"
+                  value={config.token}
+                  onChange={(e) => setConfig(prev => ({ ...prev, token: e.target.value }))}
+                  placeholder="Seu Token da NATV"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="baseUrl">URL Base</Label>
                 <Input
                   id="baseUrl"
                   value={config.baseUrl}
@@ -335,175 +205,50 @@ export function NATVConfig() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="token">Token de Autenticação</Label>
-                <Input
-                  id="token"
-                  type="password"
-                  value={config.token}
-                  onChange={(e) => setConfig(prev => ({ ...prev, token: e.target.value }))}
-                  placeholder="Seu token Bearer"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Token usado no header: Authorization: Bearer {'{token}'}
-                </p>
-              </div>
-              
-              <div className="space-y-2">
                 <Label htmlFor="timeout">Timeout (ms)</Label>
                 <Input
                   id="timeout"
                   type="number"
                   value={config.timeout}
                   onChange={(e) => setConfig(prev => ({ ...prev, timeout: parseInt(e.target.value) || 30000 }))}
-                  placeholder="30000"
+                  min="5000"
+                  max="60000"
                 />
               </div>
-            </div>
-            
-            {/* Validação local em tempo real */}
-            <ValidationFeedback result={localValidation} />
-            
-            <Separator />
-            
-            <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={isLoading}>
-                <Save className="h-4 w-4 mr-2" />
-                {isLoading ? 'Salvando...' : 'Salvar Configuração'}
-              </Button>
               
-              <Button variant="outline" onClick={handleTest} disabled={isTesting || !config.token}>
-                <TestTube className="h-4 w-4 mr-2" />
-                {isTesting ? 'Testando...' : 'Testar Conexão'}
-              </Button>
-              
-              <Button variant="outline" onClick={loadConfig}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Recarregar
-              </Button>
-            </div>
-            
-            {testResult && (
-              <Alert className={testResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-                {testResult.success ? (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                ) : (
-                  <XCircle className="h-4 w-4 text-red-600" />
-                )}
-                <AlertDescription className={testResult.success ? 'text-green-800' : 'text-red-800'}>
-                  <div className="space-y-1">
-                    <p>{testResult.message}</p>
-                    {testResult.timestamp && (
-                      <p className="text-xs opacity-70">Testado em: {testResult.timestamp}</p>
-                    )}
-                    {testResult.data && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs">Ver dados da resposta</summary>
-                        <pre className="mt-1 text-xs bg-black/5 p-2 rounded overflow-auto max-h-32">
-                          {JSON.stringify(testResult.data, null, 2)}
-                        </pre>
-                      </details>
-                    )}
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="test" className="space-y-4">
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <h4 className="font-medium flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Criar Usuário de Teste
-                </h4>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="test-username">Username</Label>
-                    <Input
-                      id="test-username"
-                      value={testData.username}
-                      onChange={(e) => setTestData(prev => ({ ...prev, username: e.target.value }))}
-                      placeholder="usuario_teste"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="test-password">Password</Label>
-                    <Input
-                      id="test-password"
-                      type="password"
-                      value={testData.password}
-                      onChange={(e) => setTestData(prev => ({ ...prev, password: e.target.value }))}
-                      placeholder="senha123"
-                    />
-                  </div>
-                </div>
-                
+              <div className="flex gap-2">
                 <Button 
-                  onClick={handleCreateUser} 
-                  disabled={isTesting || !isConfigured}
-                  className="w-full"
+                  onClick={saveConfig} 
+                  disabled={isLoading}
+                  className="flex-1"
                 >
-                  <User className="h-4 w-4 mr-2" />
-                  {isTesting ? 'Criando...' : 'Criar Usuário'}
-                </Button>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-4">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  Buscar Usuários
-                </h4>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="search-query">Termo de Busca</Label>
-                  <Input
-                    id="search-query"
-                    value={testData.searchQuery}
-                    onChange={(e) => setTestData(prev => ({ ...prev, searchQuery: e.target.value }))}
-                    placeholder="Digite username para buscar"
-                  />
-                </div>
-                
-                <Button 
-                  onClick={handleSearchUsers} 
-                  disabled={isTesting || !isConfigured}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  {isTesting ? 'Buscando...' : 'Buscar'}
-                </Button>
-              </div>
-              
-              {testResult && (
-                <Alert className={testResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-                  {testResult.success ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  {isLoading ? (
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <XCircle className="h-4 w-4 text-red-600" />
+                    <Settings className="mr-2 h-4 w-4" />
                   )}
-                  <AlertDescription className={testResult.success ? 'text-green-800' : 'text-red-800'}>
-                    <div className="space-y-2">
-                      <p className="font-medium">{testResult.message}</p>
-                      {testResult.timestamp && (
-                        <p className="text-xs opacity-70">Executado em: {testResult.timestamp}</p>
-                      )}
-                      {testResult.data && (
-                        <details className="mt-2">
-                          <summary className="cursor-pointer text-sm font-medium">Ver resposta completa</summary>
-                          <Textarea 
-                            className="mt-2 font-mono text-xs" 
-                            value={JSON.stringify(testResult.data, null, 2)}
-                            readOnly
-                            rows={10}
-                          />
-                        </details>
-                      )}
-                    </div>
+                  Salvar Configuração
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={testConnection} 
+                  disabled={isLoading || !isConfigured}
+                >
+                  {isLoading ? (
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <TestTube className="mr-2 h-4 w-4" />
+                  )}
+                  Testar
+                </Button>
+              </div>
+              
+              {isConfigured && (
+                <Alert className="border-green-200 bg-green-50">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    Configuração salva e ativa. Você pode usar as operações da NATV.
                   </AlertDescription>
                 </Alert>
               )}
@@ -512,23 +257,18 @@ export function NATVConfig() {
           
           <TabsContent value="operations" className="space-y-4">
             <div className="space-y-6">
-              <h4 className="font-medium flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Operações da API NATV
-              </h4>
-              
               {/* Criar Usuário */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Criar Usuário de Teste</CardTitle>
-                  <CardDescription>
-                    Cria um novo usuário de teste com duração específica
-                  </CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Users className="h-4 w-4" />
+                    Criar Usuário de Teste
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="create-username">Nome de usuário (opcional)</Label>
+                      <Label htmlFor="create-username">Nome de usuário</Label>
                       <Input
                         id="create-username"
                         value={operationData.createUser.username}
@@ -536,21 +276,45 @@ export function NATVConfig() {
                           ...prev,
                           createUser: { ...prev.createUser, username: e.target.value }
                         }))}
-                        placeholder="Deixe vazio para gerar automaticamente"
+                        placeholder="usuario_teste"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="create-minutes">Duração (minutos)</Label>
+                      <Label htmlFor="create-email">E-mail</Label>
                       <Input
-                        id="create-minutes"
-                        type="number"
-                        value={operationData.createUser.minutes}
+                        id="create-email"
+                        type="email"
+                        value={operationData.createUser.email}
                         onChange={(e) => setOperationData(prev => ({
                           ...prev,
-                          createUser: { ...prev.createUser, minutes: parseInt(e.target.value) || 60 }
+                          createUser: { ...prev.createUser, email: e.target.value }
                         }))}
-                        min="1"
-                        max="1440"
+                        placeholder="teste@exemplo.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="create-password">Senha</Label>
+                      <Input
+                        id="create-password"
+                        type="password"
+                        value={operationData.createUser.password}
+                        onChange={(e) => setOperationData(prev => ({
+                          ...prev,
+                          createUser: { ...prev.createUser, password: e.target.value }
+                        }))}
+                        placeholder="senha123"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="create-plan">Plano</Label>
+                      <Input
+                        id="create-plan"
+                        value={operationData.createUser.plan}
+                        onChange={(e) => setOperationData(prev => ({
+                          ...prev,
+                          createUser: { ...prev.createUser, plan: e.target.value }
+                        }))}
+                        placeholder="basic"
                       />
                     </div>
                   </div>
@@ -558,11 +322,7 @@ export function NATVConfig() {
                     onClick={async () => {
                       setOperationLoading(true)
                       try {
-                        const result = await natvService.createUserWithConfig(currentUser.id, {
-                          username: operationData.createUser.username || `user_${Date.now()}`,
-                          password: `pass_${Date.now()}`,
-                          duration: operationData.createUser.minutes
-                        })
+                        const result = await natvService.createUserWithConfig(user?.id || '', operationData.createUser)
                         setOperationResult({ type: 'createUser', data: result })
                         if (result.success) {
                           toast.success('Usuário criado com sucesso!')
@@ -576,65 +336,65 @@ export function NATVConfig() {
                         setOperationLoading(false)
                       }
                     }}
-                    disabled={operationLoading || !isConfigured}
+                    disabled={operationLoading || !isConfigured || !operationData.createUser.username || !operationData.createUser.email}
                     className="w-full"
                   >
                     {operationLoading ? (
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <User className="mr-2 h-4 w-4" />
+                      <Users className="mr-2 h-4 w-4" />
                     )}
                     Criar Usuário
                   </Button>
                 </CardContent>
               </Card>
               
-              {/* Ativar/Renovar Usuário */}
+              {/* Ativação/Renovação */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Ativar/Renovar Usuário</CardTitle>
-                  <CardDescription>
-                    Ativa ou renova um usuário existente
-                  </CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <RefreshCw className="h-4 w-4" />
+                    Ativação/Renovação
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <Label htmlFor="activate-username">Nome de usuário</Label>
+                      <Label htmlFor="activation-username">Nome de usuário</Label>
                       <Input
-                        id="activate-username"
-                        value={operationData.activateUser.username}
+                        id="activation-username"
+                        value={operationData.activation.username}
                         onChange={(e) => setOperationData(prev => ({
                           ...prev,
-                          activateUser: { ...prev.activateUser, username: e.target.value }
+                          activation: { ...prev.activation, username: e.target.value }
                         }))}
-                        placeholder="Nome do usuário"
+                        placeholder="usuario_teste"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="activate-userid">ID do usuário (alternativo)</Label>
+                      <Label htmlFor="activation-plan">Plano</Label>
                       <Input
-                        id="activate-userid"
-                        value={operationData.activateUser.userId}
+                        id="activation-plan"
+                        value={operationData.activation.plan}
                         onChange={(e) => setOperationData(prev => ({
                           ...prev,
-                          activateUser: { ...prev.activateUser, userId: e.target.value }
+                          activation: { ...prev.activation, plan: e.target.value }
                         }))}
-                        placeholder="ID numérico"
+                        placeholder="basic"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="activate-months">Meses</Label>
+                      <Label htmlFor="activation-duration">Duração (dias)</Label>
                       <Input
-                        id="activate-months"
+                        id="activation-duration"
                         type="number"
-                        value={operationData.activateUser.months}
+                        value={operationData.activation.duration}
                         onChange={(e) => setOperationData(prev => ({
                           ...prev,
-                          activateUser: { ...prev.activateUser, months: parseInt(e.target.value) || 1 }
+                          activation: { ...prev.activation, duration: parseInt(e.target.value) || 30 }
                         }))}
                         min="1"
-                        max="12"
+                        max="365"
                       />
                     </div>
                   </div>
@@ -642,31 +402,27 @@ export function NATVConfig() {
                     onClick={async () => {
                       setOperationLoading(true)
                       try {
-                        const result = await natvService.activateUserWithConfig(currentUser.id, {
-                          username: operationData.activateUser.username,
-                          plan: 'default',
-                          duration: operationData.activateUser.months * 30
-                        })
-                        setOperationResult({ type: 'activateUser', data: result })
+                        const result = await natvService.activateUserWithConfig(user?.id || '', operationData.activation)
+                        setOperationResult({ type: 'activation', data: result })
                         if (result.success) {
-                          toast.success('Usuário ativado/renovado com sucesso!')
+                          toast.success('Usuário ativado com sucesso!')
                         } else {
-                          toast.error('Erro ao ativar/renovar usuário')
+                          toast.error('Erro ao ativar usuário')
                         }
                       } catch (error) {
-                        toast.error('Erro ao ativar/renovar usuário')
-                        setOperationResult({ type: 'activateUser', error: error instanceof Error ? error.message : 'Erro desconhecido' })
+                        toast.error('Erro ao ativar usuário')
+                        setOperationResult({ type: 'activation', error: error instanceof Error ? error.message : 'Erro desconhecido' })
                       } finally {
                         setOperationLoading(false)
                       }
                     }}
-                    disabled={operationLoading || !isConfigured || (!operationData.activateUser.username && !operationData.activateUser.userId)}
+                    disabled={operationLoading || !isConfigured || !operationData.activation.username}
                     className="w-full"
                   >
                     {operationLoading ? (
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Zap className="mr-2 h-4 w-4" />
+                      <RefreshCw className="mr-2 h-4 w-4" />
                     )}
                     Ativar/Renovar
                   </Button>
@@ -676,10 +432,10 @@ export function NATVConfig() {
               {/* Buscar Usuários */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Buscar Usuários</CardTitle>
-                  <CardDescription>
-                    Busca usuários por nome ou ID
-                  </CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Search className="h-4 w-4" />
+                    Buscar Usuários
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -692,7 +448,7 @@ export function NATVConfig() {
                           ...prev,
                           searchUsers: { ...prev.searchUsers, username: e.target.value }
                         }))}
-                        placeholder="Nome do usuário"
+                        placeholder="usuario_teste"
                       />
                     </div>
                     <div>
@@ -726,13 +482,13 @@ export function NATVConfig() {
                     onClick={async () => {
                       setOperationLoading(true)
                       try {
-                        const result = await natvService.searchUsersWithConfig(currentUser.id, {
+                        const result = await natvService.searchUsersWithConfig(user?.id || '', {
                           username: operationData.searchUsers.username,
                           ...(operationData.searchUsers.userId && { email: operationData.searchUsers.userId })
                         })
                         setOperationResult({ type: 'searchUsers', data: result })
                         if (result.success) {
-                          toast.success(`Encontrados ${result.data?.length || 0} usuários`)
+                          toast.success('Encontrados ' + (result.data?.length || 0) + ' usuários')
                         } else {
                           toast.error('Erro ao buscar usuários')
                         }
@@ -893,5 +649,7 @@ export function NATVConfig() {
   )
 }
 
-// Export default para compatibilidade com lazy loading
 export default NATVConfig
+
+
+

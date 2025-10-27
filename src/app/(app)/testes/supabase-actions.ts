@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import { addMinutes, format } from "date-fns";
 import type { Client, Plan, Server, ServerTestConfig } from "@/lib/types";
 import { addTestSchema } from "@/lib/schemas";
-import { createApiSupabaseClient } from "@/lib/supabase/clients/api";
+import { createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
+import { logger } from '@/utils/production-logger'
 // Usando fetch nativo do Node.js/Next.js
 
 // Helper para gerar um link único para a área do cliente.
@@ -17,7 +18,7 @@ const generateUniqueLink = () => `/cliente/link_${new Date().getTime()}${Math.ra
  * @returns Uma lista de clientes com status "Em teste".
  */
 export async function getTestes(): Promise<Client[]> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { data, error } = await supabase
     .from('clients')
     .select('*')
@@ -59,7 +60,7 @@ export async function getTestes(): Promise<Client[]> {
  * @returns O teste encontrado ou undefined.
  */
 export async function getTesteById(id: string): Promise<Client | undefined> {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { data, error } = await supabase
     .from('clients')
     .select('*')
@@ -110,7 +111,7 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
   }
 
   // Buscar informações do servidor
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { data: serverData, error: serverError } = await supabase
     .from('servers')
     .select('*')
@@ -210,10 +211,10 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
           };
 
         } else if (testConfig.type === 'chatbot') {
-          console.log(`--- [SIMULAÇÃO DE AUTOMAÇÃO DE TESTE VIA CHATBOT] ---`);
-          console.log(`Link do Chatbot: ${testConfig.chatbotLink}`);
-          console.log(`Mensagem: ${testConfig.chatbotMessage}`);
-          console.log(`-------------------------------------------`);
+          logger.debug(`--- [SIMULAÇÃO DE AUTOMAÇÃO DE TESTE VIA CHATBOT] ---`, undefined, "DEBUG");
+          logger.debug(`Link do Chatbot: ${testConfig.chatbotLink}`, undefined, "DEBUG");
+          logger.debug(`Mensagem: ${testConfig.chatbotMessage}`, undefined, "DEBUG");
+          logger.debug(`-------------------------------------------`, undefined, "DEBUG");
         }
       }
     } catch (error: any) {
@@ -247,7 +248,7 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
   };
 
   // Inserir o novo teste no Supabase
-  const supabase2 = await createApiSupabaseClient();
+  const supabase2 = await createServerSupabaseClientForActions();
   const { data: newTest, error } = await supabase2
     .from('clients')
     .insert([newTestCustomerData])
@@ -295,7 +296,7 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
  */
 export async function convertTestToCustomerAction(id: string) {
   // Buscar o teste
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { data: test, error: testError } = await supabase
     .from('clients')
     .select('*, plans!inner(*)')
@@ -316,7 +317,7 @@ export async function convertTestToCustomerAction(id: string) {
   );
   
   // Atualizar o status para Ativo e a data de expiração
-  const supabase2 = await createApiSupabaseClient();
+  const supabase2 = await createServerSupabaseClientForActions();
   const { error } = await supabase2
     .from('clients')
     .update({ 
@@ -345,7 +346,7 @@ export async function convertTestToCustomerAction(id: string) {
  * @returns Um objeto indicando sucesso ou falha na operação.
  */
 export async function deleteTestAction(id: string) {
-  const supabase = await createApiSupabaseClient();
+  const supabase = await createServerSupabaseClientForActions();
   const { error } = await supabase
     .from('clients')
     .delete()

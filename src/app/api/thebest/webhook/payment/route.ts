@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 import { createRenewalService } from '@/services/thebest-renewal.service';
 import { headers } from 'next/headers';
 import crypto from 'crypto';
 
-// Configuração do Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Usar cliente Supabase consolidado
+const supabase = createApiSupabaseClient();
 
 // Chave secreta para validar webhooks (configure no .env)
 const WEBHOOK_SECRET = process.env.THEBEST_WEBHOOK_SECRET || 'your-webhook-secret';
@@ -203,15 +201,15 @@ async function logWebhookError(errorData: any) {
       .from('thebest_api_logs')
       .insert({
         user_id: errorData.userId || 'webhook',
-        operation: 'webhook_payment',
-        success: false,
+        operation_type: 'webhook_payment',
         request_data: errorData.payload || {},
         response_data: {
           error: errorData.error,
           message: errorData.message,
           stack: errorData.stack
         },
-        created_at: new Date().toISOString()
+        status_code: 500,
+        error_message: errorData.error
       });
   } catch (logError) {
     console.error('Erro ao registrar log do webhook:', logError);

@@ -2,16 +2,41 @@
 // Endpoint protegido para upload de arquivos com validação completa
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 import { cookies } from 'next/headers';
+import { z } from 'zod';
+import { rateLimit } from '@/lib/security/rate-limit';
+import { logger } from '@/utils/production-logger';
 import { validateFileByType, generateSecureFileName } from '@/lib/file-validation';
-// import { logSecurityEvent } from '@/lib/security';
-import { getClientIP } from '@/lib/security/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Verificar autenticação
-    const supabase = createRouteHandlerClient({ cookies });
+    // 1. Autenticação com Supabase
+    const cookieStore = await cookies();
+    const supabase = createServerSupabaseClient({
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set(name: string, value: string, options: any) {
+        cookieStore.set({
+          name,
+          value,
+          ...options,
+          httpOnly: false,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/'
+        });
+      },
+      remove(name: string, options: any) {
+        cookieStore.set({
+          name,
+          value: '',
+          ...options,
+          maxAge: 0
+        });
+      }
+    });
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
@@ -134,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     // 8. Obter URL pública (se necessário)
     let publicUrl = null;
-    if (bucket === 'avatars' || bucket === 'profiles') {
+    if (bucket === 'avatars' || bucket === 'profiles' || bucket === 'user-uploads') {
       const { data: urlData } = supabase.storage
         .from(bucket)
         .getPublicUrl(uploadData.path);
@@ -172,6 +197,19 @@ export async function POST(request: NextRequest) {
         validation_passed: true,
         uploaded_at: new Date().toISOString()
       });
+
+    // 11. Atualizar perfil do usuário se for upload de avatar
+    if (bucket === 'avatars' && publicUrl) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', user.id);
+      
+      if (profileError) {
+        logger.error('Erro ao atualizar avatar no perfil:', profileError instanceof Error ? profileError : new Error(String(profileError)));
+        // Não falhar o upload por causa disso, apenas logar
+      }
+    }
 
     return NextResponse.json({
       success: true,
