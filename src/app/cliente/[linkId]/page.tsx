@@ -7,9 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Tv, ShieldCheck, User, AlertCircle, HelpCircle, Film, CreditCard, CheckCircle, ScreenShare, BookOpen } from "lucide-react";
+import { Tv, ShieldCheck, User, AlertCircle, HelpCircle, Film, CheckCircle, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CardPriceDisplay } from "@/components/ui/price-display";
 import Link from "next/link";
 import { CopyableField } from "@/components/app/copyable-field";
 import { FormattedDate } from "@/components/app/formatted-date";
@@ -21,6 +20,8 @@ import {
 } from "@/components/ui/accordion";
 import type { KnowledgeBaseArticle, Client, Plan } from "@/lib/types";
 import ContentSuggestion from "@/components/app/ContentSuggestion";
+import { RenewalPlanCard } from "@/components/cliente/renewal-plan-card";
+import { getClientCheckoutOptions } from "@/lib/checkout/client-checkout-options";
 
 const statusConfig = {
   'Ativo': { color: 'bg-green-500', text: 'Ativo' },
@@ -113,9 +114,14 @@ export default async function ClientAreaPage({ params }: any) {
     const supportLink = "https://wa.me/5511999998888"; 
     const contentRequestLink = "https://forms.gle/exemplo";
     const publicArticles = allArticles.filter(a => a.isPublic);
+    const checkoutOptions = await getClientCheckoutOptions(
+      customer.id,
+      customer.serverId ?? null,
+      customer.managerId ?? null
+    );
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="min-h-screen bg-gray-50 dark:bg-background">
             <header className="bg-primary text-primary-foreground py-4 shadow-md">
                  <div className="container mx-auto px-4">
                     <h1 className="text-2xl font-bold">Área do Cliente</h1>
@@ -162,40 +168,33 @@ export default async function ClientAreaPage({ params }: any) {
                             </CardContent>
                         </Card>
                         
-                        {renewalPlans.length > 0 && (
+                        {renewalPlans.length > 0 && checkoutOptions.paymentEnabled && customer.uniqueLink && (
                              <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><CheckCircle className="w-6 h-6 text-green-600" />Renove ou troque seu plano</CardTitle>
-                                    <CardDescription>Escolha um dos planos abaixo para continuar aproveitando.</CardDescription>
+                                    <CardDescription>Escolha o plano, a forma de pagamento (PIX ou cartão) e confirme.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {renewalPlans.map(plan => (
-                                        <Card key={plan.id} className="flex flex-col">
-                                            <CardHeader>
-                                                <CardTitle>{plan.name}</CardTitle>
-                                                {plan.restrictions && <CardDescription>{plan.restrictions}</CardDescription>}
-                                            </CardHeader>
-                                            <CardContent className="flex-grow space-y-2">
-                                                <CardPriceDisplay
-                                                    price={plan.price}
-                                                    priceBeforeDiscount={plan.price_before_discount}
-                                                />
-                                                 <p className="text-sm text-muted-foreground">{plan.validity} dias de acesso</p>
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <ScreenShare className="w-4 h-4" />
-                                                    <span>{plan.screens} Conexão(ões)</span>
-                                                </div>
-                                            </CardContent>
-                                            <CardFooter>
-                                                <Button className="w-full">
-                                                    <CreditCard className="w-4 h-4 mr-2" />
-                                                    Renovar com este Plano
-                                                </Button>
-                                            </CardFooter>
-                                        </Card>
+                                        <RenewalPlanCard
+                                          key={plan.id}
+                                          uniqueLink={customer.uniqueLink!}
+                                          plan={plan}
+                                          checkoutOptions={checkoutOptions}
+                                        />
                                     ))}
                                 </CardContent>
                             </Card>
+                        )}
+                        {renewalPlans.length > 0 && !checkoutOptions.paymentEnabled && (
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Renovação</CardTitle>
+                              <CardDescription>
+                                Pagamento online não está habilitado para seu servidor. Entre em contato com o suporte.
+                              </CardDescription>
+                            </CardHeader>
+                          </Card>
                         )}
                          <KnowledgeBaseSection articles={publicArticles} />
                     </div>

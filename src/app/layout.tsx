@@ -2,6 +2,7 @@ import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import '../styles/hub-theme.css';
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/app/theme-provider';
@@ -14,8 +15,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
   title: 'Hub Control',
-  description: 'Sistema de gerenciamento de IPTV - Hub Control',
-  keywords: ['IPTV', 'Hub Control', 'gerenciamento', 'servidores', 'streaming'],
+  description: 'Painel administrativo Hub Control — clientes, planos, servidores e integrações',
+  keywords: ['Hub Control', 'gerenciamento', 'painel admin', 'servidores', 'assinaturas'],
   authors: [{ name: 'Hub Control Team' }],
   creator: 'Hub Control',
   publisher: 'Hub Control',
@@ -47,21 +48,21 @@ export const metadata: Metadata = {
     locale: 'pt_BR',
     url: 'https://hubcontrol.app',
     title: 'Hub Control',
-    description: 'Sistema de gerenciamento de IPTV - Hub Control',
+    description: 'Painel administrativo Hub Control — clientes, planos, servidores e integrações',
     siteName: 'Hub Control',
   },
   twitter: {
     card: 'summary',
     title: 'Hub Control',
-    description: 'Sistema de gerenciamento de IPTV - Hub Control',
+    description: 'Painel administrativo Hub Control — clientes, planos, servidores e integrações',
   },
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#2196F3' },
     { media: '(prefers-color-scheme: dark)', color: '#1976D2' }
@@ -87,6 +88,7 @@ export default function RootLayout({
             <ServiceInitializer />
             {children}
             <Toaster />
+            <SonnerToaster richColors closeButton position="top-right" />
           </ThemeProvider>
         </ErrorBoundary>
       </body>

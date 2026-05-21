@@ -1,554 +1,326 @@
 // src/app/api/proxy/thebest/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimitCustom, parseWindowToMs, buildRateLimitHeaders } from '@/lib/security/rate-limit';
-import { getExternalApiConfig } from '@/lib/security';
 import { ErrorService, ErrorType } from '@/services/error.service';
-import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
+import { createApiSupabaseClient } from '@/lib/supabase/unified-client';
+import {
+  THEBEST_PROXY_ACTIONS,
+  type TheBestProxyAction,
+  THEBEST_DEFAULT_TIMEOUT_MS,
+} from '@/lib/integrations/thebest-constants';
+import {
+  getActiveTheBestConfig,
+  migrateLegacyIntegrationConfig,
+} from '@/lib/integrations/thebest-config-store';
+import {
+  callTheBestPanel,
+  testTheBestPanelConnection,
+} from '@/lib/integrations/thebest-panel-client';
 
-// Função para verificar autenticação
-async function isAuthenticated(request: NextRequest): Promise<{ authenticated: boolean; user?: any }> {
-  const authHeader = request.headers.get('authorization');
-  
-  if (!authHeader?.startsWith('Bearer ')) {
-    return { authenticated: false };
-  }
-  
-  const token = authHeader.replace('Bearer ', '');
-  
+async function isAuthenticated(): Promise<{ authenticated: boolean; user?: { id: string } }> {
   try {
-    // Usar cliente Supabase consolidado
-    const supabase = createApiSupabaseClient();
-    
-    // Verificar se o token é válido
+    const supabase = createApiSupabaseClient(false);
     const { data: { user }, error } = await supabase.auth.getUser();
-    
-    if (error || !user) {
-      return { authenticated: false };
-    }
-    
-    return { authenticated: true, user };
+    if (error || !user) return { authenticated: false };
+    return { authenticated: true, user: { id: user.id } };
   } catch (error) {
     console.error('Erro ao verificar autenticação:', error);
     return { authenticated: false };
   }
 }
 
-// Função para obter configuração The Best do usuário
-async function getUserTheBestConfig(userId: string): Promise<{
-  success: boolean;
-  config?: {
-    baseUrl: string;
-    apiKey: string;
-    apiSecret?: string;
-    username?: string;
-    password?: string;
+async function getUserTheBestConfig(userId: string) {
+  const supabase = createApiSupabaseClient(false);
+  let data = await getActiveTheBestConfig(supabase, userId);
+  if (!data) {
+    data = await migrateLegacyIntegrationConfig(supabase, userId);
+  }
+
+  if (!data?.api_key) {
+    return {
+      success: false as const,
+      error: 'Configuração TheBest não encontrada. Configure a chave API em Integrações.',
+    };
+  }
+
+  return {
+    success: true as const,
+    config: {
+      configId: data.id,
+      baseUrl: data.api_url,
+      apiKey: data.api_key,
+      apiSecret: data.api_secret ?? undefined,
+    },
   };
-  error?: string;
-}> {
+}
+
+const ACTION_TO_OPERATION: Record<string, string> = {
+  get_packages: 'GET_PACKAGES',
+  sync_packages: 'SYNC_PACKAGES',
+  create_renewal: 'CREATE_RENEWAL',
+  renew_line: 'CREATE_RENEWAL',
+  create_trial: 'CREATE_TRIAL',
+  get_renew_cost: 'GET_RENEW_COST',
+  list_lines: 'LIST_LINES',
+  get_user_renewals: 'LIST_LINES',
+  get_renewal_status: 'GET_RENEWAL',
+  cancel_renewal: 'CANCEL_RENEWAL',
+  test_connection: 'TEST_CONNECTION',
+};
+
+async function logApiCall(
+  configId: string,
+  userId: string,
+  action: string,
+  success: boolean,
+  options?: {
+    responseData?: unknown;
+    errorMessage?: string;
+    statusCode?: number;
+    durationMs?: number;
+  }
+) {
   try {
-    const supabase = createApiSupabaseClient();
-
-    const { data, error } = await supabase
-      .from('thebest_configs')
-      .select('api_url, api_key, api_secret')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single();
-
-    if (error || !data) {
-      return {
-        success: false,
-        error: 'Configuração The Best não encontrada para este usuário'
-      };
-    }
-
-    return {
-      success: true,
-      config: {
-        baseUrl: data.api_url,
-        apiKey: data.api_key,
-        apiSecret: data.api_secret || undefined
-      }
-    };
+    const supabase = createApiSupabaseClient(false);
+    await supabase.from('thebest_api_logs').insert({
+      config_id: configId,
+      user_id: userId,
+      operation_type: ACTION_TO_OPERATION[action] ?? 'TEST_CONNECTION',
+      endpoint: action,
+      http_method: 'POST',
+      success,
+      response_data: options?.responseData ?? null,
+      error_message: options?.errorMessage ?? null,
+      response_status: options?.statusCode ?? null,
+      duration_ms: options?.durationMs ?? null,
+      created_at: new Date().toISOString(),
+    });
   } catch (error) {
-    console.error('Erro ao obter configuração The Best do usuário:', error);
-    return {
-      success: false,
-      error: 'Erro interno ao obter configuração'
-    };
+    console.error('Erro ao registrar log da API TheBest:', error);
   }
 }
 
-// Função para registrar log da API
-async function logApiCall(userId: string, operation: string, success: boolean, responseData?: any, errorMessage?: string) {
+async function touchLastUsed(configId: string) {
   try {
-    const supabase = createApiSupabaseClient();
-
+    const supabase = createApiSupabaseClient(false);
     await supabase
-      .from('thebest_api_logs')
-      .insert({
-        user_id: userId,
-        operation_type: operation,
-        success,
-        response_data: responseData,
-        error_message: errorMessage,
-        created_at: new Date().toISOString()
-      });
+      .from('thebest_configs')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('id', configId);
   } catch (error) {
-    console.error('Erro ao registrar log da API:', error);
+    console.error('Erro ao atualizar last_used_at:', error);
   }
 }
 
-// POST - Proxy para API The Best
+function isAllowedAction(action: string | null): action is TheBestProxyAction {
+  return Boolean(action && THEBEST_PROXY_ACTIONS.includes(action as TheBestProxyAction));
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // Rate limit para The Best
     const rl = await rateLimitCustom(request, {
       windowMs: parseWindowToMs('1m'),
-      max: 30, // 30 requisições por minuto
-      namespace: 'proxy:thebest'
+      max: 30,
+      namespace: 'proxy:thebest',
     });
     if (!rl.success) {
-      const rateLimitError = ErrorService.createError(
-        ErrorType.VALIDATION,
-        'Muitas requisições. Tente novamente em instantes.',
-        'RATE_LIMIT_EXCEEDED'
-      );
       return NextResponse.json(
-        { 
-          error: rateLimitError.message,
-          code: rateLimitError.code,
-          timestamp: rateLimitError.timestamp
+        {
+          error: 'Muitas requisições. Tente novamente em instantes.',
+          code: 'RATE_LIMIT_EXCEEDED',
         },
         { status: 429, headers: buildRateLimitHeaders(rl) }
       );
     }
 
-    // Verificar autenticação
-    const authResult = await isAuthenticated(request);
-    if (!authResult.authenticated) {
+    const authResult = await isAuthenticated();
+    if (!authResult.authenticated || !authResult.user) {
       const authError = ErrorService.createAuthenticationError(
         'Você precisa estar autenticado para acessar esta API.'
       );
       return NextResponse.json(
-        { 
-          error: authError.message,
-          code: authError.code,
-          timestamp: authError.timestamp
-        },
+        { error: authError.message, code: authError.code },
         { status: 401 }
       );
     }
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
-
-    if (!action) {
-      const validationError = ErrorService.createValidationError(
-        'Action é obrigatória'
-      );
+    if (!isAllowedAction(action)) {
       return NextResponse.json(
-        { 
-          error: validationError.message,
-          code: validationError.code,
-          timestamp: validationError.timestamp
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validar actions permitidas
-    const allowedActions = [
-      'get_packages',
-      'create_renewal',
-      'get_renewal_status',
-      'cancel_renewal',
-      'get_user_renewals',
-      'sync_packages',
-      'test_connection'
-    ];
-
-    if (!allowedActions.includes(action)) {
-      const authzError = ErrorService.createAuthorizationError(
-        'Action não permitida'
-      );
-      return NextResponse.json(
-        { 
-          error: authzError.message,
-          code: authzError.code,
-          timestamp: authzError.timestamp
-        },
+        { error: 'Action não permitida', code: 'ACTION_NOT_ALLOWED' },
         { status: 403 }
       );
     }
 
-    // Obter dados do corpo da requisição
-    const body = await request.json();
-
-    // Validar dados básicos
+    const body = await request.json().catch(() => ({}));
     if (!body || typeof body !== 'object') {
-      const validationError = ErrorService.createValidationError(
-        'Dados inválidos'
-      );
-      return NextResponse.json(
-        { 
-          error: validationError.message,
-          code: validationError.code,
-          timestamp: validationError.timestamp
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
 
-    // Obter configuração The Best do usuário
     const configResult = await getUserTheBestConfig(authResult.user.id);
-    if (!configResult.success || !configResult.config) {
-      const configError = ErrorService.createError(
-        ErrorType.VALIDATION,
-        'Configuração The Best não encontrada. Configure sua chave API nas integrações.',
-        'THEBEST_CONFIG_NOT_FOUND'
-      );
+    if (!configResult.success) {
       return NextResponse.json(
-        { 
-          error: configError.message,
-          code: configError.code,
-          timestamp: configError.timestamp
-        },
+        { error: configResult.error, code: 'THEBEST_CONFIG_NOT_FOUND' },
         { status: 404 }
       );
     }
 
-    const { baseUrl, apiKey, apiSecret } = configResult.config;
+    const { configId, baseUrl, apiKey, apiSecret } = configResult.config;
+    const started = Date.now();
 
-    // Preparar dados para The Best API
-    const theBestData = {
-      ...body,
-      action: action
-    };
-
-    let theBestResponse;
-    let responseData;
-    let errorMessage;
-
-    try {
-      // Fazer requisição para API The Best
-      theBestResponse = await fetch(baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
-          'User-Agent': 'Hub-Control/1.0'
-        },
-        body: JSON.stringify(theBestData)
+    if (action === 'test_connection') {
+      const test = await testTheBestPanelConnection({
+        apiKey,
+        apiSecret,
+        baseUrl,
+        timeoutMs: THEBEST_DEFAULT_TIMEOUT_MS,
       });
+      await logApiCall(configId, authResult.user.id, action, test.success, {
+        statusCode: test.status,
+        durationMs: Date.now() - started,
+        errorMessage: test.success ? undefined : test.message,
+      });
+      if (test.success) await touchLastUsed(configId);
+      return NextResponse.json({
+        success: test.success,
+        message: test.message,
+        status: test.status,
+        latency_ms: test.latencyMs,
+      });
+    }
 
-      if (!theBestResponse.ok) {
-        const errorText = await theBestResponse.text();
-        let errorData;
-        
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { message: errorText };
-        }
-        
-        errorMessage = `Erro na API The Best: ${theBestResponse.status} - ${theBestResponse.statusText}`;
-        
-        // Registrar log de erro
-        await logApiCall(authResult.user.id, action, false, null, errorMessage);
-        
-        const appError = ErrorService.createError(
-          theBestResponse.status >= 500 ? ErrorType.NETWORK : ErrorType.VALIDATION,
-          errorMessage,
-          `THEBEST_API_${theBestResponse.status}`,
-          errorData
-        );
-        
-        return NextResponse.json(
-          { 
-            error: appError.message,
-            code: appError.code,
-            timestamp: appError.timestamp,
-            details: appError.details
-          },
-          { status: theBestResponse.status }
-        );
-      }
+    const panelResult = await callTheBestPanel(
+      { apiKey, apiSecret, baseUrl, timeoutMs: THEBEST_DEFAULT_TIMEOUT_MS },
+      action,
+      body as Record<string, unknown>,
+      'POST'
+    );
 
-      responseData = await theBestResponse.json();
-      
-      // Registrar log de sucesso
-      await logApiCall(authResult.user.id, action, true, responseData);
-      
-      // Atualizar last_used_at da configuração
-      try {
-        const supabase = createApiSupabaseClient();
+    await logApiCall(configId, authResult.user.id, action, panelResult.ok, {
+      responseData: panelResult.data,
+      statusCode: panelResult.status,
+      durationMs: Date.now() - started,
+      errorMessage: panelResult.ok ? undefined : String(panelResult.data),
+    });
 
-        await supabase
-          .from('thebest_configs')
-          .update({ last_used_at: new Date().toISOString() })
-          .eq('user_id', authResult.user.id)
-          .eq('is_active', true);
-      } catch (error) {
-        // Log do erro mas não falha a requisição
-        console.error('Erro ao atualizar last_used_at:', error);
-      }
-
-      return NextResponse.json(responseData);
-      
-    } catch (error) {
-      errorMessage = `Erro de rede ao conectar com The Best API: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
-      
-      // Registrar log de erro
-      await logApiCall(authResult.user.id, action, false, null, errorMessage);
-      
-      const networkError = ErrorService.createError(
-        ErrorType.NETWORK,
-        'Erro de conexão com a API The Best. Verifique sua conexão e tente novamente.',
-        'THEBEST_NETWORK_ERROR',
-        { originalError: error instanceof Error ? error.message : 'Erro desconhecido' }
+    if (!panelResult.ok) {
+      const appError = ErrorService.createError(
+        panelResult.status >= 500 ? ErrorType.NETWORK : ErrorType.VALIDATION,
+        `Erro na API TheBest: ${panelResult.status}`,
+        `THEBEST_API_${panelResult.status}`,
+        panelResult.data
       );
-      
+      const status = panelResult.status >= 400 ? panelResult.status : 502;
+      const { stripInternalDetailsForResponse } = await import('@/lib/api-error-response');
       return NextResponse.json(
-        { 
-          error: networkError.message,
-          code: networkError.code,
-          timestamp: networkError.timestamp,
-          details: networkError.details
-        },
-        { status: 503 }
+        stripInternalDetailsForResponse(
+          { error: appError.message, code: appError.code, details: appError.details },
+          status
+        ),
+        { status }
       );
     }
-    
+
+    await touchLastUsed(configId);
+    return NextResponse.json(panelResult.data ?? { success: true });
   } catch (error) {
-    console.error('Erro no proxy The Best:', error);
-    
-    const internalError = ErrorService.createError(
-      ErrorType.UNKNOWN,
-      'Erro interno do servidor',
-      'INTERNAL_SERVER_ERROR'
-    );
-    
+    console.error('Erro no proxy TheBest:', error);
     return NextResponse.json(
-      { 
-        error: internalError.message,
-        code: internalError.code,
-        timestamp: internalError.timestamp
-      },
+      { error: 'Erro interno do servidor', code: 'INTERNAL_SERVER_ERROR' },
       { status: 500 }
     );
   }
 }
 
-// GET - Obter informações e status
 export async function GET(request: NextRequest) {
   try {
-    // Rate limit para GET
     const rl = await rateLimitCustom(request, {
       windowMs: parseWindowToMs('1m'),
-      max: 60, // 60 requisições por minuto para GET
-      namespace: 'proxy:thebest:get'
+      max: 60,
+      namespace: 'proxy:thebest:get',
     });
     if (!rl.success) {
-      const rateLimitError = ErrorService.createError(
-        ErrorType.VALIDATION,
-        'Muitas requisições. Tente novamente em instantes.',
-        'RATE_LIMIT_EXCEEDED'
-      );
       return NextResponse.json(
-        { 
-          error: rateLimitError.message,
-          code: rateLimitError.code,
-          timestamp: rateLimitError.timestamp
-        },
+        { error: 'Muitas requisições.', code: 'RATE_LIMIT_EXCEEDED' },
         { status: 429, headers: buildRateLimitHeaders(rl) }
       );
     }
 
-    // Verificar autenticação
-    const authResult = await isAuthenticated(request);
-    if (!authResult.authenticated) {
-      const authError = ErrorService.createAuthenticationError(
-        'Você precisa estar autenticado para acessar esta API.'
-      );
-      return NextResponse.json(
-        { 
-          error: authError.message,
-          code: authError.code,
-          timestamp: authError.timestamp
-        },
-        { status: 401 }
-      );
+    const authResult = await isAuthenticated();
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
-    if (!action) {
-      const validationError = ErrorService.createValidationError(
-        'Action é obrigatória'
-      );
-      return NextResponse.json(
-        { 
-          error: validationError.message,
-          code: validationError.code,
-          timestamp: validationError.timestamp
-        },
-        { status: 400 }
-      );
-    }
-
-    // Actions permitidas para GET
-    const allowedGetActions = [
-      'get_config_status',
-      'get_packages',
-      'get_user_renewals',
-      'get_renewal_status',
-      'test_connection'
-    ];
-
-    if (!allowedGetActions.includes(action)) {
-      const authzError = ErrorService.createAuthorizationError(
-        'Action não permitida para GET'
-      );
-      return NextResponse.json(
-        { 
-          error: authzError.message,
-          code: authzError.code,
-          timestamp: authzError.timestamp
-        },
-        { status: 403 }
-      );
-    }
-
-    // Obter configuração The Best do usuário
-    const configResult = await getUserTheBestConfig(authResult.user.id);
-    
     if (action === 'get_config_status') {
+      const configResult = await getUserTheBestConfig(authResult.user.id);
       return NextResponse.json({
         configured: configResult.success,
-        hasConfig: !!configResult.config,
-        error: configResult.error
+        hasConfig: configResult.success,
+        error: configResult.success ? undefined : configResult.error,
       });
     }
 
-    if (!configResult.success || !configResult.config) {
-      const configError = ErrorService.createError(
-        ErrorType.VALIDATION,
-        'Configuração The Best não encontrada. Configure sua chave API nas integrações.',
-        'THEBEST_CONFIG_NOT_FOUND'
-      );
+    if (!isAllowedAction(action)) {
+      return NextResponse.json({ error: 'Action não permitida para GET' }, { status: 403 });
+    }
+
+    const configResult = await getUserTheBestConfig(authResult.user.id);
+    if (!configResult.success) {
       return NextResponse.json(
-        { 
-          error: configError.message,
-          code: configError.code,
-          timestamp: configError.timestamp
-        },
+        { error: configResult.error, code: 'THEBEST_CONFIG_NOT_FOUND' },
         { status: 404 }
       );
     }
 
-    const { baseUrl, apiKey } = configResult.config;
+    const { configId, baseUrl, apiKey, apiSecret } = configResult.config;
+    const started = Date.now();
 
-    // Para test_connection, fazer uma requisição simples
     if (action === 'test_connection') {
-      try {
-        const testResponse = await fetch(`${baseUrl}/health`, {
-          method: 'GET',
-          headers: {
-            'X-API-Key': apiKey,
-            'User-Agent': 'Hub-Control/1.0'
-          }
-        });
-
-        const success = testResponse.ok;
-        await logApiCall(authResult.user.id, 'test_connection', success);
-
-        return NextResponse.json({
-          success,
-          status: testResponse.status,
-          message: success ? 'Conexão estabelecida com sucesso' : 'Falha na conexão'
-        });
-      } catch (error) {
-        await logApiCall(authResult.user.id, 'test_connection', false, null, error instanceof Error ? error.message : 'Erro desconhecido');
-        
-        return NextResponse.json({
-          success: false,
-          message: 'Erro de conexão com a API The Best'
-        });
-      }
-    }
-
-    // Para outras actions GET, fazer requisição normal
-    try {
-      const response = await fetch(`${baseUrl}?action=${action}`, {
-        method: 'GET',
-        headers: {
-          'X-API-Key': apiKey,
-          'User-Agent': 'Hub-Control/1.0'
-        }
+      const test = await testTheBestPanelConnection({
+        apiKey,
+        apiSecret,
+        baseUrl,
+        timeoutMs: THEBEST_DEFAULT_TIMEOUT_MS,
       });
+      await logApiCall(configId, authResult.user.id, action, test.success, {
+        durationMs: Date.now() - started,
+        errorMessage: test.success ? undefined : test.message,
+      });
+      return NextResponse.json({
+        success: test.success,
+        message: test.message,
+        status: test.status,
+      });
+    }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        await logApiCall(authResult.user.id, action, false, null, `HTTP ${response.status}: ${errorText}`);
-        
-        const appError = ErrorService.createError(
-          response.status >= 500 ? ErrorType.NETWORK : ErrorType.VALIDATION,
-          `Erro na API The Best: ${response.status} - ${response.statusText}`,
-          `THEBEST_API_${response.status}`
-        );
-        
-        return NextResponse.json(
-          { 
-            error: appError.message,
-            code: appError.code,
-            timestamp: appError.timestamp
-          },
-          { status: response.status }
-        );
-      }
+    const panelResult = await callTheBestPanel(
+      { apiKey, apiSecret, baseUrl },
+      action,
+      {},
+      'GET'
+    );
 
-      const responseData = await response.json();
-      await logApiCall(authResult.user.id, action, true, responseData);
-      
-      return NextResponse.json(responseData);
-      
-    } catch (error) {
-      await logApiCall(authResult.user.id, action, false, null, error instanceof Error ? error.message : 'Erro desconhecido');
-      
-      const networkError = ErrorService.createError(
-        ErrorType.NETWORK,
-        'Erro de conexão com a API The Best',
-        'THEBEST_NETWORK_ERROR'
-      );
-      
+    await logApiCall(configId, authResult.user.id, action, panelResult.ok, {
+      responseData: panelResult.data,
+      statusCode: panelResult.status,
+      durationMs: Date.now() - started,
+    });
+
+    if (!panelResult.ok) {
       return NextResponse.json(
-        { 
-          error: networkError.message,
-          code: networkError.code,
-          timestamp: networkError.timestamp
-        },
-        { status: 503 }
+        { error: `Erro na API TheBest: ${panelResult.status}` },
+        { status: panelResult.status >= 400 ? panelResult.status : 502 }
       );
     }
-    
+
+    await touchLastUsed(configId);
+    return NextResponse.json(panelResult.data ?? { success: true });
   } catch (error) {
-    console.error('Erro no proxy The Best (GET):', error);
-    
-    const internalError = ErrorService.createError(
-      ErrorType.UNKNOWN,
-      'Erro interno do servidor',
-      'INTERNAL_SERVER_ERROR'
-    );
-    
-    return NextResponse.json(
-      { 
-        error: internalError.message,
-        code: internalError.code,
-        timestamp: internalError.timestamp
-      },
-      { status: 500 }
-    );
+    console.error('Erro no proxy TheBest (GET):', error);
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

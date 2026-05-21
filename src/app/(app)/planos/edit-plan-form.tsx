@@ -62,6 +62,7 @@ export function EditPlanForm({ plan, planGroups, children }: EditPlanFormProps) 
       sendWelcomeMessage: plan.send_welcome_message,
       isPublic: plan.is_public,
       groupId: plan.group_id || 'none',
+      caktoUrl: plan.cakto_url || '',
     },
   });
 
@@ -335,6 +336,27 @@ export function EditPlanForm({ plan, planGroups, children }: EditPlanFormProps) 
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="caktoUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Link Cakto (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="url"
+                      placeholder="https://pay.cakto.com.br/..."
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Usado quando Cakto estiver habilitado em Integrações → Checkout.
+                  </FormDescription>
+                  <FormMessage />
                 </FormItem>
               )}
             />

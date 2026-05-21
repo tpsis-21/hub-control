@@ -5,11 +5,24 @@
  */
 
 import { NotificationSystem } from '@/lib/notifications';
-import { createClient } from '@supabase/supabase-js';
+import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 
-// Mock do Supabase
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn()
+function buildMockSupabaseQuery() {
+  return {
+    select: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    single: jest.fn().mockResolvedValue({ data: null, error: null }),
+    then: jest.fn().mockResolvedValue({ data: [], error: null }),
+  };
+}
+
+jest.mock('@/lib/supabase/clients/api', () => ({
+  createApiSupabaseClient: jest.fn(() => ({
+    from: jest.fn(() => buildMockSupabaseQuery()),
+  })),
 }));
 
 // Mock do nodemailer
@@ -30,20 +43,10 @@ describe('Sistema de Notificações', () => {
   let mockSupabase: any;
 
   beforeEach(() => {
-    // Setup do mock do Supabase
     mockSupabase = {
-      from: jest.fn(() => ({
-        select: jest.fn().mockReturnThis(),
-        insert: jest.fn().mockReturnThis(),
-        update: jest.fn().mockReturnThis(),
-        delete: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: null, error: null }),
-        then: jest.fn().mockResolvedValue({ data: [], error: null })
-      }))
+      from: jest.fn(() => buildMockSupabaseQuery()),
     };
-
-    (createClient as jest.Mock).mockReturnValue(mockSupabase);
+    (createApiSupabaseClient as jest.Mock).mockReturnValue(mockSupabase);
 
     // Configurar variáveis de ambiente para teste
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
@@ -66,10 +69,8 @@ describe('Sistema de Notificações', () => {
     });
 
     test('deve conectar ao Supabase', () => {
-      expect(createClient).toHaveBeenCalledWith(
-        'https://test.supabase.co',
-        'test-anon-key'
-      );
+      expect(createApiSupabaseClient).toHaveBeenCalled();
+      expect(mockSupabase.from).toBeDefined();
     });
   });
 

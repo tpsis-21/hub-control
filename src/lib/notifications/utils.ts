@@ -16,6 +16,7 @@ import {
   NotificationFilters,
   StatsFilters
 } from '@/types/notifications';
+import { formatDisplayDateTime } from '@/lib/timezone';
 
 // ============================================================================
 // VALIDAÇÃO DE DADOS
@@ -473,40 +474,35 @@ export function getTypeColor(type: NotificationType): string {
 /**
  * Formata uma data para exibição
  */
-export function formatDate(date: Date | string, locale: string = 'pt-BR'): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString(locale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+export function formatDate(date: Date | string): string {
+  return formatDisplayDateTime(date);
 }
 
 /**
  * Calcula tempo relativo (ex: "há 2 horas")
  */
-export function getRelativeTime(date: Date | string, locale: string = 'pt-BR'): string {
+export function getRelativeTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
-  
+
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
+
   if (diffMinutes < 1) {
     return 'agora';
-  } else if (diffMinutes < 60) {
-    return `há ${diffMinutes} minuto${diffMinutes > 1 ? 's' : ''}`;
-  } else if (diffHours < 24) {
-    return `há ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
-  } else if (diffDays < 7) {
-    return `há ${diffDays} dia${diffDays > 1 ? 's' : ''}`;
-  } else {
-    return formatDate(d, locale);
   }
+  if (diffMinutes < 60) {
+    return `há ${diffMinutes} minuto${diffMinutes > 1 ? 's' : ''}`;
+  }
+  if (diffHours < 24) {
+    return `há ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+  }
+  if (diffDays < 7) {
+    return `há ${diffDays} dia${diffDays > 1 ? 's' : ''}`;
+  }
+  return formatDate(d);
 }
 
 /**

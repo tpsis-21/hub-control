@@ -2,6 +2,7 @@ import { createApiSupabaseClient } from '@/lib/supabase/unified-client'
 import { ErrorService, ErrorType } from './error.service'
 import { logger } from '@/utils/production-logger'
 import { HttpRetry, RetryPresets } from '@/lib/http-retry'
+import { NATV_DEFAULT_TIMEOUT_MS } from '@/lib/integrations/natv-public'
 
 // Interfaces para a API NATV
 export interface NATVUser {
@@ -17,28 +18,23 @@ export interface NATVUser {
   expires_at?: string
 }
 
+/** POST /user — senha gerada pela API; minutes em string conforme contrato NATV. */
 export interface NATVCreateUserRequest {
-  username: string
-  password: string
-  email?: string
-  phone?: string
-  plan?: string
-  duration?: number
+  username?: string
+  minutes: number | string
 }
 
+/** POST /user/activation — informar username ou user_id + months. */
 export interface NATVActivationRequest {
-  username: string
-  plan: string
-  duration: number // em dias
+  username?: string
+  user_id?: number
+  months: number
 }
 
+/** POST /user/search */
 export interface NATVSearchRequest {
   username?: string
-  email?: string
-  phone?: string
-  status?: string
-  limit?: number
-  offset?: number
+  user_id?: number
 }
 
 export interface NATVApiResponse<T = any> {
@@ -66,23 +62,9 @@ export interface NATVOwnerInfo {
   credits: number
 }
 
-export interface CreateUserRequest {
-  username?: string
-  minutes?: number
-}
-
-export interface ActivateUserRequest {
-  username?: string
-  user_id?: number
-  months?: number
-}
-
-export interface SearchUsersRequest {
-  username?: string
-  user_id?: number
-  limit?: number
-  offset?: number
-}
+export type CreateUserRequest = NATVCreateUserRequest
+export type ActivateUserRequest = NATVActivationRequest
+export type SearchUsersRequest = NATVSearchRequest
 
 class NATVService {
   private config: NATVConfig | null = null
@@ -126,9 +108,9 @@ class NATVService {
       }
 
       this.config = {
-        baseUrl: data.base_url || '',
-        token: data.auth_token || '',
-        timeout: (data.config_data as any)?.timeout || 30000
+        baseUrl: '',
+        token: '__server__',
+        timeout: (data.config_data as any)?.timeout || NATV_DEFAULT_TIMEOUT_MS,
       }
     } catch (error) {
       const appError = ErrorService.fromNativeError(error)
@@ -149,38 +131,16 @@ class NATVService {
   }
 
   // Salva configuração específica do usuário
-  async saveUserConfig(userId: string, config: NATVConfig): Promise<void> {
+  async saveUserConfig(userId: string, input: { token: string }): Promise<void> {
     try {
       this.userId = userId
       
-      const configData = {
-        provider: 'natv',
-        name: `NATV API - ${userId}`,
-        base_url: config.baseUrl,
-        auth_token: config.token,
-        auth_type: 'bearer',
-        config_data: {
-          timeout: config.timeout || 30000,
-          endpoints: {
-            createUser: '/user',
-            activation: '/user/activation',
-            search: '/user/search',
-            test: '/test'
-          }
-        },
-        is_active: true,
-        is_default: false, // Configurações de usuário não são padrão
-        rate_limit_per_minute: 60,
-        created_by: userId
-      }
-
-      // Usar API segura em vez de acesso direto ao Supabase
       const response = await fetch('/api/natv/config', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(configData),
+        body: JSON.stringify({ token: input.token }),
       })
 
       if (!response.ok) {
@@ -188,7 +148,11 @@ class NATVService {
         throw new Error(errorData.error || `HTTP ${response.status}`)
       }
 
-      this.config = config
+      this.config = {
+        baseUrl: '',
+        token: input.token,
+        timeout: NATV_DEFAULT_TIMEOUT_MS,
+      }
     } catch (error) {
       const appError = ErrorService.fromNativeError(error)
       ErrorService.logError(appError, 'NATV Service - Save User Config')
@@ -241,7 +205,7 @@ class NATVService {
 
     // Usar proxy seguro em vez de requisição direta
     try {
-      const response = await fetch('/api/proxy/natv', {
+      const response = await fetch('/api/natv/request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -250,21 +214,21 @@ class NATVService {
           endpoint,
           method,
           body,
-          config: {
-            baseUrl: this.config.baseUrl,
-            token: this.config.token,
-            timeout: this.config.timeout || 30000
-          }
         }),
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `HTTP ${response.status}`)
+        return {
+          success: false,
+          message: result.message || result.error || `HTTP ${response.status}`,
+          error: result.error,
+          data: result.data,
+        }
       }
 
-      const result = await response.json()
-      return result
+      return result as NATVApiResponse<T>
 
     } catch (error) {
       const appError = ErrorService.fromNativeError(error)
@@ -279,30 +243,33 @@ class NATVService {
 
   }
 
-  // Cria um novo usuário
+  // Cria usuário de teste (senha gerada pela API NATV)
   async createUser(request: NATVCreateUserRequest): Promise<NATVApiResponse<NATVUser>> {
-    return this.makeRequest<NATVUser>('/user', 'POST', request)
+    const body: Record<string, string> = {
+      minutes: String(request.minutes),
+    }
+    if (request.username?.trim()) {
+      body.username = request.username.trim()
+    }
+    return this.makeRequest<NATVUser>('/user', 'POST', body)
   }
 
-  // Ativa ou renova um usuário existente
+  // Ativa ou renova (months em meses; username ou user_id)
   async activateUser(request: NATVActivationRequest): Promise<NATVApiResponse<NATVUser>> {
-    return this.makeRequest<NATVUser>('/user/activation', 'POST', request)
+    const body: Record<string, string | number> = {
+      months: request.months,
+    }
+    if (request.username?.trim()) body.username = request.username.trim()
+    if (request.user_id != null) body.user_id = request.user_id
+    return this.makeRequest<NATVUser>('/user/activation', 'POST', body)
   }
 
-  // Busca usuários
+  // Busca usuários (POST /user/search)
   async searchUsers(request: NATVSearchRequest): Promise<NATVApiResponse<NATVUser[]>> {
-    const params = new URLSearchParams()
-    
-    Object.entries(request).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        params.append(key, value.toString())
-      }
-    })
-    
-    const queryString = params.toString()
-    const endpoint = queryString ? `/user/search?${queryString}` : '/user/search'
-    
-    return this.makeRequest<NATVUser[]>(endpoint)
+    const body: Record<string, string | number> = {}
+    if (request.username?.trim()) body.username = request.username.trim()
+    if (request.user_id != null) body.user_id = request.user_id
+    return this.makeRequest<NATVUser[]>('/user/search', 'POST', body)
   }
 
   // Obtém detalhes de um usuário específico
@@ -405,7 +372,6 @@ class NATVService {
   // Obtém informações da configuração do usuário (sem dados sensíveis)
   async getUserConfigInfo(userId: string): Promise<{
     hasConfig: boolean
-    baseUrl?: string
     isActive?: boolean
     lastUsed?: string
     createdAt?: string
@@ -426,7 +392,6 @@ class NATVService {
 
       return {
         hasConfig: true,
-        baseUrl: data.base_url ?? undefined,
         isActive: data.is_active,
         lastUsed: data.last_used_at ?? undefined,
         createdAt: data.created_at ?? undefined
@@ -462,7 +427,7 @@ class NATVService {
 
   // Verifica se a configuração atual está carregada e válida
   isConfigLoaded(): boolean {
-    return !!this.config && !!this.config.baseUrl && !!this.config.token
+    return !!this.config && !!this.userId
   }
 
   // Obtém o ID do usuário atual da configuração

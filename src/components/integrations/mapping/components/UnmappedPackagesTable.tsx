@@ -163,10 +163,17 @@ export default function UnmappedPackagesTable({
                         <SelectValue placeholder="Selecionar plano" />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* TODO: Carregar planos disponíveis */}
-                        <SelectItem value="plan-1">Plano Básico</SelectItem>
-                        <SelectItem value="plan-2">Plano Intermediário</SelectItem>
-                        <SelectItem value="plan-3">Plano Avançado</SelectItem>
+                        {pkg.suggested_plans.length === 0 ? (
+                          <SelectItem value="__none__" disabled>
+                            Nenhum plano sugerido
+                          </SelectItem>
+                        ) : (
+                          pkg.suggested_plans.map((plan) => (
+                            <SelectItem key={plan.plan_id} value={plan.plan_id}>
+                              {plan.plan_name} ({plan.compatibility_score}%)
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </TableCell>

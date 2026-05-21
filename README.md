@@ -1,52 +1,40 @@
-# Hub Control - Sistema de Gerenciamento IPTV
+# Hub Control — Painel administrativo
 
 ## 📋 Visão Geral
 
-Hub Control é uma aplicação completa para gerenciamento de serviços IPTV, desenvolvida com Next.js 14 e Supabase. O sistema oferece funcionalidades avançadas para administração de clientes, testes, planos, servidores e automações.
+Hub Control é uma aplicação para gestão de clientes, assinaturas, planos, servidores e integrações (Gates2B, TheBest, NATV, n8n), desenvolvida com **Next.js 15** e **Supabase**.
 
 ## 🚀 Tecnologias Principais
 
-- **Frontend:** Next.js 14, React 18, TypeScript
+- **Frontend:** Next.js 15, React 18, TypeScript
 - **Backend:** Supabase (PostgreSQL + Auth + Storage)
 - **UI:** Tailwind CSS, shadcn/ui
-- **Autenticação:** NextAuth.js
+- **Autenticação:** Supabase Auth (cookies httpOnly + middleware)
 - **Validação:** Zod
 - **Notificações:** Push Notifications (Web Push API)
 
-## 🔒 Status de Segurança
+## 🔒 Status de Segurança (atualizado maio/2026)
 
-**🟢 SEGURO:** Sistema com segurança robusta implementada e pronto para produção.
+**Em endurecimento** — Fases 1–3 da auditoria aplicadas no código e no HBCONTROL.
 
-### ✅ Implementações de Segurança Concluídas
-- ✅ **Service Role Key** removida do frontend
-- ✅ **Proxy para APIs externas** (TMDB, NATV, Bot)
-- ✅ **Rate limiting avançado** por rota
-- ✅ **Headers de segurança** (CSP, HSTS, etc.)
-- ✅ **Mascaramento de dados sensíveis**
-- ✅ **Sistema de auditoria completo**
-- ✅ **Middleware de segurança robusto**
+### Implementado recentemente
+- Middleware **default-deny** (páginas + `/api/*`)
+- RLS consolidado (`hub_control_rls_phase3`)
+- Webhooks com validação de assinatura
+- CSP + HSTS (produção)
+- Cookies `httpOnly` na auth
 
-Consulte os seguintes arquivos para detalhes:
-- `SECURITY_IMPLEMENTATION_STATUS.md` - Status completo das implementações
-- `SECURITY_EXECUTIVE_SUMMARY.md` - Resumo executivo
-- `DOCUMENTATION.md` - Documentação completa atualizada
+### Ações manuais obrigatórias antes de produção
+- Rotacionar **service_role** e senha do banco no Supabase
+- Ativar **Leaked Password Protection** (Auth)
+- Configurar URLs de callback (ver `docs/GUIA_HUB_CONTROL.md` §4)
 
-## 📚 Documentação
-
-### Para Desenvolvedores
-- **Documentação Principal:** `DOCUMENTATION.md`
-- **Especificações Técnicas:** `TECHNICAL_SPECIFICATIONS.md`
-- **Análise de Segurança:** `SECURITY_ANALYSIS_REPORT.md`
-- **Guia de Backup:** `BACKUP_BACKEND_GUIDE.md`
-- **Configuração Supabase:** `README_SUPABASE.md`
-- **Guia de Segurança:** `SECURITY_GUIDE.md`
-- **Guia de Performance:** `PERFORMANCE_GUIDE.md`
-
-### Para Usuários Finais
-- **📖 Guia Completo do Usuário:** `docs/USER_GUIDE.md`
-- **🚀 Guia de Início Rápido:** `docs/QUICK_START.md`
-- **❓ Perguntas Frequentes:** `docs/FAQ.md`
-- **🔧 Solução de Problemas:** `docs/TROUBLESHOOTING.md`
+Documentação principal:
+- `docs/AUDITORIA_HUB_CONTROL_2026-05-21.md` — auditoria (diagnóstico)
+- `docs/PLANO_ACAO_MELHORIAS.md` — plano de ação para aplicar melhorias
+- `docs/GUIA_HUB_CONTROL.md` — operação (env, restore, testes, integrações)
+- `PLANO_ACAO_SEGURANCA_SUPABASE.md` — checklist SQL/RLS
+- `docs/README.md` — índice
 
 ## 🔧 Configuração
 
@@ -100,23 +88,12 @@ cp .env.example .env.local
 npm run dev
 ```
 
-**Importante:** Consulte `APP_INITIALIZATION_GUIDE.md` para configuração completa.
+**Importante:** Consulte `docs/GUIA_HUB_CONTROL.md` para configuração e operação.
 
-## 🆘 Recuperação de Desastres
+## 🆘 Recuperação e backup
 
-O Hub Control possui um sistema robusto de recuperação de desastres com scripts automatizados para backup, monitoramento e failover.
-
-### Scripts Disponíveis
-- **Backup Automatizado:** `scripts/disaster-recovery/backup-automation.ps1`
-- **Failover de Emergência:** `scripts/disaster-recovery/emergency-failover.ps1`
-- **Monitoramento de Saúde:** `scripts/disaster-recovery/monitoring-health-check.ps1`
-- **Testes de DR:** `scripts/disaster-recovery/disaster-recovery-test.ps1`
-
-### Documentação
-- [📋 Plano de Recuperação de Desastres](docs/DISASTER_RECOVERY_PLAN.md)
-- [🔧 Guia dos Scripts de DR](scripts/disaster-recovery/README.md)
-- [👨‍🏫 Treinamento para Administradores](docs/ADMIN_TRAINING.md)
-- [📝 Procedimentos Operacionais](docs/ADMIN_PROCEDURES.md)
+- Restore Supabase: `docs/GUIA_HUB_CONTROL.md` §4 e `scripts/recuperar-supabase.ps1`
+- Scripts DR opcionais: `scripts/disaster-recovery/README.md`
 
 ### Configuração Rápida
 ```powershell

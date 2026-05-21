@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from "@/lib/supabase/clients/server";
+import { requireApiAdmin } from '@/lib/api-auth';
 import nodemailer from 'nodemailer'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireApiAdmin();
+  if (auth.error) return auth.error;
+
   try {
     const { campaignId } = await request.json()
     

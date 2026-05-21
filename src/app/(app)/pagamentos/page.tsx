@@ -28,15 +28,6 @@ export default async function PagamentosPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestão de Pagamentos</h1>
-          <p className="text-muted-foreground">
-            Visualize e gerencie todos os pagamentos do sistema IPTV
-          </p>
-        </div>
-      </div>
-
       {/* Cards de Resumo */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>

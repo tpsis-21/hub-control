@@ -2,12 +2,16 @@
 import { NextResponse } from 'next/server';
 import { initializeServices } from '@/lib/startup';
 import { LoggerService } from '@/services/logger.service';
+import { requireApiAdmin } from '@/lib/api-auth';
 
 /**
  * API route para inicializar serviços do servidor de forma segura
  * Evita problemas de webpack ao executar código Node.js no lado cliente
  */
 export async function POST() {
+  const auth = await requireApiAdmin();
+  if (auth.error) return auth.error;
+
   try {
     await initializeServices();
     LoggerService.info('Serviços inicializados via API', 'InitializeServicesAPI');

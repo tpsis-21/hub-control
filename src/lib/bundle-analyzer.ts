@@ -158,7 +158,7 @@ class BundleAnalyzer {
   // Parsear módulos do webpack stats
   private parseModules(modulesData: any[]): void {
     modulesData.forEach(moduleData => {
-      const module: ModuleInfo = {
+      const moduleInfo: ModuleInfo = {
         id: moduleData.id,
         name: moduleData.name,
         size: moduleData.size,
@@ -169,13 +169,13 @@ class BundleAnalyzer {
         packageName: this.extractPackageName(moduleData.name)
       };
       
-      this.modules.set(module.id, module);
+      this.modules.set(moduleInfo.id, moduleInfo);
       
       // Adicionar módulo aos chunks correspondentes
-      module.chunks.forEach(chunkId => {
+      moduleInfo.chunks.forEach(chunkId => {
         const chunk = this.chunks.get(chunkId);
         if (chunk) {
-          chunk.modules.push(module);
+          chunk.modules.push(moduleInfo);
         }
       });
     });

@@ -50,17 +50,28 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { user_id, package_id, payment_id, amount, payment_method } = body;
-    
-    // Validar dados obrigatórios
-    if (!user_id || !package_id || !payment_id || !amount || !payment_method) {
+    const {
+      user_id,
+      line_id,
+      client_id,
+      package_id,
+      payment_id,
+      amount,
+      payment_method,
+      months,
+      transaction_id,
+    } = body;
+
+    const lineId = line_id ?? client_id;
+
+    if (!user_id || !lineId || !package_id || !payment_id || amount == null || !payment_method) {
       return NextResponse.json(
-        { error: 'Dados obrigatórios ausentes' },
+        { error: 'Obrigatório: user_id (Hub), line_id (Painel Best), package_id, payment_id, amount, payment_method' },
         { status: 400 }
       );
     }
-    
-    logger.debug(`🔄 Processando renovação manual: ${JSON.stringify({ user_id, package_id, payment_id })}`);
+
+    logger.debug(`🔄 Processando renovação manual: ${JSON.stringify({ user_id, line_id: lineId, package_id, payment_id })}`);
     
     const renewalService = createRenewalService(supabase);
     
@@ -76,10 +87,13 @@ export async function POST(request: NextRequest) {
     // Processar renovação
     const result = await renewalService.processAutoRenewal({
       userId: user_id,
+      lineId,
       packageId: package_id,
       paymentId: payment_id,
       amount,
-      paymentMethod: payment_method
+      paymentMethod: payment_method,
+      months: typeof months === 'number' ? months : undefined,
+      transactionId: transaction_id,
     });
     
     if (result.success) {

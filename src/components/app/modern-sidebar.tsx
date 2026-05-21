@@ -19,6 +19,9 @@ import {
   LogOut,
   FileText,
   ScrollText,
+  Megaphone,
+  ShoppingCart,
+  MessagesSquare,
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { usePathname, useRouter } from "next/navigation";
@@ -111,6 +114,18 @@ const navigationData = {
       description: "Controle financeiro e relatórios",
     },
     {
+      title: "Pagamentos",
+      url: "/pagamentos",
+      icon: CreditCard,
+      description: "Histórico e gestão de pagamentos",
+    },
+    {
+      title: "Checkout",
+      url: "/checkout/pedidos",
+      icon: ShoppingCart,
+      description: "Pedidos do checkout Hub",
+    },
+    {
       title: "Relatórios",
       url: "/relatorios",
       icon: FileText,
@@ -129,6 +144,11 @@ const navigationData = {
       icon: Plug,
     },
     {
+      title: "Marketing",
+      url: "/marketing",
+      icon: Megaphone,
+    },
+    {
       title: "Configurações",
       url: "/configuracoes",
       icon: Settings,
@@ -136,7 +156,7 @@ const navigationData = {
     {
       title: "Fila de Mensagens",
       url: "/mensagens",
-      icon: BarChart3,
+      icon: MessagesSquare,
     },
     {
       title: "Logs",
@@ -151,11 +171,6 @@ const navigationData = {
     },
   ],
   navSecondary: [
-    {
-      title: "Configurações",
-      url: "/configuracoes",
-      icon: Settings,
-    },
     {
       title: "Ajuda",
       url: "/ajuda",
@@ -265,10 +280,6 @@ function NavUser() {
   if (!mounted) {
     return (
       <div className="space-y-2">
-        <div className="px-3 py-2 text-xs text-muted-foreground border-t">
-          <div className="truncate">admin@iptvmanager.com</div>
-        </div>
-        
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -276,18 +287,16 @@ function NavUser() {
                 <SidebarMenuButton
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  aria-busy="true"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src="" alt="Admin" />
-                    <AvatarFallback className="rounded-lg bg-hub-blue text-white font-semibold">
-                      AD
-                    </AvatarFallback>
+                    <AvatarFallback className="rounded-lg bg-muted animate-pulse" />
                   </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">Admin</span>
-                    <span className="truncate text-xs text-muted-foreground">Administrador</span>
+                  <div className="grid flex-1 text-left text-sm leading-tight gap-1">
+                    <span className="h-3 w-24 rounded bg-muted animate-pulse" />
+                    <span className="h-2 w-16 rounded bg-muted/80 animate-pulse" />
                   </div>
-                  <ChevronRight className="ml-auto size-4" />
+                  <ChevronRight className="ml-auto size-4 opacity-40" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent

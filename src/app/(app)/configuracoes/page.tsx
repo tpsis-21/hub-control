@@ -5,7 +5,6 @@ import { useState, useTransition, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Header } from "@/components/app/header";
 import {
   Card,
   CardContent,
@@ -218,20 +217,11 @@ export default function ConfiguracoesPage() {
     }, [form, toast]);
 
     if (!settings) {
-        return (
-             <div className="flex min-h-screen w-full flex-col">
-                <Header title="Configurações e Integrações" />
-                <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6">
-                    <PageSkeleton />
-                </main>
-            </div>
-        )
+        return <PageSkeleton />;
     }
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <Header title="Configurações e Integrações" />
-      <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6">
+    <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-6">
                 <SettingsCard title="Configurações da Empresa" description="Configure as informações básicas da sua empresa." form={form} fieldsToSave={['company_name', 'primary_color']}>
@@ -296,11 +286,10 @@ export default function ConfiguracoesPage() {
                 </Card>
             </div>
         </div>
-      </main>
       <div className="mt-8">
         <UserSettingsForm />
       </div>
-    </div>
+    </>
   );
 }
 

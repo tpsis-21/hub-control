@@ -6,12 +6,20 @@
     "dev": "next dev -p 8080",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --ext .js,.ts,.tsx",
+    "lint": "eslint src",
+    "lint:all": "eslint . --max-warnings 100",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:security": "jest src/__tests__/security.test.ts",
+    "test:integration": "jest -c jest.integration.config.js --runInBand --forceExit",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "verify:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-ambiente.ps1",
+    "verify:supabase-security": "node scripts/validar-plano-seguranca-pos-migracao.mjs",
+    "verify:checkout": "node scripts/validar-plano-checkout-hub.mjs",
+    "admin:set-password": "node scripts/definir-senha-admin.js",
     "init:notifications": "node scripts/init-notifications.js",
     "notifications:setup": "node scripts/init-notifications.js",
     "notifications:test": "node scripts/init-notifications.js --test-only",
@@ -24,7 +32,8 @@
     "build:prod": "NODE_ENV=production npm run build",
     "deploy:prod": "vercel --prod",
     "deploy:preview": "vercel",
-    "check:prod": "npm run typecheck && npm run lint && npm run test",
+    "check:prod": "npm run typecheck && npm run lint:all && npm run test:ci",
+    "test:unit": "jest --ci --watchAll=false --forceExit",
     "pre-deploy": "node scripts/pre-deploy-check.js",
     "deploy:full": "npm run pre-deploy && npm run build && vercel --prod",
     "deploy:safe": "npm run pre-deploy && npm run build && vercel",
@@ -38,9 +47,6 @@
     "logs:clear": "rm -f logs/*.log && echo 'Logs cleared'",
     "backup:setup": "node scripts/setup-backup.js",
     "backup:test": "node scripts/test-backup.js",
-    "backup:full": "node scripts/run-backup.js full",
-    "backup:incremental": "node scripts/run-backup.js incremental",
-    "backup:logs": "node scripts/run-backup.js logs",
     "backup:list": "node -e \"const {BackupManager} = require('./src/lib/backup'); const fs = require('fs'); const config = JSON.parse(fs.readFileSync('./config/backup.json', 'utf8')); new BackupManager(config).listBackups().then(console.log);\"",
     "backup:cleanup": "node -e \"const {BackupManager} = require('./src/lib/backup'); const fs = require('fs'); const config = JSON.parse(fs.readFileSync('./config/backup.json', 'utf8')); new BackupManager(config).cleanupOldBackups().then(console.log);\"",
     "backup:restore": "node -e \"if(!process.argv[2]) { console.error('Uso: npm run backup:restore <backup-id>'); process.exit(1); } const {BackupManager} = require('./src/lib/backup'); const fs = require('fs'); const config = JSON.parse(fs.readFileSync('./config/backup.json', 'utf8')); new BackupManager(config).restoreBackup(process.argv[2]).then(console.log);\" --",
@@ -58,10 +64,10 @@
     "test:bpix-prod": "node scripts/test-bpix-production.js",
     "validate:bpix": "npm run test:bpix-prod && npm run check:prod",
     "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --watchAll=false",
+    "test:ci": "npm run test:unit && npm run test:integration",
     "test:automation": "cross-env NODE_ENV=test jest --testPathPatterns=automation",
     "storage:verify": "node scripts/verify-storage-setup.js",
-    "storage:setup": "echo 'Consulte docs/supabase-storage-setup.md para instruções de configuração manual'"
+    "storage:setup": "echo 'Consulte docs/GUIA_HUB_CONTROL.md e supabase/migrations/README.md'"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.3",
@@ -103,10 +109,10 @@
     "exceljs": "^4.4.0",
     "form-data": "^4.0.4",
     "lucide-react": "^0.475.0",
-    "next": "^15.5.2",
+    "next": "^15.5.18",
     "next-themes": "^0.3.0",
     "node-fetch": "^2.7.0",
-    "nodemailer": "^6.9.8",
+    "nodemailer": "^8.0.7",
     "papaparse": "^5.4.1",
     "patch-package": "^8.0.0",
     "playwright": "^1.55.0",
@@ -128,10 +134,10 @@
     "@babel/preset-react": "^7.27.1",
     "@babel/preset-typescript": "^7.27.1",
     "@eslint/eslintrc": "^3.3.1",
+    "@playwright/test": "^1.60.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/dompurify": "^3.0.5",
-    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.14",
     "@types/papaparse": "^5.3.14",
@@ -145,11 +151,23 @@
     "identity-obj-proxy": "^3.0.0",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
-    "postcss": "^8",
+    "postcss": "^8.5.10",
     "puppeteer": "^24.22.2",
     "sharp": "^0.34.3",
     "tailwindcss": "^3.4.1",
     "ts-jest": "^29.4.0",
     "typescript": "^5"
+  },
+  "overrides": {
+    "uuid": "$uuid",
+    "next": {
+      "postcss": "8.5.10"
+    },
+    "@sentry/webpack-plugin": {
+      "uuid": "$uuid"
+    },
+    "exceljs": {
+      "uuid": "$uuid"
+    }
   }
 }

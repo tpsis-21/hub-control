@@ -4,6 +4,7 @@ import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 import { z } from 'zod';
 import type { Database } from '@/lib/database.types';
 import { createStandardErrorResponse, createStandardSuccessResponse, attachSecurityHeaders } from '@/middleware/shared/helpers'
+import { requireAdminForStandardRoute } from '@/lib/api-admin-route-auth'
 
 // Schema para validação dos dados do grupo de planos
 const planGroupUpdateSchema = z.object({
@@ -18,73 +19,12 @@ function createAdminClient() {
   return createApiSupabaseClient();
 }
 
-// Função para verificar se o usuário é admin
-async function isUserAdmin(userId: string): Promise<boolean> {
-  try {
-    const adminClient = createAdminClient();
-    
-    // Admin principal é sempre admin
-    if (userId === '2f67bed8-9448-446f-8f38-9306f773620d') {
-      return true;
-    }
-    
-    const { data: profile } = await adminClient
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-    
-    return profile?.role === 'admin';
-  } catch (error) {
-    console.error('Erro ao verificar admin:', error);
-    return false;
-  }
-}
-
-// Função para obter usuário autenticado
-async function getAuthenticatedUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  
-  const token = authHeader.substring(7);
-  
-  try {
-    const adminClient = createAdminClient();
-    const { data: { user }, error } = await adminClient.auth.getUser(token);
-    
-    if (error || !user) {
-      return null;
-    }
-    
-    return user;
-  } catch (error) {
-    console.error('Erro ao verificar token:', error);
-    return null;
-  }
-}
-
 // PUT - Atualizar grupo de planos (apenas admins)
 export async function PUT(request: NextRequest) {
   try {
-    // Verificar autenticação
-    const user = await getAuthenticatedUser(request);
-    if (!user) {
-      return attachSecurityHeaders(
-        createStandardErrorResponse('UNAUTHORIZED', 'Não autorizado', 401)
-      );
-    }
-    
-    // Verificar se é admin
-    const isAdmin = await isUserAdmin(user.id);
-    if (!isAdmin) {
-      return attachSecurityHeaders(
-        createStandardErrorResponse('FORBIDDEN', 'Acesso negado - apenas administradores', 403)
-      );
-    }
-    
+    const auth = await requireAdminForStandardRoute();
+    if (auth.error) return auth.error;
+
     // Validar dados
     const body = await request.json();
     const validatedData = planGroupUpdateSchema.parse(body);
@@ -141,22 +81,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    // Verificar autenticação
-    const user = await getAuthenticatedUser(request);
-    if (!user) {
-      return attachSecurityHeaders(
-        createStandardErrorResponse('UNAUTHORIZED', 'Não autorizado', 401)
-      );
-    }
-    
-    // Verificar se é admin
-    const isAdmin = await isUserAdmin(user.id);
-    if (!isAdmin) {
-      return attachSecurityHeaders(
-        createStandardErrorResponse('FORBIDDEN', 'Acesso negado - apenas administradores', 403)
-      );
-    }
-    
+    const auth = await requireAdminForStandardRoute();
+    if (auth.error) return auth.error;
+
     // Deletar grupo de planos com cliente admin
     const adminClient = createAdminClient();
     const { error } = await adminClient

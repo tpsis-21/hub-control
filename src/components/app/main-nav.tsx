@@ -19,6 +19,7 @@ import {
   MessageSquare,
   Mail,
   Plug,
+  ShoppingCart,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -48,6 +49,7 @@ const menuItems = [
   },
   { href: "/servidores", label: "Servidores", icon: ServerIcon },
   { href: "/pagamentos", label: "Pagamentos", icon: CreditCard },
+  { href: "/checkout/pedidos", label: "Checkout", icon: ShoppingCart },
   { href: "/marketing", label: "Marketing", icon: Mail },
   { href: "/integracoes", label: "Integrações", icon: Plug },
   { href: "/notificacoes", label: "Notificações", icon: Bell },

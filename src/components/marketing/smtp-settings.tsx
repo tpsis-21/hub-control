@@ -48,7 +48,7 @@ import {
 } from 'lucide-react'
 import { SMTPConfig } from '@/lib/types/marketing'
 import { MarketingService } from '@/services/marketing.service'
-import { toast } from 'sonner'
+import { appToast } from '@/lib/app-toast'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -140,7 +140,7 @@ export function SMTPSettings() {
       ])
     } catch (error) {
       console.error('Erro ao carregar configurações:', error)
-      toast.error('Erro ao carregar configurações SMTP')
+      appToast.error('Erro ao carregar configurações SMTP')
     } finally {
       setLoading(false)
     }
@@ -150,17 +150,17 @@ export function SMTPSettings() {
     try {
       if (editingConfig) {
         // await MarketingService.updateSMTPConfig(editingConfig.id, formData)
-        toast.success('Configuração atualizada com sucesso!')
+        appToast.success('Configuração atualizada com sucesso!')
       } else {
         // await MarketingService.createSMTPConfig(formData)
-        toast.success('Configuração criada com sucesso!')
+        appToast.success('Configuração criada com sucesso!')
       }
       
       loadConfigs()
       handleCloseDialog()
     } catch (error) {
       console.error('Erro ao salvar configuração:', error)
-      toast.error('Erro ao salvar configuração')
+      appToast.error('Erro ao salvar configuração')
     }
   }
 
@@ -170,15 +170,15 @@ export function SMTPSettings() {
       const result = await MarketingService.testSMTPConfig(config)
       
       if (result.success) {
-        toast.success('Teste de SMTP realizado com sucesso!')
+        appToast.success('Teste de SMTP realizado com sucesso!')
       } else {
-        toast.error(`Erro no teste: ${result.error || 'Erro desconhecido'}`)
+        appToast.error(`Erro no teste: ${result.error || 'Erro desconhecido'}`)
       }
       
       loadConfigs()
     } catch (error) {
       console.error('Erro ao testar configuração:', error)
-      toast.error('Erro ao testar configuração')
+      appToast.error('Erro ao testar configuração')
     } finally {
       setTestingConfig(null)
     }
@@ -187,11 +187,11 @@ export function SMTPSettings() {
   const handleSetDefault = async (config: SMTPConfig) => {
     try {
       // await MarketingService.setDefaultSMTPConfig(config.id)
-      toast.success('Configuração definida como padrão!')
+      appToast.success('Configuração definida como padrão!')
       loadConfigs()
     } catch (error) {
       console.error('Erro ao definir configuração padrão:', error)
-      toast.error('Erro ao definir configuração padrão')
+      appToast.error('Erro ao definir configuração padrão')
     }
   }
 
@@ -200,11 +200,11 @@ export function SMTPSettings() {
     
     try {
       // await MarketingService.deleteSMTPConfig(deletingConfig.id)
-      toast.success('Configuração excluída com sucesso!')
+      appToast.success('Configuração excluída com sucesso!')
       loadConfigs()
     } catch (error) {
       console.error('Erro ao excluir configuração:', error)
-      toast.error('Erro ao excluir configuração')
+      appToast.error('Erro ao excluir configuração')
     } finally {
       setDeletingConfig(null)
     }

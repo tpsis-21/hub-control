@@ -31,6 +31,7 @@ import {
 } from '@/middleware/shared/helpers'
 import { getClientIP, rateLimitCustom, buildRateLimitHeaders } from '@/lib/security/rate-limit'
 import { logger } from '@/utils/production-logger'
+import { cookieConfig } from '@/lib/supabase/config'
 
 // =====================================================
 // CONFIGURAÇÕES E VALIDAÇÕES
@@ -70,10 +71,7 @@ async function createAuthClient() {
             name,
             value,
             ...options,
-            httpOnly: false, // Permite acesso do JavaScript
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/'
+            ...cookieConfig,
           })
         },
         remove(name: string, options: any) {
@@ -240,8 +238,7 @@ export async function POST(request: NextRequest) {
         user: {
           id: data.user?.id,
           email: data.user?.email
-        },
-        session: data.session
+        }
       },
       'Login realizado com sucesso'
     )

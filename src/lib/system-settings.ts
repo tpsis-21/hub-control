@@ -132,19 +132,13 @@ export async function isUserAdmin(): Promise<boolean> {
       return false;
     }
     
-    // Verificar se é o administrador principal
-    if (session.user.email === 'topplaytv7@gmail.com') {
-      return true;
-    }
-    
-    // Verificar na tabela profiles
     const { data, error } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', session.user.id)
-      .single();
-    
-    return !error && (data as any)?.role === 'admin';
+      .or(`id.eq.${session.user.id},user_id.eq.${session.user.id}`)
+      .maybeSingle();
+
+    return !error && data?.role === 'admin';
   } catch (error) {
     console.error('Erro ao verificar se usuário é admin:', error);
     return false;

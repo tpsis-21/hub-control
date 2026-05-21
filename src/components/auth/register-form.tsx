@@ -23,6 +23,16 @@ export function RegisterForm() {
     e.preventDefault();
     setLoading(true);
 
+    if (process.env.NODE_ENV === "production") {
+      toast({
+        title: "Cadastro indisponível",
+        description: "Cadastro público desabilitado. Solicite acesso ao administrador.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     // Verificar se novos cadastros estão permitidos
     const allowRegistrations = await areRegistrationsAllowed();
     if (!allowRegistrations) {

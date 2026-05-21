@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { systemMonitor, MonitoringUtils } from '@/lib/monitoring';
 import { LoggerService } from '@/services/logger.service';
+import { requireApiAdmin } from '@/lib/api-auth';
 
 /**
  * API para monitoramento do sistema
@@ -82,6 +83,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireApiAdmin();
+  if (auth.error) return auth.error;
+
   try {
     const body = await request.json();
     const { level, message, metadata } = body;
@@ -141,6 +145,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const auth = await requireApiAdmin();
+  if (auth.error) return auth.error;
+
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'all';

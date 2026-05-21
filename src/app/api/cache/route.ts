@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { memoryCache } from '@/lib/cache';
 import { LoggerService } from '@/services/logger.service';
+import { requireApiAdmin } from '@/lib/api-auth';
 
 /**
  * API para gerenciar o cache do sistema
@@ -12,6 +13,9 @@ import { LoggerService } from '@/services/logger.service';
  * GET /api/cache - Retorna estatísticas do cache
  */
 export async function GET() {
+  const auth = await requireApiAdmin();
+  if (auth.error) return auth.error;
+
   try {
     const stats = memoryCache.getStats();
     
@@ -51,6 +55,9 @@ export async function GET() {
  * DELETE /api/cache?key=chave - Remove uma chave específica
  */
 export async function DELETE(request: NextRequest) {
+  const auth = await requireApiAdmin();
+  if (auth.error) return auth.error;
+
   try {
     const { searchParams } = new URL(request.url);
     const key = searchParams.get('key');
@@ -110,6 +117,9 @@ export async function DELETE(request: NextRequest) {
  * POST /api/cache/warmup - Pré-aquece o cache com dados frequentemente acessados
  */
 export async function POST() {
+  const auth = await requireApiAdmin();
+  if (auth.error) return auth.error;
+
   try {
     // Fazer algumas chamadas para pré-aquecer o cache
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9010';

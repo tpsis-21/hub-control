@@ -42,7 +42,7 @@ import { MarketingService } from '@/services/marketing.service'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
+import { appToast } from '@/lib/app-toast'
 
 interface CreateCampaignDialogProps {
   open: boolean
@@ -157,16 +157,16 @@ export function CreateCampaignDialog({
       
       if (send_immediately) {
         await MarketingService.sendCampaign(campaign.id)
-        toast.success('Campanha criada e enviada com sucesso!')
+        appToast.success('Campanha criada e enviada com sucesso!')
       } else {
-        toast.success('Campanha criada e agendada com sucesso!')
+        appToast.success('Campanha criada e agendada com sucesso!')
       }
       
       onCampaignCreated(campaign)
       handleClose()
     } catch (error) {
       console.error('Erro ao criar campanha:', error)
-      toast.error('Erro ao criar campanha')
+      appToast.error('Erro ao criar campanha')
     } finally {
       setLoading(false)
     }

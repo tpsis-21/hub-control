@@ -222,10 +222,11 @@ export function AdminPanel() {
   };
 
   const deleteUser = async (userId: string, userEmail: string) => {
-    if (userEmail === 'topplaytv7@gmail.com') {
+    const target = users.find((u) => u.id === userId);
+    if (target?.role === 'admin') {
       toast({
         title: 'Erro',
-        description: 'Não é possível excluir o administrador principal.',
+        description: 'Não é possível excluir um usuário administrador.',
         variant: 'destructive'
       });
       return;
@@ -452,37 +453,26 @@ export function AdminPanel() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    {user.email !== 'topplaytv7@gmail.com' && (
-                      <>
-                        {user.role === 'admin' ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateUserRole(user.id, 'user')}
-                            className="flex items-center gap-1"
-                          >
-                            <UserX className="h-4 w-4" />
-                            Remover Admin
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateUserRole(user.id, 'admin')}
-                            className="flex items-center gap-1"
-                          >
-                            <UserCheck className="h-4 w-4" />
-                            Tornar Admin
-                          </Button>
-                        )}
-                      </>
-                    )}
-                    
-                    {user.email === 'topplaytv7@gmail.com' && (
-                      <Badge variant="outline" className="flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3" />
-                        Admin Principal
-                      </Badge>
+                    {user.role === 'admin' ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateUserRole(user.id, 'user')}
+                        className="flex items-center gap-1"
+                      >
+                        <UserX className="h-4 w-4" />
+                        Remover Admin
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateUserRole(user.id, 'admin')}
+                        className="flex items-center gap-1"
+                      >
+                        <UserCheck className="h-4 w-4" />
+                        Tornar Admin
+                      </Button>
                     )}
                   </div>
                 </div>

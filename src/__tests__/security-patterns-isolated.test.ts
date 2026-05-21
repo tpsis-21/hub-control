@@ -33,7 +33,7 @@ describe('🔒 Testes de Padrões de Segurança - Isolado', () => {
           
           if (pattern instanceof RegExp) {
             if (pattern.test(log.endpoint) || pattern.test(log.userAgent)) {
-              detectedPatterns.push(`${patternName} detectado em ${log.ip} - ${log.endpoint};
+              detectedPatterns.push(`${patternName} detectado em ${log.ip} - ${log.endpoint}`);
             }
           }
         }

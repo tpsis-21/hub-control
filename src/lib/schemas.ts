@@ -119,6 +119,10 @@ export const planSchema = z.object({
   sendWelcomeMessage: z.boolean().default(false),
   isPublic: z.boolean().default(false),
   groupId: z.string().optional(),
+  caktoUrl: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^https?:\/\/.+/i.test(v), { message: 'Informe uma URL válida (https://...)' }),
 });
 
 export const editPlanSchema = planSchema.extend({

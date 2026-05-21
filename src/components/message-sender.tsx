@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Send, Mail, MessageCircle, User, Clock, AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
+import { appToast } from "@/lib/app-toast";
 import type { Client } from "@/lib/types";
 
 interface MessageSenderProps {
@@ -43,17 +43,17 @@ export function MessageSender({ client, onSuccess, className }: MessageSenderPro
     e.preventDefault();
     
     if (!messageData.subject.trim() || !messageData.message.trim()) {
-      toast.error('Assunto e mensagem são obrigatórios');
+      appToast.error('Assunto e mensagem são obrigatórios');
       return;
     }
 
     if (client && !client.email && !client.whatsapp) {
-      toast.error('Cliente não possui e-mail ou WhatsApp cadastrado');
+      appToast.error('Cliente não possui e-mail ou WhatsApp cadastrado');
       return;
     }
 
     if (isScheduled && !messageData.scheduledFor) {
-      toast.error('Data e hora de agendamento são obrigatórias');
+      appToast.error('Data e hora de agendamento são obrigatórias');
       return;
     }
 
@@ -81,7 +81,7 @@ export function MessageSender({ client, onSuccess, className }: MessageSenderPro
       const data = await response.json();
       
       if (response.ok) {
-        toast.success(isScheduled ? 'Mensagem agendada com sucesso!' : 'Mensagem adicionada à fila!');
+        appToast.success(isScheduled ? 'Mensagem agendada com sucesso!' : 'Mensagem adicionada à fila!');
         
         // Limpar formulário
         setMessageData({
@@ -94,11 +94,11 @@ export function MessageSender({ client, onSuccess, className }: MessageSenderPro
         
         onSuccess?.();
       } else {
-        toast.error(data.error || 'Erro ao enviar mensagem');
+        appToast.error(data.error || 'Erro ao enviar mensagem');
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
-      toast.error('Erro ao enviar mensagem');
+      appToast.error('Erro ao enviar mensagem');
     } finally {
       setLoading(false);
     }
@@ -106,7 +106,7 @@ export function MessageSender({ client, onSuccess, className }: MessageSenderPro
 
   const handleSendReminder = async (type: 'normal' | 'urgent') => {
     if (!client) {
-      toast.error('Cliente não selecionado');
+      appToast.error('Cliente não selecionado');
       return;
     }
 
@@ -122,14 +122,14 @@ export function MessageSender({ client, onSuccess, className }: MessageSenderPro
       const data = await response.json();
       
       if (response.ok) {
-        toast.success(`Lembrete ${type === 'urgent' ? 'urgente' : 'normal'} enviado!`);
+        appToast.success(`Lembrete ${type === 'urgent' ? 'urgente' : 'normal'} enviado!`);
         onSuccess?.();
       } else {
-        toast.error(data.error || 'Erro ao enviar lembrete');
+        appToast.error(data.error || 'Erro ao enviar lembrete');
       }
     } catch (error) {
       console.error('Erro ao enviar lembrete:', error);
-      toast.error('Erro ao enviar lembrete');
+      appToast.error('Erro ao enviar lembrete');
     } finally {
       setLoading(false);
     }

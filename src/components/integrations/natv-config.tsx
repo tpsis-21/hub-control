@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -6,47 +8,53 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { toast } from 'sonner'
-import { 
-  Settings, 
-  TestTube, 
-  Users, 
-  Search, 
-  RefreshCw, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
-  ExternalLink,
+import { appToast } from '@/lib/app-toast'
+import {
+  NATV_DEFAULT_TIMEOUT_MS,
+  NATV_DEFAULT_TEST_MINUTES,
+  NATV_API_ENDPOINTS,
+} from '@/lib/integrations/natv-public'
+import {
+  Settings,
+  TestTube,
+  Users,
+  Search,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
   Clock,
   Zap,
-  Activity
+  Activity,
+  Eye,
+  EyeOff,
+  Save,
 } from 'lucide-react'
 import { natvService } from '@/services/natv.service'
 import { useAuth } from '@/hooks/useAuth'
 
-interface NATVConfig {
-  token: string
-  baseUrl: string
-  timeout: number
-}
+const ENDPOINT_ROWS = [
+  { title: 'Criar Usuário de Teste', path: `POST ${NATV_API_ENDPOINTS.createUser}`, method: 'POST' as const },
+  { title: 'Ativação/Renovação', path: `POST ${NATV_API_ENDPOINTS.activation}`, method: 'POST' as const },
+  { title: 'Buscar Usuários', path: `POST ${NATV_API_ENDPOINTS.search}`, method: 'POST' as const },
+  { title: 'Teste de Conexão', path: `GET ${NATV_API_ENDPOINTS.test}`, method: 'GET' as const },
+]
 
 interface OperationData {
   createUser: {
     username: string
-    email: string
-    password: string
-    plan: string
+    minutes: number
   }
   activation: {
     username: string
-    plan: string
-    duration: number
+    userId: string
+    months: number
   }
   searchUsers: {
     username: string
     userId: string
-    limit: number
   }
 }
 
@@ -58,11 +66,8 @@ interface OperationResult {
 
 export function NATVConfig() {
   const { user } = useAuth()
-  const [config, setConfig] = useState<NATVConfig>({
-    token: '',
-    baseUrl: 'https://revenda.pixbot.link',
-    timeout: 30000
-  })
+  const [token, setToken] = useState('')
+  const [showToken, setShowToken] = useState(false)
   const [isConfigured, setIsConfigured] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [operationLoading, setOperationLoading] = useState(false)
@@ -70,39 +75,36 @@ export function NATVConfig() {
   const [operationData, setOperationData] = useState<OperationData>({
     createUser: {
       username: '',
-      email: '',
-      password: '',
-      plan: 'basic'
+      minutes: NATV_DEFAULT_TEST_MINUTES,
     },
     activation: {
       username: '',
-      plan: 'basic',
-      duration: 30
+      userId: '',
+      months: 1,
     },
     searchUsers: {
       username: '',
       userId: '',
-      limit: 10
-    }
+    },
   })
 
   useEffect(() => {
-    loadConfig()
-  }, [])
+    if (user?.id) {
+      loadConfig()
+    }
+  }, [user?.id])
 
   const loadConfig = async () => {
     if (!user?.id) return
-    
+
     try {
       setIsLoading(true)
-      const response = await natvService.getUserConfigInfo(user?.id || '')
-      if (response.hasConfig && response.baseUrl) {
-        setConfig({
-          token: '', // Token não é retornado por segurança
-          baseUrl: response.baseUrl,
-          timeout: 30000
-        })
+      const response = await fetch('/api/natv/config')
+      const json = await response.json()
+      if (response.ok && json.data) {
         setIsConfigured(true)
+      } else {
+        setIsConfigured(false)
       }
     } catch (error) {
       console.error('Erro ao carregar configuração NATV:', error)
@@ -112,28 +114,28 @@ export function NATVConfig() {
   }
 
   const saveConfig = async () => {
-    if (!config.token.trim()) {
-      toast.error('Token é obrigatório')
+    if (!token.trim()) {
+      appToast.error('Token é obrigatório')
       return
     }
 
     if (!user?.id) return
-    
+
     setIsLoading(true)
     try {
-      await natvService.saveUserConfig(user?.id || '', config)
+      await natvService.saveUserConfig(user.id, { token: token.trim() })
       setIsConfigured(true)
-      toast.success('Configuração salva com sucesso!')
+      appToast.success('Configuração salva com sucesso!')
       
       // Testar conexão
       const testResult = await natvService.testUserConnection(user?.id || '')
       if (testResult.success) {
-        toast.success('Conexão testada com sucesso!')
+        appToast.success('Conexão testada com sucesso!')
       } else {
-        toast.error('Configuração salva, mas falha no teste de conexão')
+        appToast.error('Configuração salva, mas falha no teste de conexão')
       }
     } catch (error) {
-      toast.error('Erro ao salvar configuração')
+      appToast.error('Erro ao salvar configuração')
       console.error('Erro:', error)
     } finally {
       setIsLoading(false)
@@ -147,378 +149,419 @@ export function NATVConfig() {
     try {
       const result = await natvService.testUserConnection(user?.id || '')
       if (result.success) {
-        toast.success('Conexão testada com sucesso!')
+        appToast.success('Conexão testada com sucesso!')
         setOperationResult({ type: 'test', data: result })
       } else {
-        toast.error('Falha no teste de conexão')
+        appToast.error('Falha no teste de conexão')
         setOperationResult({ type: 'test', error: result.message })
       }
     } catch (error) {
-      toast.error('Erro ao testar conexão')
+      appToast.error('Erro ao testar conexão')
       setOperationResult({ type: 'test', error: error instanceof Error ? error.message : 'Erro desconhecido' })
     } finally {
       setIsLoading(false)
     }
   }
 
+  const operationSuccess =
+    operationResult?.data?.success ?? (operationResult && !operationResult.error)
+
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Settings className="h-5 w-5" />
-          Configuração NATV
-        </CardTitle>
-        <CardDescription>
-          Configure a integração com a API NATV para gerenciamento de usuários e licenças
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="config" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Configuração NATV
+              </CardTitle>
+              <CardDescription className="mt-1.5">
+                Informe o token do revendedor fornecido pela NATV.
+              </CardDescription>
+            </div>
+            {isConfigured && (
+              <Badge variant="secondary" className="w-fit shrink-0">
+                <CheckCircle className="mr-1 h-3 w-3" />
+                Configurado
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="config" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="config">Configuração</TabsTrigger>
             <TabsTrigger value="operations">Operações</TabsTrigger>
             <TabsTrigger value="endpoints">Endpoints</TabsTrigger>
             <TabsTrigger value="limits">Limites</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="config" className="space-y-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="token">Token *</Label>
-                <Input
-                  id="token"
-                  type="password"
-                  value={config.token}
-                  onChange={(e) => setConfig(prev => ({ ...prev, token: e.target.value }))}
-                  placeholder="Seu Token da NATV"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="baseUrl">URL Base</Label>
-                <Input
-                  id="baseUrl"
-                  value={config.baseUrl}
-                  onChange={(e) => setConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
-                  placeholder="https://revenda.pixbot.link"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="timeout">Timeout (ms)</Label>
-                <Input
-                  id="timeout"
-                  type="number"
-                  value={config.timeout}
-                  onChange={(e) => setConfig(prev => ({ ...prev, timeout: parseInt(e.target.value) || 30000 }))}
-                  min="5000"
-                  max="60000"
-                />
-              </div>
-              
+          <TabsContent value="config" className="mt-6 space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="natv-token">Token do revendedor *</Label>
               <div className="flex gap-2">
-                <Button 
-                  onClick={saveConfig} 
-                  disabled={isLoading}
+                <Input
+                  id="natv-token"
+                  type={showToken ? 'text' : 'password'}
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder={isConfigured ? 'Informe um novo token para atualizar' : 'Cole o token da API NATV'}
                   className="flex-1"
+                  autoComplete="off"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowToken((v) => !v)}
+                  aria-label={showToken ? 'Ocultar token' : 'Mostrar token'}
                 >
-                  {isLoading ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Settings className="mr-2 h-4 w-4" />
-                  )}
-                  Salvar Configuração
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={testConnection} 
-                  disabled={isLoading || !isConfigured}
-                >
-                  {isLoading ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <TestTube className="mr-2 h-4 w-4" />
-                  )}
-                  Testar
+                  {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-              
-              {isConfigured && (
-                <Alert className="border-green-200 bg-green-50">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">
-                    Configuração salva e ativa. Você pode usar as operações da NATV.
-                  </AlertDescription>
-                </Alert>
-              )}
+              <p className="text-sm text-muted-foreground">
+                O token não é exibido após salvar. Para alterar, informe um novo valor e salve novamente.
+              </p>
             </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button onClick={saveConfig} disabled={isLoading} className="sm:flex-1">
+                {isLoading ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                Salvar configuração
+              </Button>
+              <Button
+                variant="outline"
+                onClick={testConnection}
+                disabled={isLoading || !isConfigured}
+              >
+                {isLoading ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <TestTube className="mr-2 h-4 w-4" />
+                )}
+                Testar conexão
+              </Button>
+            </div>
+
+            {isConfigured && (
+              <Alert className="border-emerald-500/30 bg-emerald-500/10">
+                <CheckCircle className="h-4 w-4 text-emerald-500" />
+                <AlertDescription>
+                  Configuração ativa. Use a aba Operações para testar criação, ativação e busca.
+                </AlertDescription>
+              </Alert>
+            )}
           </TabsContent>
           
-          <TabsContent value="operations" className="space-y-4">
-            <div className="space-y-6">
-              {/* Criar Usuário */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Users className="h-4 w-4" />
-                    Criar Usuário de Teste
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="create-username">Nome de usuário</Label>
-                      <Input
-                        id="create-username"
-                        value={operationData.createUser.username}
-                        onChange={(e) => setOperationData(prev => ({
+          <TabsContent value="operations" className="mt-6 space-y-8">
+              <section className="space-y-4">
+                <h3 className="flex items-center gap-2 text-base font-semibold">
+                  <Users className="h-4 w-4" />
+                  Criar usuário de teste
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  A senha é gerada pela NATV. Informe a duração em minutos; o usuário é opcional.
+                </p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="create-username">Usuário (opcional)</Label>
+                    <Input
+                      id="create-username"
+                      value={operationData.createUser.username}
+                      onChange={(e) =>
+                        setOperationData((prev) => ({
                           ...prev,
-                          createUser: { ...prev.createUser, username: e.target.value }
-                        }))}
-                        placeholder="usuario_teste"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="create-email">E-mail</Label>
-                      <Input
-                        id="create-email"
-                        type="email"
-                        value={operationData.createUser.email}
-                        onChange={(e) => setOperationData(prev => ({
-                          ...prev,
-                          createUser: { ...prev.createUser, email: e.target.value }
-                        }))}
-                        placeholder="teste@exemplo.com"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="create-password">Senha</Label>
-                      <Input
-                        id="create-password"
-                        type="password"
-                        value={operationData.createUser.password}
-                        onChange={(e) => setOperationData(prev => ({
-                          ...prev,
-                          createUser: { ...prev.createUser, password: e.target.value }
-                        }))}
-                        placeholder="senha123"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="create-plan">Plano</Label>
-                      <Input
-                        id="create-plan"
-                        value={operationData.createUser.plan}
-                        onChange={(e) => setOperationData(prev => ({
-                          ...prev,
-                          createUser: { ...prev.createUser, plan: e.target.value }
-                        }))}
-                        placeholder="basic"
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={async () => {
-                      setOperationLoading(true)
-                      try {
-                        const result = await natvService.createUserWithConfig(user?.id || '', operationData.createUser)
-                        setOperationResult({ type: 'createUser', data: result })
-                        if (result.success) {
-                          toast.success('Usuário criado com sucesso!')
-                        } else {
-                          toast.error('Erro ao criar usuário')
-                        }
-                      } catch (error) {
-                        toast.error('Erro ao criar usuário')
-                        setOperationResult({ type: 'createUser', error: error instanceof Error ? error.message : 'Erro desconhecido' })
-                      } finally {
-                        setOperationLoading(false)
+                          createUser: { ...prev.createUser, username: e.target.value },
+                        }))
                       }
-                    }}
-                    disabled={operationLoading || !isConfigured || !operationData.createUser.username || !operationData.createUser.email}
-                    className="w-full"
-                  >
+                      placeholder="Deixe vazio para gerar automaticamente"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="create-minutes">Duração do teste (minutos) *</Label>
+                    <Input
+                      id="create-minutes"
+                      type="number"
+                      min={1}
+                      max={10080}
+                      value={operationData.createUser.minutes}
+                      onChange={(e) =>
+                        setOperationData((prev) => ({
+                          ...prev,
+                          createUser: {
+                            ...prev.createUser,
+                            minutes: parseInt(e.target.value, 10) || NATV_DEFAULT_TEST_MINUTES,
+                          },
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={async () => {
+                    setOperationLoading(true)
+                    try {
+                      const payload = {
+                        minutes: operationData.createUser.minutes,
+                        ...(operationData.createUser.username.trim()
+                          ? { username: operationData.createUser.username.trim() }
+                          : {}),
+                      }
+                      const result = await natvService.createUserWithConfig(
+                        user?.id || '',
+                        payload
+                      )
+                      setOperationResult({ type: 'createUser', data: result })
+                      if (result.success) {
+                        appToast.success('Teste criado. Credenciais retornadas pela NATV.')
+                      } else {
+                        appToast.error(result.message || 'Erro ao criar teste')
+                      }
+                    } catch (error) {
+                      appToast.error('Erro ao criar teste')
+                      setOperationResult({
+                        type: 'createUser',
+                        error: error instanceof Error ? error.message : 'Erro desconhecido',
+                      })
+                    } finally {
+                      setOperationLoading(false)
+                    }
+                  }}
+                  disabled={
+                    operationLoading ||
+                    !isConfigured ||
+                    operationData.createUser.minutes < 1
+                  }
+                  className="w-full"
+                >
                     {operationLoading ? (
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Users className="mr-2 h-4 w-4" />
                     )}
-                    Criar Usuário
+                    Criar usuário
                   </Button>
-                </CardContent>
-              </Card>
-              
-              {/* Ativação/Renovação */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <RefreshCw className="h-4 w-4" />
-                    Ativação/Renovação
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="activation-username">Nome de usuário</Label>
-                      <Input
-                        id="activation-username"
-                        value={operationData.activation.username}
-                        onChange={(e) => setOperationData(prev => ({
+              </section>
+
+              <Separator />
+
+              <section className="space-y-4">
+                <h3 className="flex items-center gap-2 text-base font-semibold">
+                  <RefreshCw className="h-4 w-4" />
+                  Ativação / renovação
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Informe o usuário ou o ID no painel NATV e a quantidade de meses.
+                </p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div>
+                    <Label htmlFor="activation-username">Usuário</Label>
+                    <Input
+                      id="activation-username"
+                      value={operationData.activation.username}
+                      onChange={(e) =>
+                        setOperationData((prev) => ({
                           ...prev,
-                          activation: { ...prev.activation, username: e.target.value }
-                        }))}
-                        placeholder="usuario_teste"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="activation-plan">Plano</Label>
-                      <Input
-                        id="activation-plan"
-                        value={operationData.activation.plan}
-                        onChange={(e) => setOperationData(prev => ({
-                          ...prev,
-                          activation: { ...prev.activation, plan: e.target.value }
-                        }))}
-                        placeholder="basic"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="activation-duration">Duração (dias)</Label>
-                      <Input
-                        id="activation-duration"
-                        type="number"
-                        value={operationData.activation.duration}
-                        onChange={(e) => setOperationData(prev => ({
-                          ...prev,
-                          activation: { ...prev.activation, duration: parseInt(e.target.value) || 30 }
-                        }))}
-                        min="1"
-                        max="365"
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={async () => {
-                      setOperationLoading(true)
-                      try {
-                        const result = await natvService.activateUserWithConfig(user?.id || '', operationData.activation)
-                        setOperationResult({ type: 'activation', data: result })
-                        if (result.success) {
-                          toast.success('Usuário ativado com sucesso!')
-                        } else {
-                          toast.error('Erro ao ativar usuário')
-                        }
-                      } catch (error) {
-                        toast.error('Erro ao ativar usuário')
-                        setOperationResult({ type: 'activation', error: error instanceof Error ? error.message : 'Erro desconhecido' })
-                      } finally {
-                        setOperationLoading(false)
+                          activation: { ...prev.activation, username: e.target.value },
+                        }))
                       }
-                    }}
-                    disabled={operationLoading || !isConfigured || !operationData.activation.username}
-                    className="w-full"
-                  >
+                      placeholder="usuario"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="activation-userid">ID no painel</Label>
+                    <Input
+                      id="activation-userid"
+                      type="number"
+                      value={operationData.activation.userId}
+                      onChange={(e) =>
+                        setOperationData((prev) => ({
+                          ...prev,
+                          activation: { ...prev.activation, userId: e.target.value },
+                        }))
+                      }
+                      placeholder="4240216"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="activation-months">Meses *</Label>
+                    <Input
+                      id="activation-months"
+                      type="number"
+                      min={1}
+                      max={24}
+                      value={operationData.activation.months}
+                      onChange={(e) =>
+                        setOperationData((prev) => ({
+                          ...prev,
+                          activation: {
+                            ...prev.activation,
+                            months: parseInt(e.target.value, 10) || 1,
+                          },
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={async () => {
+                    setOperationLoading(true)
+                    try {
+                      const payload = {
+                        months: operationData.activation.months,
+                        ...(operationData.activation.username.trim()
+                          ? { username: operationData.activation.username.trim() }
+                          : {}),
+                        ...(operationData.activation.userId.trim()
+                          ? { user_id: parseInt(operationData.activation.userId, 10) }
+                          : {}),
+                      }
+                      const result = await natvService.activateUserWithConfig(
+                        user?.id || '',
+                        payload
+                      )
+                      setOperationResult({ type: 'activation', data: result })
+                      if (result.success) {
+                        appToast.success('Ativação/renovação concluída')
+                      } else {
+                        appToast.error(result.message || 'Erro na ativação')
+                      }
+                    } catch (error) {
+                      appToast.error('Erro na ativação')
+                      setOperationResult({
+                        type: 'activation',
+                        error: error instanceof Error ? error.message : 'Erro desconhecido',
+                      })
+                    } finally {
+                      setOperationLoading(false)
+                    }
+                  }}
+                  disabled={
+                    operationLoading ||
+                    !isConfigured ||
+                    (!operationData.activation.username.trim() &&
+                      !operationData.activation.userId.trim()) ||
+                    operationData.activation.months < 1
+                  }
+                  className="w-full"
+                >
                     {operationLoading ? (
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <RefreshCw className="mr-2 h-4 w-4" />
                     )}
-                    Ativar/Renovar
+                    Ativar / renovar
                   </Button>
-                </CardContent>
-              </Card>
-              
-              {/* Buscar Usuários */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Search className="h-4 w-4" />
-                    Buscar Usuários
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="search-username">Nome de usuário</Label>
-                      <Input
-                        id="search-username"
-                        value={operationData.searchUsers.username}
-                        onChange={(e) => setOperationData(prev => ({
+              </section>
+
+              <Separator />
+
+              <section className="space-y-4">
+                <h3 className="flex items-center gap-2 text-base font-semibold">
+                  <Search className="h-4 w-4" />
+                  Buscar usuários
+                </h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="search-username">Usuário</Label>
+                    <Input
+                      id="search-username"
+                      value={operationData.searchUsers.username}
+                      onChange={(e) =>
+                        setOperationData((prev) => ({
                           ...prev,
-                          searchUsers: { ...prev.searchUsers, username: e.target.value }
-                        }))}
-                        placeholder="usuario_teste"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="search-userid">ID do usuário</Label>
-                      <Input
-                        id="search-userid"
-                        value={operationData.searchUsers.userId}
-                        onChange={(e) => setOperationData(prev => ({
-                          ...prev,
-                          searchUsers: { ...prev.searchUsers, userId: e.target.value }
-                        }))}
-                        placeholder="ID numérico"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="search-limit">Limite de resultados</Label>
-                      <Input
-                        id="search-limit"
-                        type="number"
-                        value={operationData.searchUsers.limit}
-                        onChange={(e) => setOperationData(prev => ({
-                          ...prev,
-                          searchUsers: { ...prev.searchUsers, limit: parseInt(e.target.value) || 10 }
-                        }))}
-                        min="1"
-                        max="100"
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={async () => {
-                      setOperationLoading(true)
-                      try {
-                        const result = await natvService.searchUsersWithConfig(user?.id || '', {
-                          username: operationData.searchUsers.username,
-                          ...(operationData.searchUsers.userId && { email: operationData.searchUsers.userId })
-                        })
-                        setOperationResult({ type: 'searchUsers', data: result })
-                        if (result.success) {
-                          toast.success('Encontrados ' + (result.data?.length || 0) + ' usuários')
-                        } else {
-                          toast.error('Erro ao buscar usuários')
-                        }
-                      } catch (error) {
-                        toast.error('Erro ao buscar usuários')
-                        setOperationResult({ type: 'searchUsers', error: error instanceof Error ? error.message : 'Erro desconhecido' })
-                      } finally {
-                        setOperationLoading(false)
+                          searchUsers: { ...prev.searchUsers, username: e.target.value },
+                        }))
                       }
-                    }}
-                    disabled={operationLoading || !isConfigured}
-                    className="w-full"
-                  >
+                      placeholder="usuario"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="search-userid">ID no painel (opcional)</Label>
+                    <Input
+                      id="search-userid"
+                      type="number"
+                      value={operationData.searchUsers.userId}
+                      onChange={(e) =>
+                        setOperationData((prev) => ({
+                          ...prev,
+                          searchUsers: { ...prev.searchUsers, userId: e.target.value },
+                        }))
+                      }
+                      placeholder="4240216"
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={async () => {
+                    setOperationLoading(true)
+                    try {
+                      const payload = {
+                        ...(operationData.searchUsers.username.trim()
+                          ? { username: operationData.searchUsers.username.trim() }
+                          : {}),
+                        ...(operationData.searchUsers.userId.trim()
+                          ? { user_id: parseInt(operationData.searchUsers.userId, 10) }
+                          : {}),
+                      }
+                      const result = await natvService.searchUsersWithConfig(
+                        user?.id || '',
+                        payload
+                      )
+                      setOperationResult({ type: 'searchUsers', data: result })
+                      if (result.success) {
+                        const count = Array.isArray(result.data) ? result.data.length : 0
+                        appToast.success(`Encontrados ${count} usuário(s)`)
+                      } else {
+                        appToast.error(result.message || 'Erro na busca')
+                      }
+                    } catch (error) {
+                      appToast.error('Erro na busca')
+                      setOperationResult({
+                        type: 'searchUsers',
+                        error: error instanceof Error ? error.message : 'Erro desconhecido',
+                      })
+                    } finally {
+                      setOperationLoading(false)
+                    }
+                  }}
+                  disabled={
+                    operationLoading ||
+                    !isConfigured ||
+                    (!operationData.searchUsers.username.trim() &&
+                      !operationData.searchUsers.userId.trim())
+                  }
+                  className="w-full"
+                >
                     {operationLoading ? (
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Search className="mr-2 h-4 w-4" />
                     )}
-                    Buscar Usuários
+                    Buscar usuários
                   </Button>
-                </CardContent>
-              </Card>
-              
-              {/* Resultado das Operações */}
+              </section>
+
               {operationResult && (
-                <Alert className={operationResult.data?.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-                  {operationResult.data?.success ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                <Alert
+                  className={
+                    operationSuccess
+                      ? 'border-emerald-500/30 bg-emerald-500/10'
+                      : 'border-destructive/30 bg-destructive/10'
+                  }
+                >
+                  {operationSuccess ? (
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
                   ) : (
-                    <XCircle className="h-4 w-4 text-red-600" />
+                    <XCircle className="h-4 w-4 text-destructive" />
                   )}
                   <AlertDescription>
                     <div className="space-y-2">
@@ -528,6 +571,26 @@ export function NATVConfig() {
                       <p className="text-sm">
                         {operationResult.data?.message || operationResult.error || 'Operação concluída'}
                       </p>
+                      {operationResult.type === 'createUser' &&
+                        operationResult.data?.success &&
+                        operationResult.data?.data && (
+                          <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+                            <p>
+                              <span className="font-medium">Usuário:</span>{' '}
+                              {operationResult.data.data.username ?? '—'}
+                            </p>
+                            <p>
+                              <span className="font-medium">Senha (NATV):</span>{' '}
+                              {operationResult.data.data.password ?? '—'}
+                            </p>
+                            {operationResult.data.data.id != null && (
+                              <p>
+                                <span className="font-medium">ID:</span>{' '}
+                                {operationResult.data.data.id}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       {operationResult.data?.data && (
                         <details className="mt-2">
                           <summary className="cursor-pointer text-sm font-medium">Ver dados completos</summary>
@@ -543,62 +606,33 @@ export function NATVConfig() {
                   </AlertDescription>
                 </Alert>
               )}
-            </div>
           </TabsContent>
-          
-          <TabsContent value="endpoints" className="space-y-4">
-            <div className="space-y-3">
-              <h4 className="font-medium">Endpoints Disponíveis</h4>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Criar Usuário de Teste</p>
-                    <p className="text-sm text-muted-foreground">POST /user</p>
-                  </div>
-                  <Badge variant="outline">POST</Badge>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Ativação/Renovação</p>
-                    <p className="text-sm text-muted-foreground">POST /user/activation</p>
-                  </div>
-                  <Badge variant="outline">POST</Badge>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Buscar Usuários</p>
-                    <p className="text-sm text-muted-foreground">GET /user/search</p>
-                  </div>
-                  <Badge variant="outline">GET</Badge>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Teste de Conexão</p>
-                    <p className="text-sm text-muted-foreground">GET /test</p>
-                  </div>
-                  <Badge variant="outline">GET</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <ExternalLink className="h-4 w-4" />
-                <a 
-                  href="https://revenda.pixbot.link" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="hover:underline"
+
+          <TabsContent value="endpoints" className="mt-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Rotas disponíveis na integração NATV (acesso via Hub Control).
+            </p>
+            <div className="overflow-hidden rounded-lg border border-border">
+              {ENDPOINT_ROWS.map((row, index) => (
+                <div
+                  key={row.path}
+                  className={`flex items-center justify-between gap-4 px-4 py-3 ${
+                    index > 0 ? 'border-t border-border' : ''
+                  }`}
                 >
-                  Documentação da API
-                </a>
-              </div>
+                  <div className="min-w-0">
+                    <p className="font-medium">{row.title}</p>
+                    <p className="truncate text-sm text-muted-foreground">{row.path}</p>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0 font-mono text-xs">
+                    {row.method}
+                  </Badge>
+                </div>
+              ))}
             </div>
           </TabsContent>
-          
-          <TabsContent value="limits" className="space-y-4">
+
+          <TabsContent value="limits" className="mt-6 space-y-4">
             <div className="space-y-4">
               <h4 className="font-medium flex items-center gap-2">
                 <Clock className="h-4 w-4" />
@@ -616,28 +650,27 @@ export function NATVConfig() {
                 </AlertDescription>
               </Alert>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Zap className="h-4 w-4 text-blue-500" />
-                    <h5 className="font-medium">Rate Limiting</h5>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="rounded-lg border border-border bg-muted/20 p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-primary" />
+                    <h5 className="font-medium">Rate limiting</h5>
                   </div>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• 150ms entre requisições</li>
-                    <li>• 5 criações por 30s</li>
-                    <li>• 50 criações por dia</li>
+                  <ul className="space-y-1 text-sm text-muted-foreground">
+                    <li>150ms entre requisições</li>
+                    <li>5 criações por 30s</li>
+                    <li>50 criações por dia</li>
                   </ul>
                 </div>
-                
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Activity className="h-4 w-4 text-green-500" />
+                <div className="rounded-lg border border-border bg-muted/20 p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-primary" />
                     <h5 className="font-medium">Performance</h5>
                   </div>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Timeout: {config.timeout}ms</li>
-                    <li>• Retry automático</li>
-                    <li>• Cache de configuração</li>
+                  <ul className="space-y-1 text-sm text-muted-foreground">
+                    <li>Timeout: {NATV_DEFAULT_TIMEOUT_MS / 1000}s</li>
+                    <li>Retry automático</li>
+                    <li>Proxy autenticado no Hub</li>
                   </ul>
                 </div>
               </div>
@@ -646,6 +679,7 @@ export function NATVConfig() {
         </Tabs>
       </CardContent>
     </Card>
+    </div>
   )
 }
 

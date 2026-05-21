@@ -9,7 +9,7 @@ const { performance } = require('perf_hooks');
 
 // Configurações
 const config = {
-  apiUrl: process.env.BPIX_API_URL || 'https://api.bpix.com.br/v1',
+  apiUrl: process.env.GATES2B_API_URL || process.env.BPIX_API_URL || 'https://api.gates2b.com',
   apiKey: process.env.BPIX_API_KEY,
   webhookUrl: process.env.BPIX_WEBHOOK_URL,
   encryptionKey: process.env.BPIX_ENCRYPTION_KEY,

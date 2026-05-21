@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { RefreshCw, Send, Play, Square, CheckCircle, AlertCircle, Clock, Users } from "lucide-react";
-import { toast } from "sonner";
+import { appToast } from "@/lib/app-toast";
 
 interface QueueStats {
   total: number;
@@ -88,7 +88,7 @@ export default function AdminMensagensPage() {
 
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
-      toast.error('Erro ao carregar dados do sistema');
+      appToast.error('Erro ao carregar dados do sistema');
     } finally {
       setLoading(false);
     }
@@ -120,14 +120,14 @@ export default function AdminMensagensPage() {
       const data = await response.json();
       
       if (response.ok) {
-        toast.success(data.message);
+        appToast.success(data.message);
         await fetchData();
       } else {
-        toast.error(data.error || 'Erro na operação');
+        appToast.error(data.error || 'Erro na operação');
       }
     } catch (error) {
       console.error('Erro na ação da fila:', error);
-      toast.error('Erro ao executar ação');
+      appToast.error('Erro ao executar ação');
     } finally {
       setActionLoading(null);
     }
@@ -146,14 +146,14 @@ export default function AdminMensagensPage() {
       const data = await response.json();
       
       if (response.ok) {
-        toast.success(data.message);
+        appToast.success(data.message);
         await fetchData();
       } else {
-        toast.error(data.error || 'Erro na operação');
+        appToast.error(data.error || 'Erro na operação');
       }
     } catch (error) {
       console.error('Erro na ação dos lembretes:', error);
-      toast.error('Erro ao executar ação');
+      appToast.error('Erro ao executar ação');
     } finally {
       setActionLoading(null);
     }
@@ -185,11 +185,7 @@ export default function AdminMensagensPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Administração de Mensagens</h1>
-          <p className="text-muted-foreground">Gerencie o sistema de mensagens e lembretes automáticos</p>
-        </div>
+      <div className="flex items-center justify-end gap-2">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium">Auto-refresh:</label>

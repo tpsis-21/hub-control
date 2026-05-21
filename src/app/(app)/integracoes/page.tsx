@@ -11,14 +11,15 @@ import {
   Zap, 
   MessageSquare, 
   Mail,
-  Plus,
   ExternalLink,
   CreditCard,
-  Package
+  Package,
+  ShoppingCart,
 } from 'lucide-react'
+import { CheckoutConfig } from '@/components/integrations/checkout-config'
 import { NATVConfig } from '@/components/integrations/natv-config'
-import { BPIXConfig } from '@/components/integrations/bpix-config'
-import { BPIXMetrics } from '@/components/integrations/bpix-metrics'
+import { Gates2bConfig } from '@/components/integrations/gates2b-config'
+import { Gates2bMetrics } from '@/components/integrations/gates2b-metrics'
 import { TheBestConfig } from '@/components/integrations/thebest-config'
 import { TheBestPackageManager } from '@/components/integrations/thebest-package-manager'
 import { TheBestPlanMappingManager } from '@/components/integrations/thebest-plan-mapping'
@@ -36,10 +37,18 @@ export default function IntegracoesPage() {
       category: 'Streaming'
     },
     {
-      id: 'bpix',
-      name: 'BPIX',
-      description: 'Processamento de pagamentos PIX instantâneos',
+      id: 'gates2b',
+      name: 'Gates2b',
+      description: 'PIX, cartão de crédito e cobranças via Gates2b',
       icon: CreditCard,
+      status: 'available',
+      category: 'Pagamentos'
+    },
+    {
+      id: 'checkout',
+      name: 'Checkout',
+      description: 'Pagamento e renovação na área do cliente (Hub Control)',
+      icon: ShoppingCart,
       status: 'available',
       category: 'Pagamentos'
     },
@@ -88,19 +97,9 @@ export default function IntegracoesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Integrações</h1>
-          <p className="text-muted-foreground">
-            Configure e gerencie integrações com serviços externos
-          </p>
-        </div>
-        <Button variant="outline">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Integração
-        </Button>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Configure e gerencie integrações com serviços externos.
+      </p>
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -182,14 +181,18 @@ export default function IntegracoesPage() {
 
       {/* Configuration Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="flex w-full max-w-full overflow-x-auto">
           <TabsTrigger value="natv" disabled={!integrations.find(i => i.id === 'natv')?.status.includes('available')}>
             <Zap className="h-4 w-4 mr-2" />
             NATV
           </TabsTrigger>
-          <TabsTrigger value="bpix" disabled={!integrations.find(i => i.id === 'bpix')?.status.includes('available')}>
+          <TabsTrigger value="gates2b" disabled={!integrations.find(i => i.id === 'gates2b')?.status.includes('available')}>
             <CreditCard className="h-4 w-4 mr-2" />
-            BPIX
+            Gates2b
+          </TabsTrigger>
+          <TabsTrigger value="checkout" disabled={!integrations.find(i => i.id === 'checkout')?.status.includes('available')}>
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Checkout
           </TabsTrigger>
           <TabsTrigger value="thebest" disabled={!integrations.find(i => i.id === 'thebest')?.status.includes('available')}>
             <Package className="h-4 w-4 mr-2" />
@@ -209,9 +212,13 @@ export default function IntegracoesPage() {
           <NATVConfig />
         </TabsContent>
 
-        <TabsContent value="bpix" className="space-y-4">
-          <BPIXMetrics />
-          <BPIXConfig />
+        <TabsContent value="gates2b" className="space-y-4">
+          <Gates2bMetrics />
+          <Gates2bConfig />
+        </TabsContent>
+
+        <TabsContent value="checkout" className="space-y-4">
+          <CheckoutConfig />
         </TabsContent>
 
         <TabsContent value="thebest" className="space-y-4">

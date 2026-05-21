@@ -27,19 +27,22 @@ function debugError(message: string, error?: any) {
 }
 // === FIM DOS LOGS DE DEBUG ===
 // =====================================================
-// LISTAS DE ROTAS
+// LISTAS DE ROTAS — Política default-deny (Fase 1)
+// Tudo exige autenticação, exceto o que estiver explicitamente público.
 // =====================================================
 
-const PUBLIC_ROUTES = [
+const PUBLIC_PAGE_PREFIXES = [
   '/login',
-  '/register', 
+  '/register',
   '/reset-password',
   '/auth',
+  '/privacy-policy',
+  '/terms',
   '/favicon.ico',
   '/_next',
   '/public',
   '/static',
-  '/@vite'
+  '/@vite',
 ]
 
 const AUTH_ROUTES = [
@@ -47,66 +50,74 @@ const AUTH_ROUTES = [
   '/register',
   '/auth/login',
   '/auth/register',
-  '/reset-password'
+  '/reset-password',
 ]
 
-const PROTECTED_ROUTES = [
-  '/dashboard',
-  '/configuracoes',
-  '/notificacoes',
-  '/servidores',
-  '/planos',
-  '/testes',
-  '/ajuda',
-  '/clientes',
-  '/admin',
-  '/perfil'
+/** APIs acessíveis sem sessão Supabase (auth própria ou health check) */
+const PUBLIC_API_PREFIXES = [
+  '/api/auth',
+  '/api/health',
+  '/api/status',
 ]
 
-const PUBLIC_API_ROUTES = [
-  '/api/auth'
+/** Webhooks — validam assinatura na própria rota */
+const WEBHOOK_API_PREFIXES = [
+  '/api/gates2b/webhook',
+  '/api/bpix/webhook', // legado → redirect em next.config
+  '/api/thebest/webhook',
+  '/api/webhooks/cakto',
 ]
 
-const PROTECTED_API_ROUTES = [
-  '/api/admin',
-  '/api/proxy',
-  '/api/plan-groups',
-  '/api/messages',
-  '/api/push-notifications',
-  '/api/upload',
-  '/api/reports'
-]
+/** Checkout público (área do cliente) */
+const PUBLIC_CHECKOUT_API_PREFIXES = ['/api/public/checkout']
 
-const ADMIN_API_ROUTES = [
-  '/api/admin'
-]
+/** APIs com autenticação por API key na rota (não sessão Supabase) */
+const API_KEY_AUTH_PREFIXES = ['/api/v1/bot']
+
+const ADMIN_API_PREFIXES = ['/api/admin']
+
+/** Rotas de desenvolvimento — bloqueadas em producao (Fase 2) */
+const DEV_ONLY_PAGE_PREFIXES = ['/test-auth', '/test-delete', '/examples']
 
 // =====================================================
 // HELPERS DE ROTA
 // =====================================================
 
-function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some(route => pathname.startsWith(route))
+function isDevOnlyRoute(pathname: string): boolean {
+  return DEV_ONLY_PAGE_PREFIXES.some((route) => pathname.startsWith(route))
+}
+
+function isPublicPage(pathname: string): boolean {
+  if (pathname === '/') return true
+  if (pathname.startsWith('/cliente/')) return true
+  return PUBLIC_PAGE_PREFIXES.some((route) => pathname.startsWith(route))
 }
 
 function isAuthRoute(pathname: string): boolean {
-  return AUTH_ROUTES.some(route => pathname.startsWith(route))
+  return AUTH_ROUTES.some((route) => pathname.startsWith(route))
 }
 
-function isProtectedRoute(pathname: string): boolean {
-  return PROTECTED_ROUTES.some(route => pathname.startsWith(route))
+function isPublicApi(pathname: string): boolean {
+  return (
+    PUBLIC_API_PREFIXES.some((route) => pathname.startsWith(route)) ||
+    PUBLIC_CHECKOUT_API_PREFIXES.some((route) => pathname.startsWith(route)) ||
+    WEBHOOK_API_PREFIXES.some((route) => pathname.startsWith(route)) ||
+    API_KEY_AUTH_PREFIXES.some((route) => pathname.startsWith(route))
+  )
 }
 
-function isPublicApiRoute(pathname: string): boolean {
-  return PUBLIC_API_ROUTES.some(route => pathname.startsWith(route))
+function isApiRoute(pathname: string): boolean {
+  return pathname.startsWith('/api/')
 }
 
-function isProtectedApiRoute(pathname: string): boolean {
-  return PROTECTED_API_ROUTES.some(route => pathname.startsWith(route))
+function requiresAuthentication(pathname: string): boolean {
+  if (isPublicPage(pathname)) return false
+  if (isApiRoute(pathname)) return !isPublicApi(pathname)
+  return true
 }
 
 function isAdminApiRoute(pathname: string): boolean {
-  return ADMIN_API_ROUTES.some(route => pathname.startsWith(route))
+  return ADMIN_API_PREFIXES.some((route) => pathname.startsWith(route))
 }
 
 // =====================================================
@@ -152,32 +163,34 @@ export async function middleware(req: NextRequest) {
   // 1. VERIFICAR ROTAS PÚBLICAS
   // =====================================================
   
+  // Bloquear rotas de teste em producao
+  if (process.env.NODE_ENV === 'production' && isDevOnlyRoute(pathname)) {
+    return NextResponse.redirect(new URL('/dashboard', req.url))
+  }
+
   // Permitir rota raiz
   if (pathname === '/') {
     logger.debug(`✅ Middleware: Rota raiz permitida`, undefined, "DEBUG")
     return response
   }
   
-  // Permitir rotas públicas
-  if (isPublicRoute(pathname)) {
-    logger.debug(`✅ Middleware: Rota pública permitida: ${pathname}`, undefined, "DEBUG")
+  // Permitir páginas públicas
+  if (isPublicPage(pathname)) {
+    logger.debug(`✅ Middleware: Página pública permitida: ${pathname}`, undefined, "DEBUG")
     return response
   }
-  
-  // Permitir APIs públicas
-  if (isPublicApiRoute(pathname)) {
+
+  // Permitir APIs públicas / webhooks / bot (auth na rota)
+  if (isApiRoute(pathname) && isPublicApi(pathname)) {
     logger.debug(`✅ Middleware: API pública permitida: ${pathname}`, undefined, "DEBUG")
     return response
   }
-  
+
   // =====================================================
-  // 2. VERIFICAR SE PRECISA DE AUTENTICAÇÃO
+  // 2. DEFAULT-DENY — exige autenticação
   // =====================================================
-  
-  const needsAuth = isProtectedRoute(pathname) || isProtectedApiRoute(pathname)
-  
-  if (!needsAuth) {
-    console.log(`🟡 Middleware: Rota não categorizada, permitindo: ${pathname}`)
+
+  if (!requiresAuthentication(pathname)) {
     return response
   }
   
@@ -227,7 +240,7 @@ export async function middleware(req: NextRequest) {
       logger.debug(`❌ Middleware: Usuário não autenticado: ${pathname}`, undefined, "DEBUG")
       
       // Para APIs, retornar 401
-      if (isProtectedApiRoute(pathname)) {
+      if (isApiRoute(pathname)) {
         return createStandardErrorResponse(
           'Não autorizado',
           'Você precisa estar autenticado para acessar esta API.',
@@ -294,11 +307,14 @@ export async function middleware(req: NextRequest) {
     // Headers básicos de segurança (usando helper compartilhado)
     response = attachSecurityHeaders(response)
     
-    // CORS para APIs
+    // CORS restrito para APIs autenticadas
     if (pathname.startsWith('/api/')) {
-      response.headers.set('Access-Control-Allow-Origin', '*')
+      const allowedOrigin =
+        process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:8080'
+      response.headers.set('Access-Control-Allow-Origin', allowedOrigin)
       response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
       response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      response.headers.set('Access-Control-Allow-Credentials', 'true')
     }
     
     // =====================================================
@@ -318,7 +334,7 @@ export async function middleware(req: NextRequest) {
     console.error(`🚨 Middleware: Erro na verificação:`, error)
     
     // Para APIs, retornar erro
-    if (isProtectedApiRoute(pathname)) {
+    if (isApiRoute(pathname)) {
       return createStandardErrorResponse(
         'Erro de autenticação',
         'Ocorreu um erro ao verificar sua sessão. Tente novamente.',

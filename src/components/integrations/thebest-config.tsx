@@ -27,33 +27,33 @@ import {
   Upload,
   Download
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { appToast } from '@/lib/app-toast'
 import { validateIntegrationConfig } from '@/lib/local-validation'
 import { ValidationFeedback, InlineValidation } from '@/components/ui/validation-feedback'
+import { THEBEST_DEFAULT_TIMEOUT_MS } from '@/lib/integrations/thebest-constants'
+import { PAINEL_BEST_API_DOCS_URL } from '@/config/thebest-api'
 
-interface TheBestConfig {
-  apiUrl: string
+interface TheBestConfigForm {
   apiKey: string
-  username: string
-  password: string
+  apiSecret: string
   timeout: number
 }
 
 interface TheBestPackage {
   id: string
+  name?: string
   classificacao: string
   duracao: string
   telas: number
   creditos: number
+  is_trial?: boolean
 }
 
 export function TheBestConfig() {
-  const [config, setConfig] = useState<TheBestConfig>({
-    apiUrl: '',
+  const [config, setConfig] = useState<TheBestConfigForm>({
     apiKey: '',
-    username: '',
-    password: '',
-    timeout: 30000
+    apiSecret: '',
+    timeout: THEBEST_DEFAULT_TIMEOUT_MS,
   })
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -69,10 +69,12 @@ export function TheBestConfig() {
   const [packages, setPackages] = useState<TheBestPackage[]>([])
   const [isLoadingPackages, setIsLoadingPackages] = useState(false)
   const [renewalData, setRenewalData] = useState({
+    lineId: '',
+    months: '1',
+  })
+  const [trialData, setTrialData] = useState({
     packageId: '',
-    userId: '',
-    duration: '1',
-    classification: 'COM ADULTO'
+    username: '',
   })
   const [operationResult, setOperationResult] = useState<any>(null)
   const [operationLoading, setOperationLoading] = useState(false)
@@ -108,46 +110,39 @@ export function TheBestConfig() {
           setCurrentUser(user);
           await loadUserConfig(user.id);
         } else {
-          toast.error('Usuário não autenticado');
+          appToast.error('Usuário não autenticado');
         }
       } else {
-        toast.error('Erro ao verificar autenticação');
+        appToast.error('Erro ao verificar autenticação');
       }
     } catch (error) {
       console.error('Erro ao inicializar componente:', error);
-      toast.error('Erro ao carregar dados do usuário');
+      appToast.error('Erro ao carregar dados do usuário');
     }
   }
 
-  const loadUserConfig = async (userId: string) => {
+  const loadUserConfig = async (_userId: string) => {
     try {
       setIsLoading(true);
-      
-      // Usar API backend segura
-      const response = await fetch('/api/admin/thebest-operations?operation=get_config', {
+
+      const response = await fetch('/api/integrations/thebest/config', {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
-          const configData = result.data.config_data || {};
           setConfig({
-            apiUrl: result.data.base_url || '',
-            apiKey: result.data.auth_token || '',
-            username: configData.username || '',
-            password: configData.password || '',
-            timeout: configData.timeout || 30000
+            apiKey: result.data.api_key ? '••••••••' : '',
+            apiSecret: '',
+            timeout: THEBEST_DEFAULT_TIMEOUT_MS,
           });
           setIsConfigured(true);
         } else {
           setIsConfigured(false);
         }
       } else {
-        console.error('Erro ao carregar configuração:', response.statusText);
         setIsConfigured(false);
       }
     } catch (error) {
@@ -159,13 +154,14 @@ export function TheBestConfig() {
   }
 
   const handleSave = async () => {
-    if (!config.apiUrl.trim() || !config.apiKey.trim()) {
-      toast.error('URL da API e Chave da API são obrigatórias')
+    const apiKeyToSave = config.apiKey.startsWith('••••') ? '' : config.apiKey.trim();
+    if (!apiKeyToSave) {
+      appToast.error('Informe a chave da API do painel TheBest')
       return
     }
 
     if (!currentUser) {
-      toast.error('Usuário não autenticado')
+      appToast.error('Usuário não autenticado')
       return
     }
 
@@ -177,7 +173,13 @@ export function TheBestConfig() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ config }),
+        body: JSON.stringify({
+          config: {
+            apiKey: apiKeyToSave,
+            apiSecret: config.apiSecret.trim() || undefined,
+            timeout: config.timeout,
+          },
+        }),
       });
 
       if (!response.ok) {
@@ -189,35 +191,29 @@ export function TheBestConfig() {
       
       if (success) {
         setIsConfigured(true)
-        toast.success(message || 'Configuração salva com sucesso!')
-        
-        // Testar conexão após salvar
+        setConfig((prev) => ({ ...prev, apiKey: '••••••••' }))
+        appToast.success(message || 'Configuração salva com sucesso!')
         await testConnection()
+        await loadPackages()
       } else {
         throw new Error(message || 'Erro ao salvar configuração')
       }
-      
-      setIsConfigured(true)
-      toast.success('Configuração salva com sucesso!')
-      
-      // Carregar pacotes após salvar
-      await loadPackages()
     } catch (error) {
       console.error('Erro ao salvar configuração:', error)
-      toast.error('Erro ao salvar configuração')
+      appToast.error('Erro ao salvar configuração')
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleTest = async () => {
-    if (!config.apiUrl.trim() || !config.apiKey.trim()) {
-      toast.error('Configure a URL e chave da API antes de testar')
+    if (!config.apiKey.trim() || config.apiKey.startsWith('••••')) {
+      appToast.error('Salve ou informe a chave da API antes de testar')
       return
     }
 
     if (!currentUser) {
-      toast.error('Usuário não autenticado')
+      appToast.error('Usuário não autenticado')
       return
     }
 
@@ -243,9 +239,9 @@ export function TheBestConfig() {
       })
       
       if (result.success || response.ok) {
-        toast.success('Teste de conexão realizado com sucesso!')
+        appToast.success('Teste de conexão realizado com sucesso!')
       } else {
-        toast.error('Falha no teste de conexão')
+        appToast.error('Falha no teste de conexão')
       }
     } catch (error) {
       console.error('Erro no teste:', error)
@@ -254,7 +250,7 @@ export function TheBestConfig() {
         message: 'Erro interno no teste de conexão',
         timestamp: new Date().toLocaleString('pt-BR')
       })
-      toast.error('Erro no teste de conexão')
+      appToast.error('Erro no teste de conexão')
     } finally {
       setIsTesting(false)
     }
@@ -291,17 +287,15 @@ export function TheBestConfig() {
 
       if (data) {
         setConfig({
-          apiUrl: data.base_url || '',
-          apiKey: data.auth_token || '',
-          username: data.config_data?.username || '',
-          password: data.config_data?.password || '',
-          timeout: data.config_data?.timeout || 30000
+          apiKey: data.api_key ? '••••••••' : '',
+          apiSecret: '',
+          timeout: THEBEST_DEFAULT_TIMEOUT_MS,
         })
         setIsConfigured(true)
       }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error)
-      toast.error('Erro ao carregar configuração')
+      appToast.error('Erro ao carregar configuração')
     } finally {
       setIsLoading(false)
     }
@@ -310,6 +304,7 @@ export function TheBestConfig() {
   // Função duplicada removida - usar testConnection em vez disso
 
   const testConnection = async () => {
+    const apiKeyForTest = config.apiKey.startsWith('••••') ? '' : config.apiKey.trim();
     try {
       setIsTesting(true)
       
@@ -318,7 +313,13 @@ export function TheBestConfig() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ config }),
+        body: JSON.stringify({
+          config: {
+            apiKey: apiKeyForTest || undefined,
+            apiSecret: config.apiSecret.trim() || undefined,
+            timeout: config.timeout,
+          },
+        }),
       });
 
       if (!response.ok) {
@@ -330,15 +331,15 @@ export function TheBestConfig() {
       
       if (success) {
         setTestResult({ success: true, message: message || 'Conexão testada com sucesso!' })
-        toast.success('Conexão testada com sucesso!')
+        appToast.success('Conexão testada com sucesso!')
       } else {
         setTestResult({ success: false, message: message || 'Falha na conexão' })
-        toast.error('Falha na conexão')
+        appToast.error('Falha na conexão')
       }
     } catch (error) {
       console.error('Erro ao testar conexão:', error)
       setTestResult({ success: false, message: 'Erro ao testar conexão' })
-      toast.error('Erro ao testar conexão')
+      appToast.error('Erro ao testar conexão')
     } finally {
       setIsTesting(false)
     }
@@ -364,7 +365,7 @@ export function TheBestConfig() {
       setPackages(data || [])
     } catch (error) {
       console.error('Erro ao carregar pacotes:', error)
-      toast.error('Erro ao carregar pacotes')
+      appToast.error('Erro ao carregar pacotes')
     } finally {
       setIsLoadingPackages(false)
     }
@@ -372,19 +373,18 @@ export function TheBestConfig() {
 
   const syncPackages = async () => {
     if (!isConfigured) {
-      toast.error('Configure a integração antes de sincronizar pacotes')
+      appToast.error('Configure a integração antes de sincronizar pacotes')
       return
     }
 
     try {
       setIsLoadingPackages(true)
       
-      const response = await fetch('/api/proxy/thebest?action=sync_packages', {
-        method: 'POST',
+      const response = await fetch('/api/integrations/thebest/packages?sync=true', {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({})
       })
       
       if (!response.ok) {
@@ -392,37 +392,35 @@ export function TheBestConfig() {
       }
       
       const result = await response.json()
-      toast.success('Pacotes sincronizados com sucesso!')
+      appToast.success('Pacotes sincronizados com sucesso!')
       
       // Recarregar pacotes
       await loadPackages()
     } catch (error) {
       console.error('Erro ao sincronizar pacotes:', error)
-      toast.error('Erro ao sincronizar pacotes')
+      appToast.error('Erro ao sincronizar pacotes')
     } finally {
       setIsLoadingPackages(false)
     }
   }
 
   const createRenewal = async () => {
-    if (!renewalData.packageId || !renewalData.userId) {
-      toast.error('Selecione um pacote e informe o ID do usuário')
+    if (!renewalData.lineId.trim()) {
+      appToast.error('Informe o ID do cliente no painel (line_id)')
       return
     }
 
     try {
       setOperationLoading(true)
       
-      const response = await fetch('/api/proxy/thebest?action=create_renewal', {
+      const response = await fetch('/api/proxy/thebest?action=renew_line', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          package_id: renewalData.packageId,
-          user_id: renewalData.userId,
-          duration: renewalData.duration,
-          classification: renewalData.classification
+          line_id: renewalData.lineId.trim(),
+          months: parseInt(renewalData.months, 10) || 1,
         })
       })
       
@@ -433,13 +431,13 @@ export function TheBestConfig() {
       }
       
       setOperationResult(result)
-      toast.success('Renovação criada com sucesso!')
+      appToast.success('Renovação criada com sucesso!')
       
       // Recarregar renovações do usuário
       await loadUserRenewals()
     } catch (error) {
       console.error('Erro ao criar renovação:', error)
-      toast.error(error instanceof Error ? error.message : 'Erro ao criar renovação')
+      appToast.error(error instanceof Error ? error.message : 'Erro ao criar renovação')
     } finally {
       setOperationLoading(false)
     }
@@ -467,7 +465,7 @@ export function TheBestConfig() {
       setUserRenewals([])
     } catch (error) {
       console.error('Erro ao carregar renovações:', error)
-      toast.error('Erro ao carregar renovações')
+      appToast.error('Erro ao carregar renovações')
     } finally {
       setIsLoadingRenewals(false)
     }
@@ -493,20 +491,18 @@ export function TheBestConfig() {
 
       // Resetar estado
       setConfig({
-        apiUrl: '',
         apiKey: '',
-        username: '',
-        password: '',
-        timeout: 30000
+        apiSecret: '',
+        timeout: THEBEST_DEFAULT_TIMEOUT_MS,
       })
       setIsConfigured(false)
       setTestResult(null)
       setPackages([])
       
-      toast.success('Configuração removida com sucesso!')
+      appToast.success('Configuração removida com sucesso!')
     } catch (error) {
       console.error('Erro ao remover configuração:', error)
-      toast.error('Erro ao remover configuração')
+      appToast.error('Erro ao remover configuração')
     }
   }
 
@@ -536,7 +532,16 @@ export function TheBestConfig() {
             </Button>
           </div>
           <CardDescription>
-            Configure sua integração com The Best para gerenciar pacotes e renovações.
+            Integração com o Painel Best (API REST). Autenticação via header{' '}
+            <code className="text-xs">Api-Key</code>.{' '}
+            <a
+              href={PAINEL_BEST_API_DOCS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Documentação da API
+            </a>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -550,47 +555,31 @@ export function TheBestConfig() {
             
             <TabsContent value="config" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="apiUrl">URL da API *</Label>
-                  <Input
-                    id="apiUrl"
-                    type="url"
-                    placeholder="https://api.thebest.com"
-                    value={config.apiUrl}
-                    onChange={(e) => setConfig(prev => ({ ...prev, apiUrl: e.target.value }))}
-                    disabled={isLoading}
-                  />
+                <div className="space-y-2 md:col-span-2">
+                  <p className="text-sm text-muted-foreground">
+                    A URL da API fica apenas no servidor (<code className="text-xs">THEBEST_API_BASE_URL</code>, padrão{' '}
+                    <code className="text-xs">https://api.painel.best</code>). Gere a chave em Autenticação → Chaves de API no painel.
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="apiKey">Chave da API *</Label>
+                  <Label htmlFor="apiKey">Api-Key *</Label>
                   <Input
                     id="apiKey"
                     type="password"
-                    placeholder="Sua chave da API"
+                    placeholder="Chave de API do revendedor"
                     value={config.apiKey}
                     onChange={(e) => setConfig(prev => ({ ...prev, apiKey: e.target.value }))}
                     disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="username">Usuário</Label>
+                  <Label htmlFor="apiSecret">Segredo adicional (opcional)</Label>
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="Usuário (opcional)"
-                    value={config.username}
-                    onChange={(e) => setConfig(prev => ({ ...prev, username: e.target.value }))}
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
+                    id="apiSecret"
                     type="password"
-                    placeholder="Senha (opcional)"
-                    value={config.password}
-                    onChange={(e) => setConfig(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Somente se o painel exigir"
+                    value={config.apiSecret}
+                    onChange={(e) => setConfig(prev => ({ ...prev, apiSecret: e.target.value }))}
                     disabled={isLoading}
                   />
                 </div>
@@ -624,7 +613,7 @@ export function TheBestConfig() {
                   <Button
                     variant="outline"
                     onClick={handleTest}
-                    disabled={isTesting || !config.apiUrl || !config.apiKey}
+                    disabled={isTesting || !config.apiKey}
                   >
                     <TestTube className={`h-4 w-4 mr-2 ${isTesting ? 'animate-pulse' : ''}`} />
                     {isTesting ? 'Testando...' : 'Testar Conexão'}
@@ -663,8 +652,15 @@ export function TheBestConfig() {
             </TabsContent>
             
             <TabsContent value="packages" className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Pacotes</strong> (<code className="text-xs">GET /packages/</code>) servem para sync, mapeamento de planos e criar teste.
+                  <strong> Renovação</strong> na API não usa package — apenas <code className="text-xs">line_id</code> + <code className="text-xs">months</code> na aba Renovações.
+                </AlertDescription>
+              </Alert>
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Pacotes Disponíveis</h3>
+                <h3 className="text-lg font-medium">Pacotes do Painel Best</h3>
                 <Button
                   onClick={syncPackages}
                   disabled={!isConfigured || isLoadingPackages}
@@ -687,12 +683,18 @@ export function TheBestConfig() {
                   {packages.map((pkg) => (
                     <Card key={pkg.id} className="p-4">
                       <div className="space-y-2">
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between items-start gap-2">
+                          <p className="font-medium text-sm">{pkg.name ?? `Pacote #${pkg.id}`}</p>
+                          {pkg.is_trial && (
+                            <Badge variant="secondary">Teste</Badge>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
                           <Badge variant="outline">{pkg.classificacao}</Badge>
-                          <span className="text-sm text-muted-foreground">{pkg.duracao}</span>
+                          <Badge variant="outline">{pkg.duracao}</Badge>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-sm"><strong>Telas:</strong> {pkg.telas}</p>
+                          <p className="text-sm"><strong>ID painel:</strong> {pkg.id}</p>
                           <p className="text-sm"><strong>Créditos:</strong> {pkg.creditos}</p>
                         </div>
                       </div>
@@ -706,42 +708,30 @@ export function TheBestConfig() {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Criar Nova Renovação</h3>
                 
+                <p className="text-sm text-muted-foreground">
+                  Renovação oficial: <code className="text-xs">POST /lines/&#123;id&#125;/renew/</code> com{' '}
+                  <code className="text-xs">months</code> (meses). O ID é o cliente/line no Painel Best, não o usuário do Hub.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="packageSelect">Pacote</Label>
-                    <select
-                      id="packageSelect"
-                      className="w-full p-2 border rounded-md"
-                      value={renewalData.packageId}
-                      onChange={(e) => setRenewalData(prev => ({ ...prev, packageId: e.target.value }))}
-                      disabled={!isConfigured}
-                    >
-                      <option value="">Selecione um pacote</option>
-                      {packages.map((pkg) => (
-                        <option key={pkg.id} value={pkg.id}>
-                          {pkg.classificacao} - {pkg.duracao} ({pkg.telas} telas, {pkg.creditos} créditos)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="userId">ID do Usuário</Label>
+                    <Label htmlFor="lineId">ID do cliente no painel (line_id) *</Label>
                     <Input
-                      id="userId"
-                      type="text"
-                      placeholder="ID do usuário"
-                      value={renewalData.userId}
-                      onChange={(e) => setRenewalData(prev => ({ ...prev, userId: e.target.value }))}
+                      id="lineId"
+                      type="number"
+                      min={1}
+                      placeholder="Ex.: 12345"
+                      value={renewalData.lineId}
+                      onChange={(e) => setRenewalData(prev => ({ ...prev, lineId: e.target.value }))}
                       disabled={!isConfigured}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Duração</Label>
+                    <Label htmlFor="months">Meses *</Label>
                     <select
-                      id="duration"
+                      id="months"
                       className="w-full p-2 border rounded-md"
-                      value={renewalData.duration}
-                      onChange={(e) => setRenewalData(prev => ({ ...prev, duration: e.target.value }))}
+                      value={renewalData.months}
+                      onChange={(e) => setRenewalData(prev => ({ ...prev, months: e.target.value }))}
                       disabled={!isConfigured}
                     >
                       <option value="1">1 mês</option>
@@ -750,27 +740,81 @@ export function TheBestConfig() {
                       <option value="12">12 meses</option>
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="classification">Classificação</Label>
-                    <select
-                      id="classification"
-                      className="w-full p-2 border rounded-md"
-                      value={renewalData.classification}
-                      onChange={(e) => setRenewalData(prev => ({ ...prev, classification: e.target.value }))}
-                      disabled={!isConfigured}
-                    >
-                      <option value="COM ADULTO">COM ADULTO</option>
-                      <option value="SEM ADULTO">SEM ADULTO</option>
-                    </select>
-                  </div>
                 </div>
                 
                 <Button
                   onClick={createRenewal}
-                  disabled={!isConfigured || operationLoading || !renewalData.packageId || !renewalData.userId}
+                  disabled={!isConfigured || operationLoading || !renewalData.lineId.trim()}
                 >
                   <Package className={`h-4 w-4 mr-2 ${operationLoading ? 'animate-spin' : ''}`} />
-                  {operationLoading ? 'Criando...' : 'Criar Renovação'}
+                  {operationLoading ? 'Renovando...' : 'Renovar cliente'}
+                </Button>
+
+                <Separator />
+
+                <h4 className="text-md font-medium">Criar cliente teste</h4>
+                <p className="text-sm text-muted-foreground">
+                  <code className="text-xs">POST /lines/create-trial/</code> — exige pacote de teste (<code className="text-xs">package_id</code>).
+                  Usuário e senha são gerados pelo painel se omitidos.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="trialPackage">Pacote teste *</Label>
+                    <select
+                      id="trialPackage"
+                      className="w-full p-2 border rounded-md"
+                      value={trialData.packageId}
+                      onChange={(e) => setTrialData(prev => ({ ...prev, packageId: e.target.value }))}
+                      disabled={!isConfigured}
+                    >
+                      <option value="">Selecione (is_trial)</option>
+                      {packages
+                        .filter((p) => p.is_trial)
+                        .map((pkg) => (
+                          <option key={pkg.id} value={pkg.id}>
+                            {pkg.name ?? pkg.id} — {pkg.creditos} créditos
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="trialUsername">Usuário (opcional)</Label>
+                    <Input
+                      id="trialUsername"
+                      placeholder="8–20 caracteres; senha gerada se vazio"
+                      value={trialData.username}
+                      onChange={(e) => setTrialData(prev => ({ ...prev, username: e.target.value }))}
+                      disabled={!isConfigured}
+                    />
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={!isConfigured || operationLoading || !trialData.packageId}
+                  onClick={async () => {
+                    try {
+                      setOperationLoading(true)
+                      const response = await fetch('/api/proxy/thebest?action=create_trial', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          package_id: parseInt(trialData.packageId, 10),
+                          username: trialData.username.trim() || undefined,
+                        }),
+                      })
+                      const result = await response.json()
+                      if (!response.ok) throw new Error(result.error || 'Erro ao criar teste')
+                      setOperationResult(result)
+                      appToast.success('Cliente teste criado no painel')
+                    } catch (error) {
+                      appToast.error(error instanceof Error ? error.message : 'Erro ao criar teste')
+                    } finally {
+                      setOperationLoading(false)
+                    }
+                  }}
+                >
+                  <TestTube className="h-4 w-4 mr-2" />
+                  Criar teste
                 </Button>
                 
                 {operationResult && (

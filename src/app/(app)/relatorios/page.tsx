@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Header } from "@/components/app/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -244,13 +243,7 @@ export default function RelatoriosPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Relatórios</h1>
-          <p className="text-muted-foreground">
-            Análise completa dos dados da aplicação
-          </p>
-        </div>
+      <div className="flex items-center justify-end gap-4">
         <div className="flex items-center gap-4">
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-48">
@@ -280,7 +273,7 @@ export default function RelatoriosPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="flex w-full max-w-full overflow-x-auto md:grid md:grid-cols-5 md:overflow-visible">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="customers">Clientes</TabsTrigger>
           <TabsTrigger value="tests">Testes</TabsTrigger>

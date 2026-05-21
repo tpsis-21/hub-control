@@ -8,6 +8,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createStandardErrorResponse, createStandardSuccessResponse } from '@/middleware/shared/helpers'
 import { logger } from '@/utils/production-logger'
+import { cookieConfig } from '@/lib/supabase/config'
 
 // =====================================================
 // FUNÇÕES AUXILIARES
@@ -32,10 +33,7 @@ async function createAuthClient() {
             name,
             value,
             ...options,
-            httpOnly: false,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/'
+            ...cookieConfig,
           })
         },
         remove(name: string, options: any) {

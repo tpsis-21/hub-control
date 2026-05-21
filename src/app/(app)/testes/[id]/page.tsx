@@ -4,7 +4,6 @@
 import { useTransition, useEffect, useState } from "react";
 import { notFound, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { Header } from "@/components/app/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -165,23 +164,14 @@ export default function TestDetailPage() {
   const server = customer ? servers.find((s) => s.id === customer.serverId) : null;
 
   if (loading || !customer) {
-     return (
-       <div className="flex min-h-screen w-full flex-col">
-            <Header title="Detalhes do Teste" />
-            <main className="flex-1 flex">
-                 <PageSkeleton />
-            </main>
-        </div>
-    );
+     return <PageSkeleton />;
   }
   
   const isExpired = isPast(parseISO(customer.expirationDate));
   const status = isExpired ? statusConfig['Expirado'] : statusConfig['Em teste'];
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <Header title="Detalhes do Teste" />
-      <main className="flex-1 p-4 md:p-6 space-y-6">
+      <div className="space-y-6">
         <div>
             <Button asChild variant="outline" size="sm">
                 <Link href="/testes">
@@ -269,7 +259,6 @@ export default function TestDetailPage() {
                 </Card>
             </div>
         </div>
-      </main>
-    </div>
+      </div>
   );
 }

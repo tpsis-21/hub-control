@@ -17,7 +17,7 @@ import { addManualTestSchema } from '@/lib/schemas';
 import { addManualTestAction } from '@/app/(app)/testes/actions';
 import { getServers } from '@/app/(app)/servidores/actions';
 import { Server } from '@/lib/types';
-import { toast } from 'sonner';
+import { appToast } from '@/lib/app-toast';
 
 interface ManualTestFormProps {
   onBack: () => void;
@@ -47,7 +47,7 @@ export function ManualTestForm({ onBack, onSuccess }: ManualTestFormProps) {
         setServers(allServers);
       } catch (error) {
         console.error('Erro ao carregar servidores:', error);
-        toast.error('Erro ao carregar servidores');
+        appToast.error('Erro ao carregar servidores');
       } finally {
         setLoadingServers(false);
       }
@@ -60,14 +60,14 @@ export function ManualTestForm({ onBack, onSuccess }: ManualTestFormProps) {
     try {
       const result = await addManualTestAction(data);
       if (result.success) {
-        toast.success('Teste manual criado com sucesso!');
+        appToast.success('Teste manual criado com sucesso!');
         onSuccess();
       } else {
-        toast.error(result.error || 'Erro ao criar teste manual');
+        appToast.error(result.error || 'Erro ao criar teste manual');
       }
     } catch (error) {
       console.error('Erro ao criar teste manual:', error);
-      toast.error('Erro inesperado ao criar teste manual');
+      appToast.error('Erro inesperado ao criar teste manual');
     } finally {
       setIsLoading(false);
     }

@@ -5,9 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-// import { LazyOnVisible } from '@/components/lazy/LazyComponents';
 
-// Componente LazyOnVisible temporário
+// Componente LazyOnVisible temporário (inline até lazy loading ser reintroduzido)
 const LazyOnVisible: React.FC<{
   children: React.ReactNode;
   fallback?: React.ReactNode;
@@ -43,7 +42,7 @@ import { MappingHeader } from './mapping/components/MappingHeader';
 import { useMappingData } from './mapping/hooks/useMappingData';
 import { useMappingForm } from './mapping/hooks/useMappingForm';
 import { Zap } from 'lucide-react';
-import { toast } from 'sonner';
+import { appToast } from '@/lib/app-toast';
 
 // Lazy loading dos componentes pesados
 const MappingStatistics = lazy(() => import('./mapping/MappingStatistics').then(m => ({ default: m.MappingStatistics })));
@@ -92,7 +91,7 @@ export const TheBestPlanMappingManager = memo(function TheBestPlanMappingManager
   // Handlers para os formulários
   const handleFormSubmit = useMemo(() => async () => {
     if (!validateForm()) {
-      toast.error('Por favor, preencha todos os campos obrigatórios');
+      appToast.error('Por favor, preencha todos os campos obrigatórios');
       return;
     }
 

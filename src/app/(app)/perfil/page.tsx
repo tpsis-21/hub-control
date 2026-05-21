@@ -107,7 +107,7 @@ export default function PerfilPage() {
               id: currentUser.id,
               user_id: currentUser.id,
               full_name: currentUser.user_metadata?.full_name || '',
-              role: (currentUser.email === 'topplaytv7@gmail.com' ? 'admin' : 'user') as 'admin' | 'user',
+              role: 'user' as const,
               approved: true,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
@@ -289,7 +289,7 @@ export default function PerfilPage() {
         phone: formData.phone || '',
         company: formData.company || '',
         avatar_url: formData.avatar_url || '',
-        role: (user.email === 'topplaytv7@gmail.com' ? 'admin' : 'user') as 'admin' | 'user',
+        role: 'user' as const,
         approved: true,
         updated_at: new Date().toISOString()
       };

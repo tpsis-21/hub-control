@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
-import { toast } from 'sonner'
+import { appToast } from '@/lib/app-toast'
 import { 
   Plus, 
   Edit, 
@@ -107,7 +107,7 @@ export function AutomationRules() {
       setRules(mappedRules)
     } catch (error) {
       console.error('Erro ao carregar regras:', error)
-      toast.error('Erro ao carregar regras de automação')
+      appToast.error('Erro ao carregar regras de automação')
     } finally {
       setIsLoading(false)
     }
@@ -115,7 +115,7 @@ export function AutomationRules() {
 
   const handleSaveRule = async () => {
     if (!formData.name.trim()) {
-      toast.error('Nome da regra é obrigatório')
+      appToast.error('Nome da regra é obrigatório')
       return
     }
 
@@ -140,10 +140,10 @@ export function AutomationRules() {
 
       if (editingRule) {
         await automationService.updateRule(editingRule.id, serviceRuleData)
-        toast.success('Regra atualizada com sucesso!')
+        appToast.success('Regra atualizada com sucesso!')
       } else {
         await automationService.createRule(serviceRuleData)
-        toast.success('Regra criada com sucesso!')
+        appToast.success('Regra criada com sucesso!')
       }
 
       setIsDialogOpen(false)
@@ -152,7 +152,7 @@ export function AutomationRules() {
       loadRules()
     } catch (error) {
       console.error('Erro ao salvar regra:', error)
-      toast.error('Erro ao salvar regra')
+      appToast.error('Erro ao salvar regra')
     } finally {
       setIsLoading(false)
     }
@@ -161,22 +161,22 @@ export function AutomationRules() {
   const handleDeleteRule = async (ruleId: string) => {
     try {
       await automationService.deleteRule(ruleId)
-      toast.success('Regra excluída com sucesso!')
+      appToast.success('Regra excluída com sucesso!')
       loadRules()
     } catch (error) {
       console.error('Erro ao excluir regra:', error)
-      toast.error('Erro ao excluir regra')
+      appToast.error('Erro ao excluir regra')
     }
   }
 
   const handleToggleRule = async (ruleId: string, isActive: boolean) => {
     try {
       await automationService.updateRule(ruleId, { enabled: isActive })
-      toast.success(`Regra ${isActive ? 'ativada' : 'desativada'} com sucesso!`)
+      appToast.success(`Regra ${isActive ? 'ativada' : 'desativada'} com sucesso!`)
       loadRules()
     } catch (error) {
       console.error('Erro ao alterar status da regra:', error)
-      toast.error('Erro ao alterar status da regra')
+      appToast.error('Erro ao alterar status da regra')
     }
   }
 

@@ -181,6 +181,7 @@ export function BaseTable<T extends { id: string }>({
       
       <CardContent>
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <div className="w-full overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -263,6 +264,7 @@ export function BaseTable<T extends { id: string }>({
               ))}
             </TableBody>
           </Table>
+          </div>
           
           {/* Dialog de confirmação de exclusão */}
           {selectedItem && onDelete && (

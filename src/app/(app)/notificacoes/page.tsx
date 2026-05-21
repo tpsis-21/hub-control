@@ -1,5 +1,4 @@
 // @/app/(app)/notificacoes/page.tsx
-import { Header } from "@/components/app/header";
 import { getExpirationReminders, getUsageInstructions, getEventTemplates } from "./actions";
 import { NotificationForms } from "./notification-forms";
 import type { Reminder, Instruction, OtherTemplate } from './types';
@@ -99,16 +98,11 @@ export default async function NotificacoesPage() {
     ]);
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <Header title="Notificações Automáticas" />
-      <main className="flex flex-1 flex-col gap-6 p-4 lg:gap-6 lg:p-6">
         <NotificationForms 
             initialReminders={reminders}
             initialInstructions={instructions}
             initialEventTemplates={eventTemplates}
         />
-      </main>
-    </div>
   );
 }
 

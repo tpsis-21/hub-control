@@ -4,7 +4,6 @@
 import { useTransition, useEffect, useState } from "react";
 import { notFound, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { Header } from "@/components/app/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -256,14 +255,7 @@ export default function CustomerDetailPage() {
   const plan = customer ? plans.find((p) => p.id === customer.planId) : null;
   
   if (loading) {
-    return (
-        <div className="flex min-h-screen w-full flex-col">
-            <Header title="Detalhes do Cliente" />
-            <main className="flex-1 flex">
-                 <PageSkeleton />
-            </main>
-        </div>
-    )
+    return <PageSkeleton />;
   }
 
   if (!customer) {
@@ -274,16 +266,14 @@ export default function CustomerDetailPage() {
   if (customer.status === 'Em teste') {
     router.replace(`/testes/${customer.id}`);
     return (
-       <div className="flex min-h-screen w-full flex-col items-center justify-center">
+       <div className="flex flex-col items-center justify-center py-16">
         <Loader2 className="h-10 w-10 animate-spin" />
       </div>
     );
   }
   
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <Header title="Detalhes do Cliente" />
-      <main className="flex-1 p-4 md:p-6 space-y-6">
+      <div className="space-y-6">
         <div>
             <Button asChild variant="outline" size="sm">
                 <Link href="/clientes">
@@ -384,7 +374,6 @@ export default function CustomerDetailPage() {
                 </Card>
             </div>
         </div>
-      </main>
-    </div>
+      </div>
   );
 }

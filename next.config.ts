@@ -1,11 +1,15 @@
 import type { NextConfig } from "next";
 import path from 'path';
+import { generateCSPHeader, SECURITY_HEADERS } from './src/lib/security-config';
 
 // Configuração baseada no ambiente
 const isProd = process.env.NODE_ENV === 'production';
 const isStatic = process.env.NEXT_EXPORT === 'true';
 
 const nextConfig: NextConfig = {
+  // Evita que o Next use o lockfile da pasta do usuário (C:\Users\pc-tp\)
+  outputFileTracingRoot: path.join(__dirname),
+
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -277,27 +281,26 @@ const nextConfig: NextConfig = {
   // ============================================
   
   async headers() {
+    const appSecurityHeaders: { key: string; value: string }[] = [
+      { key: 'X-Frame-Options', value: SECURITY_HEADERS['X-Frame-Options'] },
+      { key: 'X-Content-Type-Options', value: SECURITY_HEADERS['X-Content-Type-Options'] },
+      { key: 'Referrer-Policy', value: SECURITY_HEADERS['Referrer-Policy'] },
+      { key: 'X-DNS-Prefetch-Control', value: SECURITY_HEADERS['X-DNS-Prefetch-Control'] },
+      { key: 'Permissions-Policy', value: SECURITY_HEADERS['Permissions-Policy'] },
+      { key: 'Content-Security-Policy', value: generateCSPHeader() },
+    ];
+
+    if (isProd) {
+      appSecurityHeaders.push({
+        key: 'Strict-Transport-Security',
+        value: SECURITY_HEADERS['Strict-Transport-Security'],
+      });
+    }
+
     return [
       {
         source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
-          },
-        ],
+        headers: appSecurityHeaders,
       },
       {
         source: '/api/(.*)',
@@ -325,7 +328,33 @@ const nextConfig: NextConfig = {
   // ============================================
   
   async redirects() {
-    return [];
+    return [
+      {
+        source: '/integracoes/bpix',
+        destination: '/integracoes/gates2b',
+        permanent: true,
+      },
+      {
+        source: '/integracoes/bpix/:path*',
+        destination: '/integracoes/gates2b/:path*',
+        permanent: true,
+      },
+      {
+        source: '/api/bpix',
+        destination: '/api/gates2b',
+        permanent: true,
+      },
+      {
+        source: '/api/bpix/:path*',
+        destination: '/api/gates2b/:path*',
+        permanent: true,
+      },
+      {
+        source: '/api/admin/bpix-config',
+        destination: '/api/admin/gates2b-config',
+        permanent: true,
+      },
+    ];
   },
 };
 

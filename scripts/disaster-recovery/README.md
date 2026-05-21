@@ -378,7 +378,7 @@ Todos os scripts geram logs detalhados:
 
 ## 📚 Documentação Adicional
 
-- [Plano de Recuperação de Desastres](../../docs/DISASTER_RECOVERY_PLAN.md)
+- [Guia operacional](../../docs/GUIA_HUB_CONTROL.md) (restore e backup)
 - [Guia de Administração](../../docs/ADMIN_TRAINING.md)
 - [Procedimentos Operacionais](../../docs/ADMIN_PROCEDURES.md)
 - [Solução de Problemas](../../docs/TROUBLESHOOTING.md)

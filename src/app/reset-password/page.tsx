@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
+import { RecoverPasswordRequest } from "@/components/auth/recover-password-request";
 import { logger } from '@/utils/production-logger'
 
 function ResetPasswordForm() {
@@ -161,27 +162,31 @@ function ResetPasswordForm() {
 
   if (!isValidToken) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-background">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
             <div className="flex justify-center mb-4">
               <Logo variant="full" size="lg" className="text-gray-900 dark:text-white" />
             </div>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Sistema de gerenciamento de IPTV
+              Painel administrativo Hub Control
             </p>
           </div>
           <Card className="w-full max-w-md mx-auto">
             <CardHeader>
-              <CardTitle>Link Inválido</CardTitle>
+              <CardTitle>Link inválido ou expirado</CardTitle>
               <CardDescription>
-                O link de recuperação de senha é inválido ou expirou.
+                Abra o link direto do e-mail mais recente ou solicite um novo abaixo. Admin:
+                redefina a senha em Supabase → Authentication → Users.
               </CardDescription>
             </CardHeader>
+            <CardContent>
+              <RecoverPasswordRequest />
+            </CardContent>
             <CardFooter>
-              <Link href="/login" className="w-full">
-                <Button className="w-full">
-                  Voltar ao Login
+              <Link href="/login?recuperar=1" className="w-full">
+                <Button variant="outline" className="w-full">
+                  Voltar ao login
                 </Button>
               </Link>
             </CardFooter>
@@ -192,14 +197,14 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-background">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="flex justify-center mb-4">
             <Logo variant="full" size="lg" className="text-gray-900 dark:text-white" />
           </div>
           <p className="text-gray-500 dark:text-gray-400 mt-2">
-            Sistema de gerenciamento de IPTV
+            Painel administrativo Hub Control
           </p>
         </div>
         <Card className="w-full max-w-md mx-auto">

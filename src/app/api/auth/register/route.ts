@@ -15,6 +15,7 @@ import {
 } from '@/middleware/shared/helpers'
 import { getClientIP } from '@/lib/security/rate-limit'
 import { logger } from '@/utils/production-logger'
+import { cookieConfig } from '@/lib/supabase/config'
 
 // =====================================================
 // CONFIGURAÇÕES E VALIDAÇÕES
@@ -59,10 +60,7 @@ async function createAuthClient() {
             name,
             value,
             ...options,
-            httpOnly: false,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/'
+            ...cookieConfig,
           })
         },
         remove(name: string, options: any) {
@@ -118,6 +116,14 @@ function mapSupabaseError(error: any): { message: string; code: string } {
 // =====================================================
 
 export async function POST(request: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return createStandardErrorResponse(
+      'REGISTRATION_DISABLED',
+      'Cadastro público desabilitado. Solicite acesso ao administrador.',
+      403
+    );
+  }
+
   try {
     // =====================================================
     // 1. RATE LIMITING CENTRALIZADO

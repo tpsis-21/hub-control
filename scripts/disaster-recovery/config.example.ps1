@@ -372,7 +372,7 @@ SEGURANÇA:
 - Revise permissões regularmente
 
 SUPORTE:
-- Documentação: docs/DISASTER_RECOVERY_PLAN.md
+- Documentação: docs/GUIA_HUB_CONTROL.md
 - Troubleshooting: docs/TROUBLESHOOTING.md
 - Contato: devops@hubcontrol.com
 #>

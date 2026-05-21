@@ -27,17 +27,16 @@ import { ContextualAssistant } from "@/components/ui/contextual-assistant";
 
 type DashboardContentProps = {
     clients: Client[];
+    tests: Client[];
     plans: Plan[];
     servers: Server[];
 }
 
-export function DashboardContent({ clients, plans, servers }: DashboardContentProps) {
+export function DashboardContent({ clients, tests, plans, servers }: DashboardContentProps) {
   const { handleError } = useErrorHandler();
   
-  // Atualização automática de status agora é gerenciada centralmente pelo ServiceInitializer
-  
   // Usar hooks especializados para cálculos
-  const metrics = useDashboardMetrics(clients, [], plans);
+  const metrics = useDashboardMetrics(clients, tests, plans);
   const conversionRate = useTestConversionRate(clients);
   
   // Tratamento de erro para dados inválidos
@@ -88,15 +87,15 @@ export function DashboardContent({ clients, plans, servers }: DashboardContentPr
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-        <div id="dashboard-header" className="flex items-center justify-end gap-3">
+        <div id="dashboard-header" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
             <AddTestForm plans={plans} servers={servers}>
-              <Button className="btn-gradient" style={{width: '160px', height: '40px'}}>
+              <Button className="btn-gradient w-full sm:w-auto min-h-10">
                 <FlaskConical className="h-4 w-4 mr-2" />
                 Criar Teste
               </Button>
             </AddTestForm>
             <AddCustomerForm plans={plans} servers={servers}>
-              <Button variant="outline" className="btn-gradient-secondary" style={{width: '160px', height: '40px'}}>
+              <Button variant="outline" className="btn-gradient-secondary w-full sm:w-auto min-h-10">
                 <UserCheck className="h-4 w-4 mr-2" />
                 Adicionar Cliente
               </Button>

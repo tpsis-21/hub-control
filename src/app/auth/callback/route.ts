@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { logger } from '@/utils/production-logger'
+import { cookieConfig } from '@/lib/supabase/config'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -27,10 +28,7 @@ export async function GET(request: NextRequest) {
               name,
               value,
               ...options,
-              httpOnly: false,
-              secure: process.env.NODE_ENV === 'production',
-              sameSite: 'lax',
-              path: '/'
+              ...cookieConfig,
             })
           },
           remove(name: string, options: any) {

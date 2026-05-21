@@ -113,18 +113,36 @@ export function ModernHeader({
       '/dashboard': 'Dashboard',
       '/clientes': 'Clientes',
       '/planos': 'Planos Individuais',
-    '/planos/grupos': 'Grupos de Planos',
+      '/planos/grupos': 'Grupos de Planos',
       '/testes': 'Testes',
       '/servidores': 'Servidores',
       '/financeiro': 'Financeiro',
+      '/relatorios': 'Relatórios',
       '/notificacoes': 'Notificações',
       '/integracoes': 'Integrações',
+      '/checkout/pedidos': 'Checkout',
+      '/pagamentos': 'Pagamentos',
+      '/marketing': 'Marketing',
       '/configuracoes': 'Configurações',
       '/mensagens': 'Fila de Mensagens',
-      '/admin': 'Painel Admin'
+      '/logs': 'Logs e auditoria',
+      '/ajuda': 'Central de Ajuda',
+      '/perfil': 'Perfil',
+      '/admin': 'Painel Admin',
+      '/admin/mensagens': 'Administração de Mensagens',
+      '/integracoes/gates2b': 'Integração Gates2b',
+      '/documentacao/api-chatbots': 'API para Chatbots',
+      '/lgpd': 'Direitos LGPD',
     };
-    
-    return (pathname && routeTitles[pathname]) || 'Hub Control';
+
+    if (pathname) {
+      if (routeTitles[pathname]) return routeTitles[pathname];
+      if (pathname.startsWith('/clientes/')) return 'Detalhes do Cliente';
+      if (pathname.startsWith('/testes/') && pathname !== '/testes') return 'Detalhes do Teste';
+      if (pathname.startsWith('/integracoes/')) return 'Integrações';
+    }
+
+    return 'Hub Control';
   };
 
   const pageTitle = getPageTitle();

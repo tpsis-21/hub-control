@@ -53,6 +53,7 @@ export function AddPlanForm({ planGroups }: { planGroups: PlanGroup[] }) {
       sendWelcomeMessage: true,
       isPublic: true,
       groupId: 'none',
+      caktoUrl: '',
     },
   });
 
@@ -306,6 +307,24 @@ export function AddPlanForm({ planGroups }: { planGroups: PlanGroup[] }) {
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="caktoUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Link Cakto (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="url"
+                      placeholder="https://pay.cakto.com.br/..."
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />

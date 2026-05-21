@@ -43,6 +43,11 @@ const RATE_LIMITS = {
   notifications: {
     limit: 50,
     window: 60 * 1000 // 1 minuto
+  },
+  // Checkout público - 30 requests por minuto por IP
+  checkout: {
+    limit: 30,
+    window: 60 * 1000
   }
 };
 
@@ -51,6 +56,7 @@ const RATE_LIMITS = {
  */
 function getRateLimitType(pathname: string): keyof typeof RATE_LIMITS {
   if (pathname.includes('/auth/')) return 'auth';
+  if (pathname.includes('/public/checkout')) return 'checkout';
   if (pathname.includes('/upload/')) return 'upload';
   if (pathname.includes('/notifications/')) return 'notifications';
   return 'default';

@@ -11,6 +11,7 @@ import { createServerSupabaseClientForActions } from "@/lib/supabase/clients/ser
 import { getServers } from "@/app/(app)/servidores/actions";
 import { mapClientToDatabaseClient, mapDatabaseClientToClient } from "@/lib/database-mappers";
 import { NATVService } from "@/services/natv.service";
+import { buildIntegrationUrl } from "@/lib/integrations/server-base-urls";
 import { logger } from '@/utils/production-logger'
 
 
@@ -42,7 +43,7 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
 
     try {
         if (server.integrationType === 'natv') {
-            const url = `https://natv.pm/user`;
+            const url = buildIntegrationUrl('natv', '/user');
             const body = { username: data.iptvUsername, minutes: String(testDurationMinutes) };
             const response = await fetch(url, {
                 method: 'POST',
@@ -158,7 +159,7 @@ export async function addAutomaticTestAction(data: z.infer<typeof addAutomaticTe
 
   try {
     if (server.integrationType === 'natv') {
-      const url = `https://natv.pm/user`;
+      const url = buildIntegrationUrl('natv', '/user');
       const username = data.iptvUsername || `teste_${Date.now()}`;
       const body = { username, minutes: String(testDurationMinutes) };
       

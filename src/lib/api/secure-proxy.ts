@@ -4,6 +4,7 @@
  */
 
 import { logger } from '@/lib/logger';
+import { getGates2bBaseUrl, getNatvBaseUrl } from '@/lib/integrations/server-base-urls';
 
 interface ProxyConfig {
   baseUrl: string;
@@ -134,15 +135,21 @@ class SecureProxyClient {
 // Instância singleton
 export const secureProxy = new SecureProxyClient();
 
-// Configurações padrão para serviços conhecidos
+// Configurações padrão para serviços conhecidos (URLs via env)
 secureProxy.registerService('natv', {
-  baseUrl: 'https://natv.pm',
+  baseUrl: getNatvBaseUrl(),
   timeout: 30000,
   retries: 3,
 });
 
+secureProxy.registerService('gates2b', {
+  baseUrl: getGates2bBaseUrl(),
+  timeout: 30000,
+  retries: 3,
+});
+// Alias legado: Bpix é o mesmo gateway Gates2b
 secureProxy.registerService('bpix', {
-  baseUrl: process.env.BPIX_API_URL || 'https://api.bpix.com.br',
+  baseUrl: getGates2bBaseUrl(),
   timeout: 30000,
   retries: 3,
 });

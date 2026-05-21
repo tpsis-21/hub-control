@@ -3,7 +3,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
-// import { notificationSystem } from '@/lib/notifications';
 import { withUnifiedMiddleware } from '@/middleware/unified-middleware';
 // import { logSecurityEvent } from '@/lib/security';
 import { createStandardErrorResponse, createStandardSuccessResponse, attachSecurityHeaders } from '@/middleware/shared/helpers';
@@ -91,10 +90,10 @@ async function checkUserPermissions(supabase: any, action: string): Promise<{
 
   // Buscar role do usuário
   const { data: profile } = await supabase
-    .from('user_profiles')
+    .from('profiles')
     .select('role')
-    .eq('id', user.id)
-    .single();
+    .or(`id.eq.${user.id},user_id.eq.${user.id}`)
+    .maybeSingle();
 
   const role = profile?.role || 'user';
   
@@ -147,51 +146,57 @@ async function GET(request: NextRequest) {
 
     const filters = validationResult.data;
 
-    // TODO: Implementar quando as tabelas estiverem configuradas
-    // // Buscar templates do banco de dados
-    // let query = supabase
-    //   .from('notification_templates')
-    //   .select('*');
-    //
-    // // Aplicar filtros
-    // if (filters.type) {
-    //   query = query.eq('type', filters.type);
-    // }
-    // if (filters.isActive !== undefined) {
-    //   query = query.eq('is_active', filters.isActive);
-    // }
-    // if (filters.search) {
-    //   query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%;
-    // }
-    //
-    // // Aplicar paginação
-    // if (filters.offset) {
-    //   query = query.range(filters.offset`, (filters.offset + (filters.limit || 20)) - 1);
-    // } else if (filters.limit) {
-    //   query = query.limit(filters.limit);
-    // } else {
-    //   query = query.limit(20);
-    // }
-    //
-    // // Ordenar por nome
-    // query = query.order('name', { ascending: true });
-    //
-    // const { data: templates, error: dbError, count } = await query;
-    //
-    // if (dbError) {
-    //   console.error('Erro ao buscar templates:', dbError);
+    let query = supabase
+      .from('notifications')
+      .select('*', { count: 'exact' });
 
-    // Dados simulados para templates
-    const templates: any[] = [];
-    const dbError = null;
-    const count = 0;
+    if (filters.type) {
+      query = query.eq('type', filters.type);
+    }
+    if (filters.isActive !== undefined) {
+      query = query.eq('active', filters.isActive);
+    }
+    if (filters.search) {
+      const term = filters.search.replace(/[%_]/g, '');
+      query = query.or(`event.ilike.%${term}%,subject.ilike.%${term}%,message.ilike.%${term}%`);
+    }
 
-    // TODO: Implementar quando o sistema de notificações estiver configurado
-    // // Buscar templates do sistema também
-    // const systemTemplates = notificationSystem.listTemplates();
-    
-    // Dados simulados para templates do sistema
-    const systemTemplates: any[] = [];
+    const limit = filters.limit ?? 50;
+    const offset = filters.offset ?? 0;
+    query = query.range(offset, offset + limit - 1).order('updated_at', { ascending: false });
+
+    const { data: rows, error: dbError, count } = await query;
+
+    if (dbError) {
+      console.error('Erro ao buscar templates:', dbError);
+      return attachSecurityHeaders(
+        createStandardErrorResponse('Erro ao buscar templates', dbError.message, 500)
+      );
+    }
+
+    const templates = (rows || []).map((row: Record<string, unknown>) => {
+      let payload: Record<string, unknown> = {};
+      try {
+        payload = JSON.parse(String(row.message ?? '{}')) as Record<string, unknown>;
+      } catch {
+        payload = {};
+      }
+      return {
+        id: row.id,
+        name: row.event,
+        type: row.type,
+        channel: 'email',
+        subject: row.subject ?? '',
+        content: (payload.emailTemplate as string) || String(row.message ?? ''),
+        variables: [],
+        metadata: { description: String(row.type) },
+        is_active: row.active ?? true,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      };
+    });
+
+    const systemTemplates: unknown[] = [];
 
     // Log da consulta
     // await logSecurityEvent({

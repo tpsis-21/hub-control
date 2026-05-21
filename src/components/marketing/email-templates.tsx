@@ -56,7 +56,7 @@ import {
 } from 'lucide-react'
 import { EmailTemplate, TemplateVariable } from '@/lib/types/marketing'
 import { MarketingService } from '@/services/marketing.service'
-import { toast } from 'sonner'
+import { appToast } from '@/lib/app-toast'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -165,7 +165,7 @@ export function EmailTemplates() {
       ])
     } catch (error) {
       console.error('Erro ao carregar templates:', error)
-      toast.error('Erro ao carregar templates')
+      appToast.error('Erro ao carregar templates')
     } finally {
       setLoading(false)
     }
@@ -175,17 +175,17 @@ export function EmailTemplates() {
     try {
       if (editingTemplate) {
         // await MarketingService.updateEmailTemplate(editingTemplate.id, formData)
-        toast.success('Template atualizado com sucesso!')
+        appToast.success('Template atualizado com sucesso!')
       } else {
         // await MarketingService.createEmailTemplate(formData)
-        toast.success('Template criado com sucesso!')
+        appToast.success('Template criado com sucesso!')
       }
       
       loadTemplates()
       handleCloseDialog()
     } catch (error) {
       console.error('Erro ao salvar template:', error)
-      toast.error('Erro ao salvar template')
+      appToast.error('Erro ao salvar template')
     }
   }
 
@@ -200,11 +200,11 @@ export function EmailTemplates() {
       }
       
       // await MarketingService.createEmailTemplate(duplicatedTemplate)
-      toast.success('Template duplicado com sucesso!')
+      appToast.success('Template duplicado com sucesso!')
       loadTemplates()
     } catch (error) {
       console.error('Erro ao duplicar template:', error)
-      toast.error('Erro ao duplicar template')
+      appToast.error('Erro ao duplicar template')
     }
   }
 
@@ -213,11 +213,11 @@ export function EmailTemplates() {
     
     try {
       // await MarketingService.deleteEmailTemplate(deletingTemplate.id)
-      toast.success('Template excluído com sucesso!')
+      appToast.success('Template excluído com sucesso!')
       loadTemplates()
     } catch (error) {
       console.error('Erro ao excluir template:', error)
-      toast.error('Erro ao excluir template')
+      appToast.error('Erro ao excluir template')
     } finally {
       setDeletingTemplate(null)
     }

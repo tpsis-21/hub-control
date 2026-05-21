@@ -8,6 +8,7 @@ import type { Client, Plan, Server, ServerTestConfig } from "@/lib/types";
 import { addTestSchema } from "@/lib/schemas";
 import { createServerSupabaseClientForActions } from "@/lib/supabase/clients/server";
 import { logger } from '@/utils/production-logger'
+import { buildIntegrationUrl } from '@/lib/integrations/server-base-urls'
 // Usando fetch nativo do Node.js/Next.js
 
 // Helper para gerar um link único para a área do cliente.
@@ -147,7 +148,7 @@ export async function addTestAction(data: z.infer<typeof addTestSchema>, allPlan
 
     try {
       if (server.integrationType === 'natv') {
-        const url = `https://revenda.pixbot.link/user`;
+        const url = buildIntegrationUrl('natv', '/user');
         const body = { username: data.iptvUsername, minutes: String(testDurationMinutes) };
         const response = await fetch(url, {
           method: 'POST',

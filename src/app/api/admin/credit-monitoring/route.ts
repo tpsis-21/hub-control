@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 import { createStandardErrorResponse, createStandardSuccessResponse } from '@/middleware/shared/helpers';
 import { z } from 'zod';
+import { isProfileAdmin } from '@/lib/admin-role';
 
 // Schema para configuração de alertas
 const creditAlertSchema = z.object({
@@ -34,29 +35,6 @@ const reportFiltersSchema = z.object({
   status: z.enum(['active', 'resolved', 'ignored']).optional()
 });
 
-// Função para verificar se o usuário é admin
-async function isUserAdmin(userId: string): Promise<boolean> {
-  try {
-    const supabase = await createServerSupabaseClient();
-    
-    // Admin principal é sempre admin
-    if (userId === '2f67bed8-9448-446f-8f38-9306f773620d') {
-      return true;
-    }
-    
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-    
-    return profile?.role === 'admin';
-  } catch (error) {
-    console.error('Erro ao verificar admin:', error);
-    return false;
-  }
-}
-
 // GET - Buscar status de créditos e alertas
 export async function GET(request: NextRequest) {
   try {
@@ -72,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verificar se é admin
-    const isAdmin = await isUserAdmin(user.id);
+    const isAdmin = await isProfileAdmin(supabase, user.id);
     if (!isAdmin) {
       return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }
@@ -195,7 +173,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verificar se é admin
-    const isAdmin = await isUserAdmin(user.id);
+    const isAdmin = await isProfileAdmin(supabase, user.id);
     if (!isAdmin) {
       return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }
@@ -258,7 +236,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se é admin
-    const isAdmin = await isUserAdmin(user.id);
+    const isAdmin = await isProfileAdmin(supabase, user.id);
     if (!isAdmin) {
       return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }
@@ -354,7 +332,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verificar se é admin
-    const isAdmin = await isUserAdmin(user.id);
+    const isAdmin = await isProfileAdmin(supabase, user.id);
     if (!isAdmin) {
       return createStandardErrorResponse('ACCESS_DENIED', 'Acesso negado', 403);
     }

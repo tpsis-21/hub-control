@@ -1,0 +1,2816 @@
+{
+  "name": "WF - Eventos - Gates2B",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6597ef66-434b-4784-a4ee-18279f11cfe9",
+              "name": "bpix_id",
+              "value": "={{ $json.body.id }}",
+              "type": "string"
+            },
+            {
+              "id": "65ba17ec-ab17-4994-9c31-05fd7fe0e354",
+              "name": "valor",
+              "value": "={{ $json.body.amount }}",
+              "type": "string"
+            },
+            {
+              "id": "b4d03a15-5367-4851-9b55-3a8ea1b044c3",
+              "name": "status",
+              "value": "={{ $json.body.status }}",
+              "type": "string"
+            },
+            {
+              "id": "66aec01b-4f35-498a-afab-97c360afa73e",
+              "name": "nome",
+              "value": "={{ $json.body.name_client }}",
+              "type": "string"
+            },
+            {
+              "id": "bpix-gateway-email",
+              "name": "gateway_email",
+              "value": "={{ $json.body.email || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "bpix-payer-email-webhook",
+              "name": "payer_email_webhook",
+              "value": "={{ $json.body.payerEmail || $json.body.pagadorEmail || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "bpix-phone-client",
+              "name": "telefone",
+              "value": "={{ $json.body.phone_number || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "bpix-document-client",
+              "name": "document_client",
+              "value": "={{ $json.body.document_client || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "5eb3c9e7-eef9-4de5-b0c6-c9a9e2919f84",
+              "name": "createdAt",
+              "value": "={{ $json.body.createdAt }}",
+              "type": "string"
+            },
+            {
+              "id": "fdb91173-7961-4846-84fd-9e1cd7abdd65",
+              "name": "method",
+              "value": "={{ $json.body.method }}",
+              "type": "string"
+            },
+            {
+              "id": "c17ca50d-32c5-4e9e-949c-034075e91614",
+              "name": "id_transacao",
+              "value": "={{ $json.body.id_transaction || $json.body.transactionId || $json.body.transaction_id || $json.body.charge_id || $json.body.orderId || $json.body.reference_id || $json.body.id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "97d8983a-43c5-4f3a-8b57-bb2f9ddfb229",
+              "name": "international_status",
+              "value": "={{ String($json.body.international_status || $json.body.status || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "bpix-payload-completo",
+              "name": "payload_completo",
+              "value": "={{ JSON.stringify($json.body || {}) }}",
+              "type": "string"
+            },
+            {
+              "id": "4a89233c-ffdd-40bf-85d8-66014aa7793c",
+              "name": "external_reference",
+              "value": "={{ $json.body.external_reference || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        81584,
+        53424
+      ],
+      "id": "39b5aa19-1cd7-47cf-9922-7e9c3db9ea3b",
+      "name": "Tratar Dados Bpix"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "status-paid-like",
+              "leftValue": "={{ String($json.international_status || '').trim().toUpperCase() }}",
+              "rightValue": "^(PAYMENT_RECEIVED|PAID|APPROVED|COMPLETED|SUCCESS)$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "has-canonical-key",
+              "leftValue": "={{ String($json.id_transacao || '').trim() }}",
+              "rightValue": "^.+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        81952,
+        53424
+      ],
+      "id": "5299fec7-d519-4f3e-9d96-886d10abb8c4",
+      "name": "Pagamento confirmado?"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eventos-bpix",
+        "options": {}
+      },
+      "id": "7c5911e5-2c8a-4ec7-9814-c39b5c5e911a",
+      "name": "Webhook Status Bpix",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        81200,
+        53424
+      ],
+      "webhookId": "a88b0f4c-3da7-4f93-8432-f45c793650c0"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check_status_proc",
+              "leftValue": "={{ String($json.status_processamento || '').trim() }}",
+              "rightValue": "ok",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "check_status_pag",
+              "leftValue": "={{ String($json.status_pagamento || '').trim() }}",
+              "rightValue": "PAID",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        83104,
+        53424
+      ],
+      "id": "79edb32f-96a5-4ccb-b5d7-583f4de781ff",
+      "name": "Verificar Idempotência"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "X870S5VczjUmAzpZ",
+          "mode": "list",
+          "cachedResultName": "Logs Gates2B - UNIFICADO",
+          "cachedResultUrl": "/projects/rNLhC1pA17vRc8ZO/datatables/X870S5VczjUmAzpZ"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id_transacao",
+              "keyValue": "={{ $('Contexto Transação').item.json.id_transacao }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status_processamento": "processando",
+            "status_pagamento": "PAID"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "status_processamento",
+              "displayName": "status_processamento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        83472,
+        53344
+      ],
+      "id": "698d2da7-bdbe-48ea-80cb-8495afe47125",
+      "name": "Definir Processando",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "975e64da-aa42-4a11-98c0-df3d442ba719",
+                    "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+                    "rightValue": "^(site_lazer|site_lazerplay)$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "site_lazerplay"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+                    "rightValue": "^(botconversa_manual|botconversa_renovacao_manual|bc_manual|bc_renovacao_manual)$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    },
+                    "id": "ff7e8255-f252-4bae-bedb-dc2ec5c7660f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "botconversa_manual"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9ca0c2c3-9238-4a42-99de-59d16ed0afc0",
+                    "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+                    "rightValue": "^(botconversa_automatico|bc_automatico)$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "botconversa_automatico"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "445586fb-d14e-410a-a182-6c48f444bdc4",
+                    "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+                    "rightValue": "=^(site_xcloud|site_xcloudtv)$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "site_xcloud"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1d5d6eda-fb66-47c3-99fa-d73862a26078",
+                    "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+                    "rightValue": "^(site_maxplayer|site_max)$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "site_max"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "95ea57ea-e1ac-4047-953a-93988aafab9d",
+                    "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+                    "rightValue": "^(site_iptvroku|site_iptv_roku)$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "site_iptvroku"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0e4a70fd-3b30-4234-9a7a-fa6431e2634a",
+                    "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+                    "rightValue": "^(site_iptvsalvador|site_ssaiptv)$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "site_iptvsalvador"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0dbf33c6-7395-4cef-b306-8c6759b367f8",
+                    "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+                    "rightValue": "^(botconversa_renovacao_manual|bc_renovacao_manual)$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "botconversa_renovacao_manual"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "app-origem-manual",
+                    "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+                    "rightValue": "checkouttp_manual",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "checkouttp_manual"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "app-origem-automatico",
+                    "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+                    "rightValue": "checkouttp_automatico",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "checkouttp_automatico"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        83744,
+        53280
+      ],
+      "id": "57b42063-2ef3-4494-9a1c-c5a31447eb1e",
+      "name": "Roteamento por Origem"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "X870S5VczjUmAzpZ",
+          "mode": "list",
+          "cachedResultName": "Logs Gates2B - UNIFICADO",
+          "cachedResultUrl": "/projects/rNLhC1pA17vRc8ZO/datatables/X870S5VczjUmAzpZ"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id_transacao",
+              "keyValue": "={{ $('Contexto Transação').item.json.id_transacao }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status_processamento": "ok"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "id_transacao",
+              "displayName": "id_transacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "bpix_id",
+              "displayName": "bpix_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "status_pagamento",
+              "displayName": "status_pagamento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "plano",
+              "displayName": "plano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "valor_plano",
+              "displayName": "valor_plano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "conexoes",
+              "displayName": "conexoes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "origem",
+              "displayName": "origem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "status_processamento",
+              "displayName": "status_processamento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "validade_pix",
+              "displayName": "validade_pix",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        84624,
+        53344
+      ],
+      "id": "fdcf0b75-ab5c-4dc3-971e-263fb2f79021",
+      "name": "Finalizar Processamento",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "X870S5VczjUmAzpZ",
+          "mode": "list",
+          "cachedResultName": "Logs Gates2B - UNIFICADO",
+          "cachedResultUrl": "/projects/rNLhC1pA17vRc8ZO/datatables/X870S5VczjUmAzpZ"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id_transacao",
+              "keyValue": "={{ $('Tratar Dados Bpix').item.json.id_transacao }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        82336,
+        53424
+      ],
+      "id": "a5763c57-e03c-49f1-ad19-57befcfbf947",
+      "name": "Buscar Transação Unificada",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5a9a6f2b-4f8a-4d3c-9d21-e06c1a7b8a0d",
+              "name": "id_transacao",
+              "value": "={{ $('Tratar Dados Bpix').first().json.id_transacao }}",
+              "type": "string"
+            },
+            {
+              "id": "e0c1d3d3-7f6b-4fe2-9c6b-1c9f2bd9b2c1",
+              "name": "bpix_id",
+              "value": "={{ $('Tratar Dados Bpix').first().json.bpix_id }}",
+              "type": "string"
+            },
+            {
+              "id": "8c2a0f54-5a5f-4f0d-ae27-7c52a5ad12df",
+              "name": "origem",
+              "value": "={{ (() => { try { const pickPayload = () => { try { const r = $json.payload_completo; if (typeof r === 'string' && r.trim()) return JSON.parse(r); if (r && typeof r === 'object') return r; } catch (e) {} return {}; }; const p = pickPayload(); const out = p.output && typeof p.output === 'object' ? p.output : {}; const renFalse = p.renovacao_automatica === false || out.renovacaoAutomaticaEfetiva === false; let orig = String($json.origem || '').trim().toLowerCase(); if (!orig) { const tipo = String($json.tipo_ativacao || '').trim().toLowerCase(); if (['automatica','automatico','automatic'].includes(tipo)) orig = 'checkouttp_automatico'; else orig = 'checkouttp_manual'; } if (renFalse && /_automatico$/.test(orig)) orig = orig.replace(/_automatico$/i, '_manual'); return orig; } catch (e) { const raw = String($json.origem || '').trim().toLowerCase(); if (raw) return raw; const tipo = String($json.tipo_ativacao || '').trim().toLowerCase(); if (['automatica','automatico','automatic'].includes(tipo)) return 'checkouttp_automatico'; return 'checkouttp_manual'; } })() }}",
+              "type": "string"
+            },
+            {
+              "id": "c1db0f07-8c07-4a73-a58f-1b1a6c4c4f1e",
+              "name": "status_processamento",
+              "value": "={{ $json.status_processamento || 'pendente' }}",
+              "type": "string"
+            },
+            {
+              "id": "d7d18fd9-1d2b-4fbf-8c89-1a2e5e7a3e22",
+              "name": "status_pagamento",
+              "value": "={{ 'PAID' }}",
+              "type": "string"
+            },
+            {
+              "id": "a0f18448-16fe-4e92-9186-0b10d9e7c0b0",
+              "name": "nome",
+              "value": "={{ $json.nome || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "fd81e298-69b2-4a1f-9a11-1f2a0b5b53a1",
+              "name": "email",
+              "value": "={{ $json.email || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "5c0b5d5d-52b6-4c26-9a02-66ac9b0c8f4b",
+              "name": "telefone",
+              "value": "={{ $json.telefone || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "context-document-client",
+              "name": "payerDocument",
+              "value": "={{ $('Tratar Dados Bpix').first().json.document_client || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e0a95aa1-2a42-4f3a-9cc0-8a9fbe8ad3c9",
+              "name": "plano",
+              "value": "={{ $json.plano || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "c43e8a23-1892-4f26-9b2b-7a96f4c7dfe2",
+              "name": "valor_plano",
+              "value": "={{ $json.valor_plano || $('Tratar Dados Bpix').first().json.valor || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f20dd4f5-7f22-4d2f-8d27-3b1aa2f1a4e9",
+              "name": "conexoes",
+              "value": "={{ $json.conexoes || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "7dbb0f76-47f0-4c4a-a8a2-4cf4a7b94841",
+              "name": "validade_pix",
+              "value": "={{ $json.validade_pix || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "be0b79d7-e65a-4e37-8b49-4b928b4a7b5a",
+              "name": "status_gestor",
+              "value": "={{ $json.status_gestor || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "context-payerName",
+              "name": "payerName",
+              "value": "={{ $('Tratar Dados Bpix').first().json.nome || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "context-payerEmail",
+              "name": "payerEmail",
+              "value": "={{ (() => { const pick = (...a) => a.map((x) => String(x ?? '').trim()).find(Boolean) || ''; const bpix = $('Tratar Dados Bpix').first().json; let orderPayload = {}; let webhookBody = {}; try { orderPayload = JSON.parse($json.payload_completo || '{}'); } catch (e) {} try { webhookBody = JSON.parse(bpix.payload_completo || '{}'); } catch (e) {} const explicitPayerEmail = pick(webhookBody.payerEmail, webhookBody.pagadorEmail, bpix.payer_email_webhook); if (explicitPayerEmail) return explicitPayerEmail; const paymentMethod = pick(orderPayload.payment_method, orderPayload.paymentMethod, String(bpix.method || '').toUpperCase() === 'BPIX' ? 'pix' : '').toLowerCase(); if (paymentMethod === 'card') return pick(webhookBody.email, bpix.gateway_email); return pick($json.email, orderPayload.email, orderPayload.customer?.email); })() }}",
+              "type": "string"
+            },
+            {
+              "id": "context-payerPhone",
+              "name": "payerPhone",
+              "value": "={{ $('Tratar Dados Bpix').first().json.telefone || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "context-payload-completo",
+              "name": "payload_completo",
+              "value": "={{ $json.payload_completo || $('Tratar Dados Bpix').first().json.payload_completo || JSON.stringify($('Tratar Dados Bpix').first().json || {}) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        82720,
+        53424
+      ],
+      "id": "04dba2cd-33f0-43ed-8f1d-052b120dc27f",
+      "name": "Contexto Transação"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        83472,
+        53504
+      ],
+      "id": "1781cc3e-4d2a-4654-ad73-1d40e4bbecce",
+      "name": "🛑 Duplicidade Detectada (Fim)",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "W1eNVCdkrYgFyCLgQ-U6o",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/W1eNVCdkrYgFyCLgQ-U6o",
+          "cachedResultName": "WF - Subfluxo Ativacao - Lazer Play"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nome": "={{ $('Contexto Transação').item.json.nome }}",
+            "email": "={{ $('Contexto Transação').item.json.email }}",
+            "telefone": "={{ $('Contexto Transação').item.json.telefone }}",
+            "nome_da_oferta": "={{ (() => { const labels = { mensal: 'Mensal', bimestral: 'Bimestral', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual' }; try { const p = JSON.parse($('Contexto Transação').item.json.payload_completo || '{}'); const map = { mensal: 1, bimestral: 2, trimestral: 3, semestral: 6, anual: 12 }; let slug = String(p.plano || '').toLowerCase(); if (!map[slug]) { const ref = String(p.external_ref || p.external_reference || ''); const mm = ref.match(/^lp-([a-z]+)-/i); if (mm) slug = mm[1]; } return labels[slug] || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Mensal'); } catch(e) { return 'Mensal'; } })() }}",
+            "preco_da_oferta": "={{ $('Contexto Transação').item.json.valor_plano }}",
+            "período_atual": "={{ (() => {\n  try {\n    const p = JSON.parse($('Contexto Transação').item.json.payload_completo || '{}');\n    const map = { mensal: 1, bimestral: 2, trimestral: 3, semestral: 6, anual: 12 };\n    const m = Number(p.periodo_meses);\n    if (Number.isFinite(m) && m > 0) return String(m);\n    const slug = String(p.plano || '').toLowerCase();\n    if (map[slug]) return String(map[slug]);\n    const ref = String(p.external_ref || p.external_reference || $('Contexto Transação').item.json.external_ref || '');\n    const mm = ref.match(/^lp-([a-z]+)-/i);\n    if (mm && map[mm[1]]) return String(map[mm[1]]);\n  } catch (e) {}\n  return '1';\n})() }}",
+            "vencimento_cakto": "={{ $('Contexto Transação').item.json.validade_pix }}",
+            "timestamp": "={{ $('Tratar Dados Bpix').item.json.createdAt || new Date().toISOString() }}",
+            "transaction_id": "={{ $('Contexto Transação').item.json.id_transacao }}",
+            "manual_confirmed": "={{ 'false' }}",
+            "periodo_meses": "={{ (() => {\n  try {\n    const p = JSON.parse($('Contexto Transação').item.json.payload_completo || '{}');\n    const map = { mensal: 1, bimestral: 2, trimestral: 3, semestral: 6, anual: 12 };\n    const m = Number(p.periodo_meses);\n    if (Number.isFinite(m) && m > 0) return String(m);\n    const slug = String(p.plano || '').toLowerCase();\n    if (map[slug]) return String(map[slug]);\n    const ref = String(p.external_ref || p.external_reference || $('Contexto Transação').item.json.external_ref || '');\n    const mm = ref.match(/^lp-([a-z]+)-/i);\n    if (mm && map[mm[1]]) return String(map[mm[1]]);\n  } catch (e) {}\n  return '1';\n})() }}",
+            "conexoes": "={{ $('Contexto Transação').item.json.conexoes || '1' }}",
+            "plano_slug": "={{ (() => {\n  try {\n    const p = JSON.parse($('Contexto Transação').item.json.payload_completo || '{}');\n    const slug = String(p.plano || '').toLowerCase();\n    if (slug && ['mensal','bimestral','trimestral','semestral','anual'].includes(slug)) return slug;\n    const ref = String(p.external_ref || p.external_reference || '');\n    const mm = ref.match(/^lp-([a-z]+)-/i);\n    if (mm) return mm[1];\n  } catch (e) {}\n  return 'mensal';\n})() }}",
+            "external_ref": "={{ (() => { try { const p = JSON.parse($('Contexto Transação').item.json.payload_completo || '{}'); return p.external_ref || p.external_reference || $('Contexto Transação').item.json.external_ref || ''; } catch(e) { return $('Contexto Transação').item.json.external_ref || ''; } })() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome_da_oferta",
+              "displayName": "nome_da_oferta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "preco_da_oferta",
+              "displayName": "preco_da_oferta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "período_atual",
+              "displayName": "período_atual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "vencimento_cakto",
+              "displayName": "vencimento_cakto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "transaction_id",
+              "displayName": "transaction_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "manual_confirmed",
+              "displayName": "manual_confirmed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "periodo_meses",
+              "displayName": "periodo_meses",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "conexoes",
+              "displayName": "conexoes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "plano_slug",
+              "displayName": "plano_slug",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "external_ref",
+              "displayName": "external_ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        84240,
+        52912
+      ],
+      "id": "04bd3757-16c3-40f8-9486-53e8a7f6d3b6",
+      "name": "Call 'subfluxo_ativacao - LAZER PLAY'",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "X870S5VczjUmAzpZ",
+          "mode": "list",
+          "cachedResultName": "Logs Gates2B - UNIFICADO",
+          "cachedResultUrl": "/projects/rNLhC1pA17vRc8ZO/datatables/X870S5VczjUmAzpZ"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id_transacao",
+              "keyValue": "={{ $('Contexto Transação').item.json.id_transacao }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status_processamento": "ok"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "id_transacao",
+              "displayName": "id_transacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "bpix_id",
+              "displayName": "bpix_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "status_pagamento",
+              "displayName": "status_pagamento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "plano",
+              "displayName": "plano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "valor_plano",
+              "displayName": "valor_plano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "conexoes",
+              "displayName": "conexoes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "origem",
+              "displayName": "origem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "status_processamento",
+              "displayName": "status_processamento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "usuario",
+              "displayName": "usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "senha",
+              "displayName": "senha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "id_iptv",
+              "displayName": "id_iptv",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "servidor",
+              "displayName": "servidor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "status_gestor",
+              "displayName": "status_gestor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "payload_completo",
+              "displayName": "payload_completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "tipo_ativacao",
+              "displayName": "tipo_ativacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        84624,
+        53504
+      ],
+      "id": "c7d5ce47-3c55-4222-a66d-b8f6cfffaada",
+      "name": "Finalizar Processamento (Manual)",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "1656282192",
+        "text": "=✅ <b>PAGAMENTO MANUAL RECEBIDO</b>\n\n🙋‍♂️ <b>Nome:</b> {{ $('Contexto Transação').item.json.nome || '-' }}\n📱 <b>Telefone:</b> {{ $('Contexto Transação').item.json.telefone || '-' }}\n✉️ <b>Email:</b> {{ $('Contexto Transação').item.json.email || '-' }}\n📦 <b>Plano:</b> {{ $('Contexto Transação').item.json.plano || '-' }}\n💰 <b>Valor:</b> {{ $('Contexto Transação').item.json.valor_plano || $('Tratar Dados Bpix').item.json.valor || '-' }}\n\n🧾 <b>Transação:</b> {{ $('Contexto Transação').item.json.id_transacao || '-' }}\n🧩 <b>PIX:</b> {{ $('Contexto Transação').item.json.bpix_id || '-' }}\n🌐 <b>Origem:</b> {{ $('Contexto Transação').item.json.origem || '-' }}\n🕒 <b>Evento:</b> {{ now || '-' }}\n\n🔁 <b>Status Gestor:</b> ⏱ Pendente baixa\n\n#PagamentoManual",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Confirmar baixa no gestor",
+                    "additionalFields": {
+                      "callback_data": "=baixa|{{ $('Contexto Transação').item.json.id_transacao }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        84240,
+        53760
+      ],
+      "id": "d1d59aa5-6ba9-4462-8f81-ec2249018270",
+      "name": "Notificar Pagamento Manual (Telegram)",
+      "webhookId": "feb65b54-f71a-410a-a4a7-53a53fb3911c",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "1656282192",
+        "text": "=✅ <b>PAGAMENTO LAZER RECEBIDO</b>\n\n🙋‍♂️ <b>Nome:</b> {{ $('Contexto Transação').item.json.nome || '-' }}\n📱 <b>Telefone:</b> {{ $('Contexto Transação').item.json.telefone || '-' }}\n✉️ <b>Email:</b> {{ $('Contexto Transação').item.json.email || '-' }}\n📦 <b>Plano:</b> {{ $('Contexto Transação').item.json.plano || '-' }}\n💰 <b>Valor:</b> {{ $('Contexto Transação').item.json.valor_plano || $('Tratar Dados Bpix').item.json.valor || '-' }}\n\n🧾 <b>Transação:</b> {{ $('Contexto Transação').item.json.id_transacao || '-' }}\n🧩 <b>PIX:</b> {{ $('Contexto Transação').item.json.bpix_id || '-' }}\n🌐 <b>Origem:</b> {{ $('Contexto Transação').item.json.origem || '-' }}\n🕒 <b>Evento:</b> {{ now || '-' }}\n\n🔁 <b>Status Gestor:</b> ⏱ Pendente baixa\n\n#PagamentoManual",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Confirmar baixa no gestor",
+                    "additionalFields": {
+                      "callback_data": "=baixa|{{ $('Contexto Transação').item.json.id_transacao }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        84240,
+        53936
+      ],
+      "id": "d4a20508-4d7e-4111-9954-592f2536d474",
+      "name": "Notificar Pagamento Manual (Telegram)2",
+      "webhookId": "feb65b54-f71a-410a-a4a7-53a53fb3911c",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "0qqId2YzkwPsSHc7NXNVt",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/0qqId2YzkwPsSHc7NXNVt",
+          "cachedResultName": "WF - Subfluxo Ativacao - Xcloudiptv"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nome": "={{ $('Contexto Transação').item.json.nome }}",
+            "email": "={{ $('Contexto Transação').item.json.email }}",
+            "telefone": "={{ $('Contexto Transação').item.json.telefone }}",
+            "nome_da_oferta": "={{ $('Contexto Transação').item.json.plano }}",
+            "preco_da_oferta": "={{ $('Contexto Transação').item.json.valor_plano }}",
+            "período_atual": "={{ $('Contexto Transação').item.json.plano }}",
+            "conexoes": "={{ $('Contexto Transação').item.json.conexoes }}",
+            "username": "={{ $('Contexto Transação').item.json.usuario || '' }}",
+            "password": "={{ $('Contexto Transação').item.json.senha || '' }}",
+            "id_iptv": "={{ $('Contexto Transação').item.json.id_iptv || '' }}",
+            "timestamp": "={{ $('Tratar Dados Bpix').item.json.createdAt || new Date().toISOString() }}",
+            "origem": "={{ $('Contexto Transação').item.json.origem || 'gates2b_eventos' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome_da_oferta",
+              "displayName": "nome_da_oferta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "preco_da_oferta",
+              "displayName": "preco_da_oferta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "período_atual",
+              "displayName": "período_atual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "conexoes",
+              "displayName": "conexoes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "username",
+              "displayName": "username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "password",
+              "displayName": "password",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "id_iptv",
+              "displayName": "id_iptv",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "origem",
+              "displayName": "origem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "transaction_id",
+              "displayName": "transaction_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "gateway",
+              "displayName": "gateway",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "modo_ativacao",
+              "displayName": "modo_ativacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        84240,
+        53584
+      ],
+      "id": "664f41b2-d7ca-472c-aaa2-e82c0fa79063",
+      "name": "Call 'subfluxo_ativacao - xcloudiptv",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "ZhIRclFopSDVfqTo",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/ZhIRclFopSDVfqTo",
+          "cachedResultName": "WF - Subfluxo Ativacao - Max Player"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nome": "={{ $json.nome }}",
+            "email": "={{ $json.email }}",
+            "telefone": "={{ $json.telefone }}",
+            "nome_da_oferta": "={{ $json.plano }}",
+            "preco_da_oferta": "={{ $json.valor_plano }}",
+            "período_atual": "={{ $json.plano }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome_da_oferta",
+              "displayName": "nome_da_oferta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "preco_da_oferta",
+              "displayName": "preco_da_oferta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "período_atual",
+              "displayName": "período_atual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "vencimento_cakto",
+              "displayName": "vencimento_cakto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        84240,
+        53424
+      ],
+      "id": "135b4771-c4c2-46ba-83e1-514d3c37d1cc",
+      "name": "Call 'subfluxo_ativacao - maxplayer",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "8gAkbrkg4PAl1b5FR-Jxk",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/8gAkbrkg4PAl1b5FR-Jxk",
+          "cachedResultName": "WF - Subfluxo Ativacao - Iptv Roku"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nome": "={{ $json.nome }}",
+            "email": "={{ $json.email }}",
+            "telefone": "={{ $json.telefone }}",
+            "nome_da_oferta": "={{ $json.plano }}",
+            "preco_da_oferta": "={{ $json.valor_plano }}",
+            "período_atual": "={{ $json.plano }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome_da_oferta",
+              "displayName": "nome_da_oferta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "preco_da_oferta",
+              "displayName": "preco_da_oferta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "período_atual",
+              "displayName": "período_atual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "vencimento_cakto",
+              "displayName": "vencimento_cakto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "transaction_id",
+              "displayName": "transaction_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "manual_confirmed",
+              "displayName": "manual_confirmed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        84240,
+        53248
+      ],
+      "id": "2fc122f8-e723-480f-af27-146b0fb4d63a",
+      "name": "Call 'subfluxo_ativacao - iptvroku",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "1656282192",
+        "text": "=✅ <b>PAGAMENTO IPTV SALVADOR RECEBIDO</b>\n\n🙋‍♂️ <b>Nome:</b> {{ $('Contexto Transação').item.json.nome || '-' }}\n📱 <b>Telefone:</b> {{ $('Contexto Transação').item.json.telefone || '-' }}\n✉️ <b>Email:</b> {{ $('Contexto Transação').item.json.email || '-' }}\n📦 <b>Plano:</b> {{ $('Contexto Transação').item.json.plano || '-' }}\n💰 <b>Valor:</b> {{ $('Contexto Transação').item.json.valor_plano || $('Tratar Dados Bpix').item.json.valor || '-' }}\n\n🧾 <b>Transação:</b> {{ $('Contexto Transação').item.json.id_transacao || '-' }}\n🧩 <b>PIX:</b> {{ $('Contexto Transação').item.json.bpix_id || '-' }}\n🌐 <b>Origem:</b> {{ $('Contexto Transação').item.json.origem || '-' }}\n🕒 <b>Evento:</b> {{ now || '-' }}\n\n🔁 <b>Status Gestor:</b> ⏱ Pendente baixa\n\n#PagamentoManual",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Confirmar baixa no gestor",
+                    "additionalFields": {
+                      "callback_data": "=baixa|{{ $('Contexto Transação').item.json.id_transacao }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        84240,
+        54096
+      ],
+      "id": "9cc71b17-921e-485a-bc2f-eb1c7b41a5c3",
+      "name": "Notificar Pagamento Manual (Telegram)3",
+      "webhookId": "feb65b54-f71a-410a-a4a7-53a53fb3911c",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "5IochQTAbL986FWM",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/5IochQTAbL986FWM",
+          "cachedResultName": "WF - Subfluxo Ativacao - Ssa Iptv Salvador"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nome": "={{ $('Contexto Transação').item.json.nome }}",
+            "email": "={{ $('Contexto Transação').item.json.email }}",
+            "telefone": "={{ $('Contexto Transação').item.json.telefone }}",
+            "nome_da_oferta": "={{ $('Contexto Transação').item.json.plano }}",
+            "preco_da_oferta": "={{ $('Contexto Transação').item.json.valor_plano }}",
+            "período_atual": "={{ $('Contexto Transação').item.json.conexoes }}",
+            "vencimento_cakto": "={{ $('Contexto Transação').item.json.validade_pix }}",
+            "timestamp": "={{ $('Tratar Dados Bpix').item.json.createdAt || new Date().toISOString() }}",
+            "transaction_id": "={{ $('Contexto Transação').item.json.id_transacao }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome_da_oferta",
+              "displayName": "nome_da_oferta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "preco_da_oferta",
+              "displayName": "preco_da_oferta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "período_atual",
+              "displayName": "período_atual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "vencimento_cakto",
+              "displayName": "vencimento_cakto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "transaction_id",
+              "displayName": "transaction_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "manual_confirmed",
+              "displayName": "manual_confirmed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        84240,
+        53088
+      ],
+      "id": "20126d96-9703-4427-9d4d-e38e92a3cba2",
+      "name": "Call 'subfluxo_ativacao - SSA IPTV SALVADOR'",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "## 1) Entrada\nTriggers e recebimento de dados.",
+        "height": 220,
+        "width": 1440,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        81104,
+        53312
+      ],
+      "id": "582e7ca9-7618-4c15-8405-92a465320fd3",
+      "name": "Sticky | Seção 1"
+    },
+    {
+      "parameters": {
+        "content": "## 2) Validação\nChecagens, IF/Switch e roteamento inicial.",
+        "height": 390,
+        "width": 1060,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        82624,
+        53232
+      ],
+      "id": "de394e1a-4865-4397-a100-e4a4b18f7e78",
+      "name": "Sticky | Seção 2"
+    },
+    {
+      "parameters": {
+        "content": "## 3) Processamento\nTransformações e regra de negocio.",
+        "height": 1580,
+        "width": 1060,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        83760,
+        52624
+      ],
+      "id": "375e2a06-55a8-407b-a71c-6cb29145ffb2",
+      "name": "Sticky | Seção 3"
+    },
+    {
+      "parameters": {
+        "content": "## 4) Integrações\nAPIs, banco, subfluxos e mensagens.",
+        "height": 220,
+        "width": 340,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        85664,
+        53312
+      ],
+      "id": "16f809ea-2ce4-4a72-a0d3-09d2654d6cf6",
+      "name": "Sticky | Seção 4"
+    },
+    {
+      "parameters": {
+        "content": "## 5) Saída e Monitoramento\nResposta final, logs e observabilidade.",
+        "height": 220,
+        "width": 340,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        86048,
+        53312
+      ],
+      "id": "82220baa-3a1f-453d-a784-0623bb68176a",
+      "name": "Sticky | Seção 5"
+    },
+    {
+      "parameters": {
+        "content": "## Erros e Alertas\n- `ERR | Formatar Erro`: consolida contexto do erro\n- `MSG | Telegram Erro Estruturado`: envia alerta legivel\n- Tratamento local por fluxo (sem centralizacao)",
+        "height": 432,
+        "width": 648,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        84832,
+        53136
+      ],
+      "id": "a3ae42b6-4b42-45e6-babb-14c26d2b4ae8",
+      "name": "Sticky | Erros e Alertas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json ?? {};\nconst err = raw.error ?? raw;\nconst wfName = $workflow?.name || 'Workflow sem nome';\nconst wfId = $workflow?.id || 'N/A';\nconst execId = $execution?.id || 'N/A';\nconst now = new Date().toISOString();\nconst nodeFromError = err?.node?.name || err?.context?.nodeName || raw?.node?.name || 'Nao identificado';\nconst message = err?.message || raw?.message || 'Erro sem mensagem';\nconst code = err?.code || err?.name || raw?.code || 'N/A';\nconst details = (err?.description || err?.stack || raw?.description || '')\n  .toString()\n  .slice(0, 900);\nconst telegramText = [\n  'ALERTA DE ERRO NO FLUXO',\n  `Workflow: ${wfName}`,\n  `Workflow ID: ${wfId}`,\n  `Execucao ID: ${execId}`,\n  `No: ${nodeFromError}`,\n  `Codigo: ${code}`,\n  `Mensagem: ${message}`,\n  details ? `Detalhes: ${details}` : null,\n  `Horario: ${now}`,\n].filter(Boolean).join('\\n');\nreturn [{ json: { ...raw, telegram_text: telegramText } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        84944,
+        53344
+      ],
+      "id": "5b148702-6d7b-45a4-9850-e141413ad0c5",
+      "name": "ERR | Formatar Erro"
+    },
+    {
+      "parameters": {
+        "chatId": "=1656282192",
+        "text": "={{ $json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        85232,
+        53344
+      ],
+      "id": "202dca23-9c1b-4966-ae45-cead11cb466d",
+      "name": "MSG | Telegram Erro Estruturado",
+      "webhookId": "a5c86342-ea60-4254-87b2-4511cd932d4e",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "Slz3hFNalKQxjrxy",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/Slz3hFNalKQxjrxy",
+          "cachedResultName": "WF - Processar Pagamento - Gates2B"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        84240,
+        52736
+      ],
+      "id": "9994692c-e74b-4fe8-81ba-882f4dcc021b",
+      "name": "Call 'WF - Processar Pagamento - Gates2B'",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "is-app-origin-check",
+              "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+              "rightValue": "checkouttp_manual",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "is-app-origin-check-automatico",
+              "leftValue": "={{ $('Contexto Transação').item.json.origem }}",
+              "rightValue": "checkouttp_automatico",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        82880,
+        53424
+      ],
+      "id": "7bb43973-c348-4fd0-8dba-4673006503ee",
+      "name": "Origem é da aplicação?"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "iQRoSwoFXTzkWKZc",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/iQRoSwoFXTzkWKZc",
+          "cachedResultName": "WF - CheckoutTP - Processar Pagamento - Gates2B v1 PRO"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_transacao": "={{ $('Contexto Transação').first().json.id_transacao || '' }}",
+            "transactionId": "={{ $('Contexto Transação').first().json.id_transacao || '' }}",
+            "orderId": "={{ $('Contexto Transação').first().json.orderId || $('Contexto Transação').first().json.reference_id || '' }}",
+            "reference_id": "={{ $('Contexto Transação').first().json.reference_id || $('Contexto Transação').first().json.orderId || '' }}",
+            "status_pagamento": "={{ $('Contexto Transação').first().json.status_pagamento || '' }}",
+            "status": "={{ String($('Contexto Transação').first().json.status_pagamento || '').trim().toLowerCase() }}",
+            "event": "={{ String($('Contexto Transação').first().json.status_pagamento || '').trim().toLowerCase() }}",
+            "origem": "={{ $('Contexto Transação').first().json.origem || 'checkouttp_manual' }}",
+            "nome": "={{ $('Contexto Transação').first().json.nome || '' }}",
+            "name_client": "={{ $('Contexto Transação').first().json.payerName || '' }}",
+            "email": "={{ $('Contexto Transação').first().json.email || '' }}",
+            "telefone": "={{ $('Contexto Transação').first().json.telefone || '' }}",
+            "phone_number": "={{ $('Contexto Transação').first().json.payerPhone || '' }}",
+            "document_client": "={{ $('Contexto Transação').first().json.payerDocument || '' }}",
+            "plano": "={{ $('Contexto Transação').first().json.plano || '' }}",
+            "conexoes": "={{ $('Contexto Transação').first().json.conexoes || '' }}",
+            "valor_plano": "={{ $('Contexto Transação').first().json.valor_plano || '' }}",
+            "bpix_id": "={{ $('Contexto Transação').first().json.bpix_id || '' }}",
+            "payload_completo": "={{ $('Contexto Transação').first().json.payload_completo || '' }}",
+            "source": "hub_eventos_gates2b",
+            "correlationId": "={{ $('Contexto Transação').first().json.id_transacao || $('Contexto Transação').first().json.orderId || '' }}",
+            "payerName": "={{ $('Contexto Transação').first().json.payerName || '' }}",
+            "payerEmail": "={{ $('Contexto Transação').first().json.payerEmail || '' }}",
+            "payerPhone": "={{ $('Contexto Transação').first().json.payerPhone || '' }}",
+            "payerDocument": "={{ $('Contexto Transação').first().json.payerDocument || '' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_transacao",
+              "displayName": "id_transacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "transactionId",
+              "displayName": "transactionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "orderId",
+              "displayName": "orderId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "reference_id",
+              "displayName": "reference_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "status_pagamento",
+              "displayName": "status_pagamento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "event",
+              "displayName": "event",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "origem",
+              "displayName": "origem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "plano",
+              "displayName": "plano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "conexoes",
+              "displayName": "conexoes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "valor_plano",
+              "displayName": "valor_plano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "bpix_id",
+              "displayName": "bpix_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "payload_completo",
+              "displayName": "payload_completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "correlationId",
+              "displayName": "correlationId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "name_client",
+              "displayName": "name_client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "phone_number",
+              "displayName": "phone_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "document_client",
+              "displayName": "document_client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "payerName",
+              "displayName": "payerName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "payerEmail",
+              "displayName": "payerEmail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "payerPhone",
+              "displayName": "payerPhone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "payerDocument",
+              "displayName": "payerDocument",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        84224,
+        54368
+      ],
+      "id": "63140257-0c57-400b-94f1-9f8267c0c655",
+      "name": "Call 'WF - CheckoutTP - Processar Pagamento - Gates2B v1 PRO'"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "hubco-prefix-check",
+              "leftValue": "={{ String($json.body?.external_reference || $json.external_reference || '').trim() }}",
+              "rightValue": "hubco_",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        81392,
+        53424
+      ],
+      "id": "10d3d344-e8e3-41d8-b414-11382141f61d",
+      "name": "É checkout Hub Control (hubco_)?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        81672,
+        53304
+      ],
+      "id": "a6447d37-0f44-4b89-a88c-461cd8304e6c",
+      "name": "Ignorar — Hub Control (hubco_)"
+    }
+  ],
+  "connections": {
+    "Tratar Dados Bpix": {
+      "main": [
+        [
+          {
+            "node": "Pagamento confirmado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pagamento confirmado?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Transação Unificada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Status Bpix": {
+      "main": [
+        [
+          {
+            "node": "É checkout Hub Control (hubco_)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Idempotência": {
+      "main": [
+        [
+          {
+            "node": "Definir Processando",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🛑 Duplicidade Detectada (Fim)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Processando": {
+      "main": [
+        [
+          {
+            "node": "Roteamento por Origem",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ERR | Formatar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Roteamento por Origem": {
+      "main": [
+        [
+          {
+            "node": "Call 'subfluxo_ativacao - LAZER PLAY'",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notificar Pagamento Manual (Telegram)2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Pagamento Manual (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'WF - Processar Pagamento - Gates2B'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'subfluxo_ativacao - xcloudiptv",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'subfluxo_ativacao - maxplayer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'subfluxo_ativacao - iptvroku",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'subfluxo_ativacao - SSA IPTV SALVADOR'",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notificar Pagamento Manual (Telegram)3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Pagamento Manual (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'WF - CheckoutTP - Processar Pagamento - Gates2B v1 PRO'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'WF - CheckoutTP - Processar Pagamento - Gates2B v1 PRO'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'subfluxo_ativacao - LAZER PLAY'": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Processamento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ERR | Formatar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Transação Unificada": {
+      "main": [
+        [
+          {
+            "node": "Contexto Transação",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ERR | Formatar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto Transação": {
+      "main": [
+        [
+          {
+            "node": "Origem é da aplicação?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Origem é da aplicação?": {
+      "main": [
+        [
+          {
+            "node": "Verificar Idempotência",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verificar Idempotência",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar Pagamento Manual (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Processamento (Manual)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'subfluxo_ativacao - SSA IPTV SALVADOR'": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Processamento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ERR | Formatar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalizar Processamento": {
+      "main": [
+        [],
+        [
+          {
+            "node": "ERR | Formatar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalizar Processamento (Manual)": {
+      "main": [
+        [],
+        [
+          {
+            "node": "ERR | Formatar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'subfluxo_ativacao - xcloudiptv": {
+      "main": [
+        [],
+        [
+          {
+            "node": "ERR | Formatar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'subfluxo_ativacao - maxplayer": {
+      "main": [
+        [],
+        [
+          {
+            "node": "ERR | Formatar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'subfluxo_ativacao - iptvroku": {
+      "main": [
+        [],
+        [
+          {
+            "node": "ERR | Formatar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ERR | Formatar Erro": {
+      "main": [
+        [
+          {
+            "node": "MSG | Telegram Erro Estruturado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'WF - Processar Pagamento - Gates2B'": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Processamento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ERR | Formatar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É checkout Hub Control (hubco_)?": {
+      "main": [
+        [
+          {
+            "node": "Ignorar — Hub Control (hubco_)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tratar Dados Bpix",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ignorar — Hub Control (hubco_)": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

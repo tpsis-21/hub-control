@@ -8,6 +8,7 @@ import { isBrowserUserAdmin } from "@/lib/supabase/clients/browser";
 import type { Plan, PlanGroup } from "@/lib/types";
 import { planSchema, editPlanSchema, planGroupSchema, editPlanGroupSchema } from "@/lib/schemas";
 import { logger } from '@/utils/production-logger'
+import { requireAdminFromSession } from '@/lib/admin-role'
 
 
 // Substituir todas as operações Firestore por chamadas Supabase
@@ -28,7 +29,8 @@ export async function getPlans(): Promise<Plan[]> {
     panelPlanId: plan.panel_plan_id,
     priceBeforeDiscount: plan.price_before_discount,
     sendWelcomeMessage: plan.send_welcome_message,
-    isPublic: plan.is_public
+    isPublic: plan.is_public,
+    caktoUrl: (plan as { cakto_url?: string | null }).cakto_url ?? undefined,
   }));
   
   return plans as Plan[];
@@ -64,6 +66,7 @@ export async function addPlanAction(data: z.infer<typeof planSchema>) {
     send_welcome_message: data.sendWelcomeMessage, // Mapear camelCase para snake_case
     price_before_discount: data.priceBeforeDiscount, // Mapear camelCase para snake_case
     group_id: data.groupId === "none" ? undefined : data.groupId,
+    cakto_url: data.caktoUrl?.trim() || null,
     // panel_plan_id será gerado automaticamente pelo trigger
   };
   
@@ -74,6 +77,7 @@ export async function addPlanAction(data: z.infer<typeof planSchema>) {
   delete (newPlanData as any).sendWelcomeMessage;
   delete (newPlanData as any).priceBeforeDiscount;
   delete (newPlanData as any).panelPlanId;
+  delete (newPlanData as any).caktoUrl;
   
   const supabase = await createServerSupabaseClientForActions();
   const { data: inserted, error } = await supabase.from('plans').insert([newPlanData]).select().single();
@@ -101,65 +105,38 @@ export async function editPlanAction(data: z.infer<typeof editPlanSchema>) {
       return { success: false, error: 'Usuário não autenticado' };
     }
     
-    // Verificar se é o usuário admin conhecido
-    const isKnownAdmin = user.id === '2f67bed8-9448-446f-8f38-9306f773620d' && user.email === 'topplaytv7@gmail.com';
-    logger.debug('🔍 editPlanAction - É admin conhecido:', isKnownAdmin);
-    
-    if (!isKnownAdmin) {
-      console.error('❌ editPlanAction - Usuário não tem permissão de admin');
-      return { success: false, error: 'Você não tem permissão para editar planos' };
+    const adminCheck = await requireAdminFromSession(supabase);
+    if (!adminCheck.ok) {
+      return { success: false, error: adminCheck.error };
     }
-    
-    const finalUpdateData = {
-        ...updateData,
+
+    const { data: updated, error: updateError } = await supabase
+      .from('plans')
+      .update({
+        name: updateData.name,
+        price: updateData.price,
+        validity: updateData.validity,
+        screens: updateData.screens,
+        restrictions: updateData.restrictions || null,
         is_public: updateData.isPublic,
         send_welcome_message: updateData.sendWelcomeMessage,
-        price_before_discount: updateData.priceBeforeDiscount,
-        panel_plan_id: updateData.panelPlanId,
-        group_id: updateData.groupId === "none" ? null : updateData.groupId,
-    };
-    
-    logger.debug('🔍 editPlanAction - finalUpdateData antes da limpeza:', JSON.stringify(finalUpdateData, null, 2));
-    
-    // Remover os campos camelCase antes de enviar para o banco
-    delete (finalUpdateData as any).countingType;
-    delete (finalUpdateData as any).groupId;
-    delete (finalUpdateData as any).isPublic;
-    delete (finalUpdateData as any).sendWelcomeMessage;
-    delete (finalUpdateData as any).priceBeforeDiscount;
-    delete (finalUpdateData as any).panelPlanId;
-    
-    logger.debug('🔍 editPlanAction - finalUpdateData após limpeza:', JSON.stringify(finalUpdateData, null, 2));
-    
-    // Usar endpoint seguro do backend para operações administrativas
-    try {
-      const response = await fetch('/api/admin/plans', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-        },
-        body: JSON.stringify({ id, ...finalUpdateData })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ editPlanAction - Erro na API:', errorData);
-        return { success: false, error: errorData.error || 'Erro ao atualizar plano' };
-      }
-      
-      const { data: updated } = await response.json();
-      logger.debug('✅ editPlanAction - Plano atualizado via API segura:', updated);
-      
-      revalidatePath('/planos');
-      return { success: true, data: updated };
-      
-    } catch (apiError) {
-      console.error('❌ editPlanAction - Erro na requisição:', apiError);
-      return { success: false, error: 'Erro de comunicação com o servidor' };
+        price_before_discount: updateData.priceBeforeDiscount ?? null,
+        panel_plan_id: updateData.panelPlanId || null,
+        group_id: updateData.groupId === 'none' ? null : updateData.groupId,
+        cakto_url: updateData.caktoUrl?.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('❌ editPlanAction - Erro Supabase:', updateError)
+      return { success: false, error: updateError.message }
     }
-    
-    // Código removido - lógica já tratada acima no bloco try/catch
+
+    revalidatePath('/planos')
+    return { success: true, data: updated }
   } catch (err) {
     console.error('❌ editPlanAction - Erro inesperado:', err);
     return { success: false, error: 'Erro inesperado ao atualizar plano' };
@@ -272,16 +249,10 @@ export async function deletePlanGroupAction(groupId: string) {
         return { success: false, error: 'Usuário não autenticado' };
     }
     
-    // Verificar se o usuário é admin (assumindo admin baseado na verificação anterior)
-    logger.debug('Verificando perfil do usuário:', user.id, user.email);
-    
-    // Como já confirmamos que este usuário específico é admin, vamos prosseguir
-    if (user.id !== '2f67bed8-9448-446f-8f38-9306f773620d') {
-        logger.debug('Usuário não autorizado para esta operação');
-        return { success: false, error: 'Acesso negado: apenas administradores podem excluir grupos' };
+    const adminCheck = await requireAdminFromSession(supabase);
+    if (!adminCheck.ok) {
+        return { success: false, error: adminCheck.error };
     }
-    
-    logger.debug('Usuário confirmado como admin, prosseguindo com exclusão');
     
     // Usar cliente normal já que confirmamos que o usuário é admin
     

@@ -10,6 +10,7 @@ export interface TheBestConfig {
   user_id: string;
   api_url: string;
   api_key: string;
+  api_secret?: string | null;
   username?: string;
   password?: string;
   config_data?: {
@@ -394,19 +395,31 @@ export class TheBestService {
   ): Promise<TheBestRenewal[]> {
     try {
       const supabase = await createApiSupabaseClient();
+
+      const { data: config } = await (supabase as any)
+        .from('thebest_configs')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('is_default', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!config?.id) return [];
       
       let query = (supabase as any)
         .from('thebest_renewals')
         .select(`
           *,
           thebest_packages (
+            name,
             classificacao,
             duracao,
             telas,
             creditos
           )
         `)
-        .eq('created_by', userId)
+        .eq('config_id', config.id)
         .order('created_at', { ascending: false });
       
       if (options?.status) {
@@ -574,71 +587,57 @@ export class TheBestService {
     latency?: number;
     error?: string;
   }> {
-    const startTime = Date.now();
-    
+    const { testTheBestPanelConnection } = await import(
+      '@/lib/integrations/thebest-panel-client'
+    );
+    const started = Date.now();
+
     try {
-      // Simular teste de conexão (substituir pela implementação real)
-      const timeout = config.config_data?.timeout || this.DEFAULT_TIMEOUT;
-      
-      // Aqui seria feita a chamada real para a API The Best
-      // Por enquanto, simular um teste básico
-      await new Promise(resolve => setTimeout(resolve, 100)); // Simular latência
-      
-      const latency = Date.now() - startTime;
-      
-      // Log do teste
+      const result = await testTheBestPanelConnection({
+        apiKey: config.api_key,
+        apiSecret: config.api_secret ?? undefined,
+        baseUrl: config.api_url,
+        timeoutMs: this.DEFAULT_TIMEOUT,
+      });
+
+      const latency = result.latencyMs ?? Date.now() - started;
+
       await this.logApiCall(
         config.id,
         'TEST_CONNECTION',
         config.api_url,
         'GET',
         {
-          success: true,
+          success: result.success,
           durationMs: latency,
-          responseStatus: 200,
-          userId: config.user_id
+          responseStatus: result.status,
+          errorMessage: result.success ? undefined : result.message,
+          userId: config.user_id,
         }
       );
-      
-      LoggerService.info('Teste de conexão The Best realizado', 'TheBestService', { 
-        configId: config.id,
-        latency,
-        success: true
-      });
-      
+
       return {
-        success: true,
-        message: 'Conexão estabelecida com sucesso',
-        latency
+        success: result.success,
+        message: result.message,
+        latency,
+        error: result.success ? undefined : result.message,
       };
     } catch (error) {
-      const latency = Date.now() - startTime;
+      const latency = Date.now() - started;
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      
-      // Log do erro
-      await this.logApiCall(
-        config.id,
-        'TEST_CONNECTION',
-        config.api_url,
-        'GET',
-        {
-          success: false,
-          durationMs: latency,
-          errorMessage,
-          userId: config.user_id
-        }
-      );
-      
-      LoggerService.error('Erro no teste de conexão The Best', 'TheBestService', { 
-        configId: config.id,
-        error
+
+      await this.logApiCall(config.id, 'TEST_CONNECTION', config.api_url, 'GET', {
+        success: false,
+        durationMs: latency,
+        errorMessage,
+        userId: config.user_id,
       });
-      
+
       return {
         success: false,
         message: 'Falha na conexão',
         latency,
-        error: errorMessage
+        error: errorMessage,
       };
     }
   }

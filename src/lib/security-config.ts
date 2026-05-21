@@ -38,10 +38,12 @@ export const CORS_CONFIG = {
   origin: process.env.NODE_ENV === 'production' 
     ? [process.env.NEXT_PUBLIC_APP_URL || 'https://hub-control.vercel.app']
     : [
-        'http://localhost:3000', 
+        'http://localhost:3000',
         'http://127.0.0.1:3000',
+        'http://localhost:8080',
+        'http://127.0.0.1:8080',
         'http://localhost:9002',
-        'http://127.0.0.1:9002'
+        'http://127.0.0.1:9002',
       ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [

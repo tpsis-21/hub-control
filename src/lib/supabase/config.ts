@@ -15,9 +15,9 @@ export const defaultAuthConfig = {
   flowType: 'pkce' as const,
 } as const;
 
-// Configurações de cookies para SSR
+// Configurações de cookies para SSR (httpOnly protege contra roubo via XSS)
 export const cookieConfig = {
-  httpOnly: false,
+  httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
   path: '/',
@@ -28,9 +28,6 @@ export const storageConfig = {
   storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   storageKey: 'sb-session',
 } as const;
-
-// Email do admin principal (para verificações especiais)
-export const ADMIN_EMAIL = 'topplaytv7@gmail.com';
 
 // Validação de configuração
 if (!supabaseConfig.url || !supabaseConfig.anonKey) {

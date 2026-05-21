@@ -1,23 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/unified-client';
 import { logger } from '@/lib/logger';
+import { getTheBestBaseUrl } from '@/lib/integrations/thebest-constants';
+import {
+  deactivateTheBestConfig,
+  getActiveTheBestConfig,
+  migrateLegacyIntegrationConfig,
+  upsertTheBestConfig,
+} from '@/lib/integrations/thebest-config-store';
+import { testTheBestPanelConnection } from '@/lib/integrations/thebest-panel-client';
 
 /**
- * API Route segura para operações TheBest que requerem service role
- * Substitui o uso direto da service role key no frontend
+ * Operações TheBest — usa `thebest_configs` (canônico).
  */
 
 export async function GET(request: NextRequest) {
   try {
-    // Verificar autenticação do usuário
     const supabase = createApiSupabaseClient(false);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -25,214 +31,112 @@ export async function GET(request: NextRequest) {
 
     switch (operation) {
       case 'get_config':
-        return await getUserTheBestConfig(user.id);
-      
+        return getUserTheBestConfigResponse(supabase, user.id);
       case 'test_connection':
-        return await testTheBestConnection(user.id);
-        
+        return testConnectionForUser(supabase, user.id);
       default:
-        return NextResponse.json(
-          { error: 'Operação não suportada' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Operação não suportada' }, { status: 400 });
     }
-
   } catch (error) {
-    logger.error('Erro na API de operações TheBest:', error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+    logger.error(
+      'Erro na API de operações TheBest:',
+      error instanceof Error ? error : new Error(String(error))
     );
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar autenticação do usuário
     const supabase = createApiSupabaseClient(false);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const body = await request.json();
     const { operation, data } = body;
 
     switch (operation) {
-      case 'save_config':
-        return await saveTheBestConfig(user.id, data);
-        
-      case 'delete_config':
-        return await deleteTheBestConfig(user.id);
-        
-      default:
-        return NextResponse.json(
-          { error: 'Operação não suportada' },
-          { status: 400 }
-        );
-    }
-
-  } catch (error) {
-    logger.error('Erro na API de operações TheBest:', error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
-  }
-}
-
-async function getUserTheBestConfig(userId: string) {
-  try {
-    const supabase = createApiSupabaseClient(false);
-    
-    const { data, error } = await supabase
-      .from('integration_configs')
-      .select('*')
-      .eq('provider', 'thebest')
-      .eq('created_by', userId)
-      .eq('is_active', true)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      logger.error('Erro ao buscar configuração TheBest:', error);
-      return NextResponse.json(
-        { error: 'Erro ao buscar configuração' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: data || null
-    });
-
-  } catch (error) {
-    logger.error('Erro ao obter configuração TheBest:', error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { error: 'Erro interno' },
-      { status: 500 }
-    );
-  }
-}
-
-async function saveTheBestConfig(userId: string, configData: any) {
-  try {
-    const supabase = createApiSupabaseClient(true); // Usar service role para operações de escrita
-    
-    const { data, error } = await supabase
-      .from('integration_configs')
-      .upsert({
-        provider: 'thebest',
-        base_url: configData.apiUrl,
-        auth_token: configData.apiKey,
-        config_data: {
-          username: configData.username,
-          password: configData.password,
-          timeout: configData.timeout || 30000
-        },
-        created_by: userId,
-        is_active: true,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'provider,created_by'
-      })
-      .select()
-      .single();
-
-    if (error) {
-      logger.error('Erro ao salvar configuração TheBest:', error);
-      return NextResponse.json(
-        { error: 'Erro ao salvar configuração' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      data
-    });
-
-  } catch (error) {
-    logger.error('Erro ao salvar configuração TheBest:', error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { error: 'Erro interno' },
-      { status: 500 }
-    );
-  }
-}
-
-async function deleteTheBestConfig(userId: string) {
-  try {
-    const supabase = createApiSupabaseClient(true); // Usar service role para operações de exclusão
-    
-    const { error } = await supabase
-      .from('integration_configs')
-      .update({ is_active: false })
-      .eq('provider', 'thebest')
-      .eq('created_by', userId);
-
-    if (error) {
-      logger.error('Erro ao deletar configuração TheBest:', error);
-      return NextResponse.json(
-        { error: 'Erro ao deletar configuração' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Configuração removida com sucesso'
-    });
-
-  } catch (error) {
-    logger.error('Erro ao deletar configuração TheBest:', error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { error: 'Erro interno' },
-      { status: 500 }
-    );
-  }
-}
-
-async function testTheBestConnection(userId: string) {
-  try {
-    // Buscar configuração do usuário
-    const configResponse = await getUserTheBestConfig(userId);
-    const configData = await configResponse.json();
-    
-    if (!configData.success || !configData.data) {
-      return NextResponse.json({
-        success: false,
-        message: 'Configuração TheBest não encontrada'
-      });
-    }
-
-    const config = configData.data;
-    
-    // Fazer teste de conexão via proxy
-    const testResponse = await fetch('/api/proxy/thebest?action=test_connection', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
+      case 'save_config': {
+        const apiKey = data?.apiKey ?? data?.api_key ?? data?.auth_token;
+        if (!apiKey || typeof apiKey !== 'string') {
+          return NextResponse.json({ error: 'Chave da API obrigatória' }, { status: 400 });
+        }
+        const saved = await upsertTheBestConfig(supabase, user.id, {
+          apiKey,
+          apiSecret: data?.apiSecret ?? data?.api_secret,
+        });
+        return NextResponse.json({ success: true, data: saved });
       }
-    });
-
-    const testResult = await testResponse.json();
-    
-    return NextResponse.json({
-      success: testResult.success || testResponse.ok,
-      message: testResult.message || (testResponse.ok ? 'Conexão estabelecida com sucesso!' : 'Erro na conexão'),
-      data: testResult
-    });
-
+      case 'delete_config':
+        await deactivateTheBestConfig(supabase, user.id);
+        return NextResponse.json({ success: true, message: 'Configuração removida' });
+      default:
+        return NextResponse.json({ error: 'Operação não suportada' }, { status: 400 });
+    }
   } catch (error) {
-    logger.error('Erro ao testar conexão TheBest:', error instanceof Error ? error : new Error(String(error)));
+    logger.error(
+      'Erro na API de operações TheBest:',
+      error instanceof Error ? error : new Error(String(error))
+    );
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+  }
+}
+
+async function getUserTheBestConfigResponse(
+  supabase: ReturnType<typeof createApiSupabaseClient>,
+  userId: string
+) {
+  let data = await getActiveTheBestConfig(supabase, userId);
+  if (!data) {
+    data = await migrateLegacyIntegrationConfig(supabase, userId);
+  }
+
+  return NextResponse.json({
+    success: true,
+    data: data
+      ? {
+          id: data.id,
+          base_url: data.api_url,
+          auth_token: data.api_key,
+          panel_base_url: getTheBestBaseUrl(),
+          config_data: {},
+          is_active: data.is_active,
+        }
+      : null,
+  });
+}
+
+async function testConnectionForUser(
+  supabase: ReturnType<typeof createApiSupabaseClient>,
+  userId: string
+) {
+  let config = await getActiveTheBestConfig(supabase, userId);
+  if (!config) {
+    config = await migrateLegacyIntegrationConfig(supabase, userId);
+  }
+
+  if (!config?.api_key) {
     return NextResponse.json({
       success: false,
-      message: 'Erro ao testar conexão'
+      message: 'Configuração TheBest não encontrada',
     });
   }
+
+  const result = await testTheBestPanelConnection({
+    apiKey: config.api_key,
+    apiSecret: config.api_secret ?? undefined,
+    baseUrl: config.api_url,
+  });
+
+  return NextResponse.json({
+    success: result.success,
+    message: result.message,
+    data: result,
+  });
 }

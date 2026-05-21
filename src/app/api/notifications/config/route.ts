@@ -4,7 +4,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/unified-client';
 // Temporariamente removido para resolver erro de build
-// import { notificationSystem } from '@/lib/notifications';
 import { withUnifiedMiddleware } from '@/middleware/unified-middleware';
 // Temporariamente comentado para resolver erro de build
 // import { logSecurityEvent } from '@/lib/security';

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, Activity, Zap, Clock, AlertTriangle, CreditCard } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { NATVService } from '@/services/natv.service';
-import BPIXService from '@/services/bpix.service';
+import Gates2bService from '@/services/gates2b.service';
 
 interface IntegrationMetric {
   id: string;
@@ -31,7 +31,7 @@ export function IntegrationMetrics({ className }: IntegrationMetricsProps) {
     
     try {
       const natvService = new NATVService();
-      const bpixService = new BPIXService();
+      const gates2bService = new Gates2bService();
       const newMetrics: IntegrationMetric[] = [];
 
       // Verificar conectividade NATV
@@ -73,27 +73,27 @@ export function IntegrationMetrics({ className }: IntegrationMetricsProps) {
         }
       }
 
-      // Verificar conectividade BPIX
-      if (bpixService.isConfigured()) {
+      // Verificar conectividade Gates2b
+      if (gates2bService.isConfigured()) {
         try {
-          const testResponse = await bpixService.testConnection();
+          const testResponse = await gates2bService.testConnection();
           newMetrics.push({
-            id: 'bpix-connectivity',
-            name: 'BPIX API',
+            id: 'gates2b-connectivity',
+            name: 'Gates2b API',
             value: testResponse.success ? 'Online' : 'Offline',
             status: testResponse.success ? 'success' : 'error',
             lastUpdate: new Date(),
-            description: 'Status da conectividade com a API BPIX'
+            description: 'Status da conectividade com a API Gates2b'
           });
 
-          // Obter estatísticas BPIX
+          // Obter estatísticas Gates2b
           if (testResponse.success) {
             try {
-              const statsResponse = await bpixService.getPaymentStats();
+              const statsResponse = await gates2bService.getPaymentStats();
               if (statsResponse.success && statsResponse.data) {
                 newMetrics.push({
-                  id: 'bpix-payments',
-                  name: 'Pagamentos BPIX',
+                  id: 'gates2b-payments',
+                  name: 'Pagamentos Gates2b',
                   value: statsResponse.data.total_payments || 0,
                   status: 'info',
                   lastUpdate: new Date(),
@@ -101,17 +101,17 @@ export function IntegrationMetrics({ className }: IntegrationMetricsProps) {
                 });
               }
             } catch (error) {
-              console.error('Erro ao obter estatísticas BPIX:', error);
+              console.error('Erro ao obter estatísticas Gates2b:', error);
             }
           }
         } catch (error) {
           newMetrics.push({
-            id: 'bpix-connectivity',
-            name: 'BPIX API',
+            id: 'gates2b-connectivity',
+            name: 'Gates2b API',
             value: 'Erro',
             status: 'error',
             lastUpdate: new Date(),
-            description: 'Erro ao conectar com a API BPIX'
+            description: 'Erro ao conectar com a API Gates2b'
           });
         }
       }
@@ -142,7 +142,7 @@ export function IntegrationMetrics({ className }: IntegrationMetricsProps) {
 
   const getStatusIcon = (status: IntegrationMetric['status'], metricId?: string) => {
     // Ícones específicos para certas métricas
-    if (metricId?.includes('bpix')) {
+    if (metricId?.includes('gates2b')) {
       switch (status) {
         case 'success':
           return <CreditCard className="h-4 w-4 text-green-500" />;

@@ -142,7 +142,7 @@ function createTestScripts() {
       'test:watch': 'jest --watch',
       'test:coverage': 'jest --coverage',
       'test:ci': 'jest --ci --coverage --watchAll=false',
-      'test:automation': 'NODE_ENV=test jest --testPathPattern=automation'
+      'test:automation': 'NODE_ENV=test jest --testPathPatterns=automation'
     };
     
     let scriptsAdded = 0;

@@ -36,7 +36,7 @@ import { Campaign } from '@/lib/types/marketing'
 import { MarketingService } from '@/services/marketing.service'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { toast } from 'sonner'
+import { appToast } from '@/lib/app-toast'
 
 interface CampaignListProps {
   campaigns: Campaign[]
@@ -65,11 +65,11 @@ export function CampaignList({ campaigns, onCampaignUpdate }: CampaignListProps)
     try {
       setSendingCampaign(campaign.id)
       await MarketingService.sendCampaign(campaign.id)
-      toast.success('Campanha enviada com sucesso!')
+      appToast.success('Campanha enviada com sucesso!')
       onCampaignUpdate()
     } catch (error) {
       console.error('Erro ao enviar campanha:', error)
-      toast.error('Erro ao enviar campanha')
+      appToast.error('Erro ao enviar campanha')
     } finally {
       setSendingCampaign(null)
     }
@@ -81,11 +81,11 @@ export function CampaignList({ campaigns, onCampaignUpdate }: CampaignListProps)
     try {
       // Aqui você implementaria a função de deletar no MarketingService
       // await MarketingService.deleteCampaign(deletingCampaign.id)
-      toast.success('Campanha excluída com sucesso!')
+      appToast.success('Campanha excluída com sucesso!')
       onCampaignUpdate()
     } catch (error) {
       console.error('Erro ao excluir campanha:', error)
-      toast.error('Erro ao excluir campanha')
+      appToast.error('Erro ao excluir campanha')
     } finally {
       setDeletingCampaign(null)
     }

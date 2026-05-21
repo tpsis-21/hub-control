@@ -22,29 +22,7 @@ export type {
 } from './interfaces';
 
 // Re-exportar sistemas de notificação
-export { 
+export {
   notificationSystem,
-  NotificationSystem
+  NotificationSystem,
 } from '../notification-system';
-
-export { 
-  realtimeNotificationSystem,
-  RealtimeNotificationSystem,
-  sendNotification,
-  sendSecurityAlert,
-  sendSystemAlert,
-  sendUserNotification,
-  sendBulkNotification,
-  sendScheduledNotification,
-  markNotificationAsDelivered,
-  markNotificationAsRead,
-  getNotificationStatistics,
-  getNotificationConfig,
-  updateNotificationConfig,
-  // useNotifications foi movido para '@/hooks/useNotifications' para evitar dependência de client em módulos server
-  createNotificationMiddleware,
-  DeliveryStrategy
-} from '../realtime-notification-system';
-
-// Re-exportar tipo de configuração do realtime system com alias
-export type { NotificationChannelConfig as RealtimeChannelConfig } from '../realtime-notification-system';

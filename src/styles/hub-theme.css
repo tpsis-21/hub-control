@@ -87,42 +87,40 @@
 }
 
 .dark {
-  /* Dark Mode - Hub Control */
-  --background: 210 23% 15%;
+  /* Dark Mode — alinhado ao fundo preto da logo (#000) */
+  --hub-brand-black: 0 0% 0%;
+  --hub-surface-raised: 0 0% 6%;
+
+  --background: var(--hub-brand-black);
   --foreground: 0 0% 98%;
-  --card: 210 23% 25%; /* Ligeiramente mais claro que o background */
+  --card: var(--hub-surface-raised);
   --card-foreground: 0 0% 98%;
-  --popover: var(--hub-dark);
+  --popover: var(--hub-surface-raised);
   --popover-foreground: 0 0% 98%;
-  
-  /* Primary no modo escuro */
+
   --primary: var(--hub-blue);
   --primary-foreground: 0 0% 98%;
-  
-  /* Secondary no modo escuro */
-  --secondary: 210 23% 20%;
+
+  --secondary: 0 0% 8%;
   --secondary-foreground: 0 0% 98%;
-  
-  /* Muted no modo escuro */
-  --muted: 210 23% 20%;
-  --muted-foreground: 210 15% 70%;
-  
-  /* Accent no modo escuro */
-  --accent: 210 23% 20%;
+
+  --muted: 0 0% 8%;
+  --muted-foreground: 0 0% 65%;
+
+  --accent: 0 0% 10%;
   --accent-foreground: 0 0% 98%;
-  
-  /* Borders e Inputs no modo escuro */
-  --border: 210 23% 20%;
-  --input: 210 23% 20%;
-  
-  /* Sidebar no modo escuro */
-  --sidebar-background: 210 23% 15%; /* Mais escuro que o hub-dark */
+
+  --border: 0 0% 12%;
+  --input: 0 0% 10%;
+  --ring: var(--hub-blue);
+
+  --sidebar-background: var(--hub-brand-black);
   --sidebar-foreground: 0 0% 98%;
   --sidebar-primary: var(--hub-blue);
   --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 210 23% 18%;
+  --sidebar-accent: 0 0% 8%;
   --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 210 23% 18%;
+  --sidebar-border: 0 0% 12%;
   --sidebar-ring: var(--hub-blue);
 }
 

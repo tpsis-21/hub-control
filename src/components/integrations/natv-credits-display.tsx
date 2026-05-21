@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Coins, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { appToast } from '@/lib/app-toast';
 import { useNATVCredits } from '@/hooks/use-natv-credits';
 
 interface NATVCreditsDisplayProps {
@@ -26,9 +26,9 @@ export function NATVCreditsDisplay({ className }: NATVCreditsDisplayProps) {
   const handleRefresh = async () => {
     const result = await syncCredits();
     if (result.success) {
-      toast.success('Créditos NATV sincronizados com sucesso');
+      appToast.success('Créditos NATV sincronizados com sucesso');
     } else {
-      toast.error('Erro ao sincronizar créditos NATV');
+      appToast.error('Erro ao sincronizar créditos NATV');
     }
   };
 

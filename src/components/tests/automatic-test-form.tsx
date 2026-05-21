@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Clock, MessageSquare, Zap, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { appToast } from '@/lib/app-toast';
 import { getServers } from '@/app/(app)/servidores/actions';
 import { createAutomaticTest } from '@/lib/test-service';
 import type { Server } from '@/lib/types';
@@ -64,7 +64,7 @@ export function AutomaticTestForm({ onBack, onSuccess }: AutomaticTestFormProps)
         setServers(allServers);
       } catch (error) {
         console.error('Erro ao carregar servidores:', error);
-        toast.error('Erro ao carregar servidores');
+        appToast.error('Erro ao carregar servidores');
       } finally {
         setLoadingServers(false);
       }
@@ -79,11 +79,11 @@ export function AutomaticTestForm({ onBack, onSuccess }: AutomaticTestFormProps)
       // Validar dados de contato se mensagem estiver habilitada
       if (data.sendMessage) {
         if (data.messageChannel === 'email' && !data.email) {
-          toast.error('E-mail é obrigatório quando envio por e-mail está habilitado');
+          appToast.error('E-mail é obrigatório quando envio por e-mail está habilitado');
           return;
         }
         if (data.messageChannel === 'whatsapp' && !data.phone) {
-          toast.error('Telefone é obrigatório quando envio por WhatsApp está habilitado');
+          appToast.error('Telefone é obrigatório quando envio por WhatsApp está habilitado');
           return;
         }
       }
@@ -109,11 +109,11 @@ export function AutomaticTestForm({ onBack, onSuccess }: AutomaticTestFormProps)
         }
       });
 
-      toast.success('Teste automático criado com sucesso!');
+      appToast.success('Teste automático criado com sucesso!');
       onSuccess?.(testConfig.id);
     } catch (error) {
       console.error('Erro ao criar teste automático:', error);
-      toast.error('Erro ao criar teste automático. Tente novamente.');
+      appToast.error('Erro ao criar teste automático. Tente novamente.');
     } finally {
       setIsLoading(false);
     }

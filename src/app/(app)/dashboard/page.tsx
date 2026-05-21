@@ -1,24 +1,18 @@
 // @/app/(app)/dashboard/page.tsx
-import { getClientes } from "@/app/(app)/clientes/actions";
-import { getPlans } from "@/app/(app)/planos/actions";
-import { getServers } from "@/app/(app)/servidores/actions";
+import { getDashboardPageData } from "./actions";
 import { DashboardContent } from "./dashboard-content";
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  // 1. Fetch all data on the server
-  const [allClients, allPlans, allServers] = await Promise.all([
-    getClientes({}),
-    getPlans(),
-    getServers(),
-  ]);
+  const { clients, tests, plans, servers } = await getDashboardPageData();
 
   return (
     <DashboardContent 
-        clients={allClients} 
-        plans={allPlans}
-        servers={allServers}
+        clients={clients}
+        tests={tests}
+        plans={plans}
+        servers={servers}
     />
   );
 }

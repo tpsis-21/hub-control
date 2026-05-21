@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { logger } from '@/utils/production-logger';
 import { validateFileByType, generateSecureFileName } from '@/lib/file-validation';
+import { cookieConfig } from '@/lib/supabase/config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,10 +23,7 @@ export async function POST(request: NextRequest) {
           name,
           value,
           ...options,
-          httpOnly: false,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/'
+          ...cookieConfig,
         });
       },
       remove(name: string, options: any) {

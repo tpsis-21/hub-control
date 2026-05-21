@@ -11,19 +11,17 @@ import { serverFormSchema, editServerSchema } from "@/lib/schemas";
 export async function getServers(): Promise<Server[]> {
     try {
       const supabase = await createServerSupabaseClientForActions();
-      
-      // Obter o usuário autenticado
+
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         console.error('Error getting authenticated user:', authError);
         return [];
       }
-    
-      // Buscar apenas servidores do usuário autenticado
+
+      // Buscar servidores (RLS restringe por perfil/admin)
       const { data, error } = await supabase
         .from('servers')
-        .select('*')
-        .eq('user_id', user.id);
+        .select('*');
       if (error) {
         console.error('Error fetching servers:', error);
         return [];

@@ -1,5 +1,4 @@
 // @/app/(app)/planos/grupos/page.tsx
-import { Header } from "@/components/app/header";
 import {
   Card,
   CardContent,
@@ -21,9 +20,6 @@ export default async function PlanosGruposPage() {
     ]);
 
     return (
-        <div className="flex min-h-screen w-full flex-col">
-            <Header title="Grupos de Planos" />
-            <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6">
                 <Card>
                     <CardHeader>
                         <CardTitle>Gerenciar Grupos de Planos</CardTitle>
@@ -35,8 +31,6 @@ export default async function PlanosGruposPage() {
                         <PlanGroupList initialGroups={planGroups} initialPlans={plans}/>
                     </CardContent>
                 </Card>
-            </main>
-        </div>
     );
 }
 

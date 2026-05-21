@@ -4,7 +4,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 import type { Database } from '../../database.types';
-import { supabaseConfig } from '../config';
+import { supabaseConfig, cookieConfig } from '../config';
 import { MiddlewareCookieManager } from '../utils/cookies';
 import { UserManager } from '../auth/user';
 import { supabaseLogger } from '../utils/logger';
@@ -39,10 +39,7 @@ export function createMiddlewareSupabaseClient(request: NextRequest) {
           
           // Aplicar o cookie na nova response
           response.cookies.set(name, value, {
-            httpOnly: false,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
+            ...cookieConfig,
             ...options,
           });
         },
@@ -58,10 +55,7 @@ export function createMiddlewareSupabaseClient(request: NextRequest) {
           
           // Remover o cookie da nova response
           response.cookies.set(name, '', {
-            httpOnly: false,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
+            ...cookieConfig,
             maxAge: 0,
             ...options,
           });

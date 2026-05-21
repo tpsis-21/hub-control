@@ -4,6 +4,7 @@ import { rateLimitCustom, parseWindowToMs, buildRateLimitHeaders } from '@/lib/s
 import { getExternalApiConfig } from '@/lib/security';
 import { ErrorService, ErrorType } from '@/services/error.service';
 import { createApiSupabaseClient } from '@/lib/supabase/unified-client';
+import { getNatvBaseUrl } from '@/lib/integrations/natv-constants';
 
 // Função para verificar autenticação
 async function isAuthenticated(request: NextRequest): Promise<{ authenticated: boolean; user?: any }> {
@@ -47,7 +48,7 @@ async function getUserNATVConfig(userId: string): Promise<{
       .eq('is_active', true)
       .single();
 
-    if (error || !data || !data.base_url || !data.auth_token) {
+    if (error || !data || !data.auth_token) {
       return {
         success: false,
         error: 'Configuração NATV não encontrada para este usuário'
@@ -59,7 +60,7 @@ async function getUserNATVConfig(userId: string): Promise<{
     return {
       success: true,
       config: {
-        baseUrl: data.base_url,
+        baseUrl: getNatvBaseUrl(),
         token: data.auth_token,
         username: configData.username,
         password: configData.password

@@ -1,0 +1,33 @@
+Consolidação de documentação — 21/05/2026
+Substituído por: docs/AUDITORIA_HUB_CONTROL_2026-05-21.md + docs/GUIA_HUB_CONTROL.md
+
+=== Relatórios e auditorias (1ª leva) ===
+docs/RELATORIO_AUDITORIA_COMPLETA_HUB_CONTROL_2026-05-19.md
+RELATORIO_MELHORIAS_NECESSARIAS.md, RELATORIO_FINAL_TESTES.md, RELATORIO_VULNERABILIDADES.md
+RELATORIO_ANALISE_INTEGRACOES.md, FASE_1_RELATORIO_FINAL.md, RELATÓRIO_FINAL_SEGURANÇA.md
+SECURITY_ANALYSIS_REPORT.md, SUPABASE_SECURITY_ANALYSIS_REPORT.md, SECURITY_STATUS_REPORT.md
+SECURITY_EXECUTIVE_SUMMARY.md, AVATAR_SYSTEM_*_REPORT.md, ANALISE_DUPLICIDADE.md, ANALISE_SUPABASE_DETALHADA.md
+erros supabase/RELATORIO_FINAL_SEGURANCA.md
+.trae/documents/relatorio-*, ANALISE_COMPLETA_HUB_CONTROL_2024.md
+testsprite_tests/ (pasta inteira — TC*.py, relatórios HTML/MD, tmp/)
+
+=== 2ª leva — raiz, docs, migrações legadas ===
+~90 arquivos *.md na raiz (FASE_*, GUIA_*, EXECUTE_*, SECURITY_*, TESTE_*, RESUMO_*, AVATAR_*, etc.)
+~150 arquivos *.sql / *.js / *.cjs soltos na raiz (scripts one-off de RLS, avatar, debug, migração manual)
+SECURITY_GUIDE.md, BACKUP_*.md, DOCUMENTATION.md, TECHNICAL_SPECIFICATIONS.md, etc.
+Pasta migrations/ na raiz (README + SUPABASE_INSTRUCTIONS + SQL legado)
+Todos docs/*.md exceto: AUDITORIA, GUIA, README
+security-test-report.json
+
+=== Mantidos ===
+README.md
+PLANO_ACAO_SEGURANCA_SUPABASE.md
+docs/AUDITORIA_HUB_CONTROL_2026-05-21.md
+docs/GUIA_HUB_CONTROL.md
+docs/README.md
+supabase/migrations/README.md
+scripts/ (pasta intacta)
+src/__tests__/, e2e/ (código de teste — não removido)
+
+=== Scripts npm removidos (quebrados) ===
+backup:full, backup:incremental, backup:logs (run-backup.js inexistente)

@@ -2,7 +2,7 @@
 // Hook personalizado para gerenciar uploads com validação completa
 
 import { useState, useCallback } from 'react';
-import { toast } from 'sonner';
+import { appToast } from '@/lib/app-toast';
 import { validateFileByType, FILE_VALIDATION_CONFIGS, formatFileSize } from '@/lib/file-validation';
 
 interface UploadProgress {
@@ -69,15 +69,11 @@ export function useSecureUpload(options: UseSecureUploadOptions = {}): UseSecure
       const result = await validateFileByType(file, fileType);
       
       if (showToasts && !result.isValid) {
-        toast.error('Arquivo inválido', {
-          description: result.errors.join(', ')
-        });
+        appToast.error('Arquivo inválido', result.errors.join(', '));
       }
       
       if (showToasts && result.warnings.length > 0) {
-        toast.warning('Avisos de validação', {
-          description: result.warnings.join(', ')
-        });
+        appToast.warning('Avisos de validação', result.warnings.join(', '));
       }
       
       return result;
@@ -85,7 +81,7 @@ export function useSecureUpload(options: UseSecureUploadOptions = {}): UseSecure
       const errorMessage = 'Erro na validação do arquivo';
       
       if (showToasts) {
-        toast.error(errorMessage);
+        appToast.error(errorMessage);
       }
       
       return {
@@ -103,7 +99,7 @@ export function useSecureUpload(options: UseSecureUploadOptions = {}): UseSecure
     if (isUploading) {
       const error = 'Upload já em andamento';
       if (showToasts) {
-        toast.error(error);
+        appToast.error(error);
       }
       return { success: false, error };
     }
@@ -115,13 +111,13 @@ export function useSecureUpload(options: UseSecureUploadOptions = {}): UseSecure
       // 1. Validação prévia (se habilitada)
       if (validateBeforeUpload) {
         if (showToasts) {
-          toast.loading('Validando arquivo...', { id: 'upload-validation' });
+          appToast.loading('Validando arquivo...', { id: 'upload-validation' });
         }
         
         const validation = await validateFile(file, fileType);
         
         if (showToasts) {
-          toast.dismiss('upload-validation');
+          appToast.dismiss('upload-validation');
         }
         
         if (!validation.isValid) {
@@ -206,28 +202,27 @@ export function useSecureUpload(options: UseSecureUploadOptions = {}): UseSecure
       });
 
       if (showToasts) {
-        toast.loading('Enviando arquivo...', { id: 'upload-progress' });
+        appToast.loading('Enviando arquivo...', { id: 'upload-progress' });
       }
 
       const result = await uploadPromise;
 
       if (showToasts) {
-        toast.dismiss('upload-progress');
+        appToast.dismiss('upload-progress');
       }
 
       if (result.success) {
         if (showToasts) {
-          toast.success('Arquivo enviado com sucesso!', {
-            description: `${file.name} (${formatFileSize(file.size)})`
-          });
+          appToast.success(
+            'Arquivo enviado com sucesso!',
+            `${file.name} (${formatFileSize(file.size)})`
+          );
         }
         
         onSuccess?.(result);
       } else {
         if (showToasts) {
-          toast.error('Erro no upload', {
-            description: result.error
-          });
+          appToast.error('Erro no upload', result.error);
         }
         
         onError?.(result.error!, result.details);
@@ -239,8 +234,8 @@ export function useSecureUpload(options: UseSecureUploadOptions = {}): UseSecure
       const errorMessage = 'Erro inesperado durante o upload';
       
       if (showToasts) {
-        toast.dismiss('upload-progress');
-        toast.error(errorMessage);
+        appToast.dismiss('upload-progress');
+        appToast.error(errorMessage);
       }
       
       const result: UploadResult = {

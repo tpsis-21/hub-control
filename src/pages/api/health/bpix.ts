@@ -4,7 +4,6 @@
  */
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { bpixHealthCheckConfig } from '@/config/bpix-production';
 import { createApiSupabaseClient } from '@/lib/supabase/clients/api';
 
 interface HealthCheckResult {

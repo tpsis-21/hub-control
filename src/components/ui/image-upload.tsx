@@ -29,30 +29,16 @@ export function ImageUpload({
 }: ImageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Usar hook apropriado baseado no tipo
-  const uploadHook = type === 'avatar' 
-    ? useAvatarUpload({
-        onSuccess: (result) => {
-          console.log('🔍 [DEBUG] Avatar upload success:', result);
-          if (result.data?.publicUrl) {
-            console.log('🔍 [DEBUG] Calling onChange with URL:', result.data.publicUrl);
-            onChange(result.data.publicUrl);
-          }
-        },
-        showToasts: true
-      })
-    : useImageUpload({
-        onSuccess: (result) => {
-          console.log('🔍 [DEBUG] Image upload success:', result);
-          if (result.data?.publicUrl) {
-            console.log('🔍 [DEBUG] Calling onChange with URL:', result.data.publicUrl);
-            onChange(result.data.publicUrl);
-          }
-        },
-        showToasts: true
-      });
-  
-  const { upload, isUploading, progress, validateFile, getMaxFileSize } = uploadHook;
+  const onUploadSuccess = (result: { data?: { publicUrl?: string } }) => {
+    if (result.data?.publicUrl) {
+      onChange(result.data.publicUrl);
+    }
+  };
+
+  const avatarUpload = useAvatarUpload({ onSuccess: onUploadSuccess, showToasts: true });
+  const imageUpload = useImageUpload({ onSuccess: onUploadSuccess, showToasts: true });
+  const { upload, isUploading, progress, validateFile, getMaxFileSize } =
+    type === 'avatar' ? avatarUpload : imageUpload;
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

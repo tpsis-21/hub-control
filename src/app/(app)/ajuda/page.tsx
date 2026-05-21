@@ -1,5 +1,4 @@
 // @/app/(app)/ajuda/page.tsx
-import { Header } from "@/components/app/header";
 import {
   Card,
   CardContent,
@@ -14,9 +13,6 @@ export default async function AjudaPage() {
     const articles = await getArticles();
 
     return (
-        <div className="flex min-h-screen w-full flex-col">
-            <Header title="Central de Ajuda" />
-            <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6">
                  <Card>
                     <CardHeader>
                         <div className="flex items-center justify-between">
@@ -32,8 +28,6 @@ export default async function AjudaPage() {
                        <ArticleManagement initialArticles={articles} />
                     </CardContent>
                 </Card>
-            </main>
-        </div>
     );
 }
 

@@ -3,7 +3,6 @@
 
 import type { User } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ADMIN_EMAIL } from '../config';
 import { supabaseLogger } from '../utils/logger';
 import { logger } from '@/utils/production-logger'
 
@@ -108,17 +107,10 @@ export class UserManager {
         return null;
       }
 
-      // Admin principal é sempre admin automaticamente
-      const userEmail = userId ? null : (await this.getCurrentUser())?.email;
-      if (userEmail === ADMIN_EMAIL) {
-        supabaseLogger.userOperation('getUserRole', user.id, userEmail || undefined);
-        return 'admin';
-      }
-
       const profile = await this.getUserProfile(user.id);
       const role = profile?.role || null;
-      
-      supabaseLogger.userOperation('getUserRole', user.id, userEmail || undefined);
+
+      supabaseLogger.userOperation('getUserRole', user.id, undefined);
       return role;
     } catch (error) {
       supabaseLogger.error('Erro ao obter role do usuário', error as Error);
@@ -148,22 +140,6 @@ export class UserManager {
       if (!user) {
         supabaseLogger.warn('isUserApproved: Usuário não encontrado');
         return false;
-      }
-
-      // Admin principal é sempre aprovado automaticamente
-      if (user.email === ADMIN_EMAIL) {
-        supabaseLogger.userOperation('isUserApproved', user.id, user.email || undefined);
-        
-        // Tentar criar o perfil se não existir (ignorar erros de permissão)
-        try {
-          await this.supabase
-            .from('profiles')
-            .upsert({ id: user.id, user_id: user.id, role: 'admin' }, { onConflict: 'user_id' });
-        } catch (error) {
-          supabaseLogger.warn('Não foi possível criar perfil de admin (modo somente leitura)', { userId: user.id });
-        }
-        
-        return true;
       }
 
       const profile = await this.getUserProfile(user.id);

@@ -5,6 +5,12 @@ import { ptBR } from 'date-fns/locale';
 // Fuso horário de Brasília
 export const BRAZIL_TIMEZONE = 'America/Sao_Paulo';
 
+/** Formato padrão para exibição ao usuário (regra do projeto). */
+export const DISPLAY_DATETIME_FORMAT = 'dd/MM/yyyy HH:mm:ss';
+
+/** Formato só data. */
+export const DISPLAY_DATE_FORMAT = 'dd/MM/yyyy';
+
 /**
  * Converte uma data para o fuso horário de Brasília
  */
@@ -22,12 +28,22 @@ export function fromBrazilTime(date: Date): Date {
 /**
  * Formata uma data no fuso horário de Brasília
  */
-export function formatBrazilDate(date: Date, formatStr: string = 'dd/MM/yyyy HH:mm'): string {
+export function formatBrazilDate(
+  date: Date,
+  formatStr: string = DISPLAY_DATETIME_FORMAT
+): string {
   const brazilDate = toBrazilTime(date);
-  return format(brazilDate, formatStr, { 
+  return format(brazilDate, formatStr, {
     timeZone: BRAZIL_TIMEZONE,
-    locale: ptBR 
+    locale: ptBR,
   });
+}
+
+/** Data/hora para telas e notificações ao usuário final. */
+export function formatDisplayDateTime(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return 'Data inválida';
+  return formatBrazilDate(d, DISPLAY_DATETIME_FORMAT);
 }
 
 /**

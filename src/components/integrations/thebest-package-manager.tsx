@@ -95,10 +95,11 @@ interface PackageFormData {
 }
 
 interface RenewalFormData {
+  /** ID do cliente (line) no Painel Best — obrigatório para renovar na API. */
+  line_id: string;
+  months: string;
+  /** Opcional: pacote no Hub só para histórico / mapeamento de meses. */
   package_id: string;
-  user_id: string;
-  duration: string;
-  classification: string;
   notes?: string;
 }
 
@@ -135,10 +136,9 @@ export function TheBestPackageManager() {
   });
   
   const [renewalForm, setRenewalForm] = useState<RenewalFormData>({
+    line_id: '',
+    months: '1',
     package_id: '',
-    user_id: '',
-    duration: '1',
-    classification: 'SEM ADULTO',
     notes: '',
   });
   
@@ -269,53 +269,90 @@ export function TheBestPackageManager() {
     }
   };
   
-  /**
-   * Cria uma nova renovação
-   */
-  const handleCreateRenewal = async () => {
-    if (!user || !renewalForm.package_id) return;
-    
+  /** Sincroniza pacotes do Painel Best (GET /packages/) para o Supabase. */
+  const handleSyncFromPanel = async () => {
     try {
-      const config = await TheBestService.getUserConfig(user.id);
-      if (!config) {
-        toast({
-          title: 'Erro',
-          description: 'Configuração The Best não encontrada.',
-          variant: 'destructive',
-        });
-        return;
+      setSyncing(true);
+      const response = await fetch('/api/integrations/thebest/packages?sync=true');
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || result.error || 'Falha na sincronização');
       }
-      
-      await TheBestService.createRenewal(
-        config.id,
-        {
-          package_id: renewalForm.package_id,
-          user_id: renewalForm.user_id,
-          duration: renewalForm.duration,
-          classification: renewalForm.classification,
-        },
-        user.id
-      );
-      
       toast({
-        title: 'Sucesso',
-        description: 'Renovação criada com sucesso.',
+        title: 'Pacotes sincronizados',
+        description: `${result.count ?? 0} pacote(s) do Painel Best.`,
       });
-      
-      setIsRenewalDialogOpen(false);
-      setRenewalForm({
-        package_id: '',
-        user_id: '',
-        duration: '1',
-        classification: 'SEM ADULTO',
-        notes: '',
-      });
-      
       await loadData();
     } catch (error) {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível criar a renovação.',
+        title: 'Erro na sincronização',
+        description:
+          error instanceof Error ? error.message : 'Não foi possível sincronizar do painel.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  /**
+   * Renova no Painel Best (POST /lines/{id}/renew/) e opcionalmente registra no Hub.
+   */
+  const handleCreateRenewal = async () => {
+    if (!user || !renewalForm.line_id.trim()) return;
+
+    const months = parseInt(renewalForm.months, 10) || 1;
+
+    try {
+      const panelRes = await fetch('/api/proxy/thebest?action=renew_line', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          line_id: renewalForm.line_id.trim(),
+          months,
+        }),
+      });
+
+      const panelData = await panelRes.json();
+      if (!panelRes.ok) {
+        throw new Error(panelData.error || panelData.message || 'Falha na API do painel');
+      }
+
+      if (renewalForm.package_id) {
+        await fetch('/api/thebest/renewals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.id,
+            line_id: renewalForm.line_id.trim(),
+            package_id: renewalForm.package_id,
+            payment_id: `manual-${Date.now()}`,
+            amount: 0,
+            payment_method: 'manual',
+            months,
+          }),
+        });
+      }
+
+      toast({
+        title: 'Cliente renovado',
+        description: `Line ${renewalForm.line_id} renovada por ${months} mês(es) no Painel Best.`,
+      });
+
+      setIsRenewalDialogOpen(false);
+      setRenewalForm({
+        line_id: '',
+        months: '1',
+        package_id: '',
+        notes: '',
+      });
+
+      await loadData();
+    } catch (error) {
+      toast({
+        title: 'Erro na renovação',
+        description:
+          error instanceof Error ? error.message : 'Não foi possível renovar no painel.',
         variant: 'destructive',
       });
     }
@@ -330,8 +367,12 @@ export function TheBestPackageManager() {
       '3': '3 meses',
       '6': '6 meses',
       '12': '12 meses',
+      '1_MES': '1 mês',
+      '3_MESES': '3 meses',
+      '6_MESES': '6 meses',
+      '12_MESES': '12 meses',
     };
-    return durations[duration] || duration;
+    return durations[duration] || duration.replace(/_/g, ' ');
   };
   
   /**
@@ -361,13 +402,23 @@ export function TheBestPackageManager() {
       {/* Header com ações */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Gerenciamento de Pacotes</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Painel Best — Pacotes e renovações</h2>
           <p className="text-muted-foreground">
-            Gerencie pacotes e renovações da integração The Best
+            Pacotes vêm de <code className="text-xs">GET /packages/</code> (sync e mapeamento).
+            Renovação usa <code className="text-xs">line_id</code> + <code className="text-xs">months</code> — sem package na API de renew.
           </p>
         </div>
         
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={handleSyncFromPanel}
+            disabled={syncing || loading}
+          >
+            <Download className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            Sync Painel Best
+          </Button>
+
           <Button
             variant="outline"
             onClick={() => loadData()}
@@ -684,76 +735,67 @@ export function TheBestPackageManager() {
       <Dialog open={isRenewalDialogOpen} onOpenChange={setIsRenewalDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Nova Renovação</DialogTitle>
+            <DialogTitle>Renovar cliente no Painel Best</DialogTitle>
             <DialogDescription>
-              Criar uma nova renovação para um pacote The Best
+              Chama <code className="text-xs">POST /lines/&#123;line_id&#125;/renew/</code> com meses.
+              Pacote abaixo é opcional (só histórico no Hub).
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div>
-              <Label htmlFor="renewal-package">Pacote</Label>
-              <Select 
-                value={renewalForm.package_id} 
-                onValueChange={(value) => setRenewalForm(prev => ({ ...prev, package_id: value }))}
+              <Label htmlFor="renewal-line">ID do cliente no painel (line_id) *</Label>
+              <Input
+                id="renewal-line"
+                type="number"
+                min={1}
+                value={renewalForm.line_id}
+                onChange={(e) => setRenewalForm(prev => ({ ...prev, line_id: e.target.value }))}
+                placeholder="Ex.: 12345"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="renewal-months">Meses *</Label>
+              <Select
+                value={renewalForm.months}
+                onValueChange={(value) => setRenewalForm(prev => ({ ...prev, months: value }))}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um pacote" />
+                <SelectTrigger id="renewal-months">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="1">1 mês</SelectItem>
+                  <SelectItem value="3">3 meses</SelectItem>
+                  <SelectItem value="6">6 meses</SelectItem>
+                  <SelectItem value="12">12 meses</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="renewal-package">Pacote no Hub (opcional)</Label>
+              <Select 
+                value={renewalForm.package_id || '_none'} 
+                onValueChange={(value) =>
+                  setRenewalForm(prev => ({
+                    ...prev,
+                    package_id: value === '_none' ? '' : value,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem registro no Hub" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">— Não registrar no Hub —</SelectItem>
                   {packages.filter(p => p.is_active).map((pkg) => (
                     <SelectItem key={pkg.id} value={pkg.id}>
-                      {pkg.classificacao} - {formatDuration(pkg.duracao)} - {pkg.telas} telas
+                      {(pkg as { name?: string }).name ?? pkg.classificacao} — {formatDuration(pkg.duracao)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="renewal-user">ID do Usuário</Label>
-              <Input
-                id="renewal-user"
-                value={renewalForm.user_id}
-                onChange={(e) => setRenewalForm(prev => ({ ...prev, user_id: e.target.value }))}
-                placeholder="ID do usuário para renovação"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="renewal-duration">Duração</Label>
-                <Select 
-                  value={renewalForm.duration} 
-                  onValueChange={(value) => setRenewalForm(prev => ({ ...prev, duration: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 mês</SelectItem>
-                    <SelectItem value="3">3 meses</SelectItem>
-                    <SelectItem value="6">6 meses</SelectItem>
-                    <SelectItem value="12">12 meses</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="renewal-classification">Classificação</Label>
-                <Select 
-                  value={renewalForm.classification} 
-                  onValueChange={(value) => setRenewalForm(prev => ({ ...prev, classification: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SEM ADULTO">Sem Adulto</SelectItem>
-                    <SelectItem value="COM ADULTO">Com Adulto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             
             <div>
@@ -777,9 +819,9 @@ export function TheBestPackageManager() {
             </Button>
             <Button 
               onClick={handleCreateRenewal}
-              disabled={!renewalForm.package_id || !renewalForm.user_id}
+              disabled={!renewalForm.line_id.trim()}
             >
-              Criar Renovação
+              Renovar no painel
             </Button>
           </DialogFooter>
         </DialogContent>

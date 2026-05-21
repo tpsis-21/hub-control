@@ -76,6 +76,7 @@ export type Plan = {
   send_welcome_message?: boolean;
   is_public?: boolean;
   group_id?: string;
+  cakto_url?: string | null;
   created_at: string;
   updated_at: string;
   group?: PlanGroup;

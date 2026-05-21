@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Copy, Eye, EyeOff, Shield, AlertTriangle } from 'lucide-react';
-import { toast } from 'sonner';
+import { appToast } from '@/lib/app-toast';
 import { 
   maskSensitiveData, 
   maskEmail, 
@@ -83,16 +83,16 @@ export function SensitiveData({
   // Função para copiar
   const handleCopy = async () => {
     if (!value) {
-      toast.error('Nenhum valor para copiar');
+      appToast.error('Nenhum valor para copiar');
       return;
     }
 
     setIsCopying(true);
     try {
       await navigator.clipboard.writeText(value);
-      toast.success(`${label || 'Valor'} copiado para a área de transferência`);
+      appToast.success(`${label || 'Valor'} copiado para a área de transferência`);
     } catch (error) {
-      toast.error('Erro ao copiar para a área de transferência');
+      appToast.error('Erro ao copiar para a área de transferência');
     } finally {
       setIsCopying(false);
     }

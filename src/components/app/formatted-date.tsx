@@ -4,11 +4,12 @@
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatBrazilDate } from "@/lib/timezone";
+import { DISPLAY_DATETIME_FORMAT, formatBrazilDate } from "@/lib/timezone";
 
 type FormattedDateProps = {
   dateString: string;
-  format: string;
+  /** Padrão: DD/MM/AAAA HH:MM:SS (Brasília) */
+  format?: string;
 };
 
 /**
@@ -19,7 +20,10 @@ type FormattedDateProps = {
  * @param {string} formatString - O formato desejado (ex: "dd/MM/yyyy").
  * @returns A data formatada como string.
  */
-export function FormattedDate({ dateString, format: formatString }: FormattedDateProps) {
+export function FormattedDate({
+  dateString,
+  format: formatString = DISPLAY_DATETIME_FORMAT,
+}: FormattedDateProps) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
