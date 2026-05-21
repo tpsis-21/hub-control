@@ -47,6 +47,7 @@ npm run check:prod
 - [x] `security-tests.yml` alinhado aos scripts reais
 - [x] `ci.yml` com audit + `test:security`
 - [x] Trigger em `push`/`pull_request` em `main` e `develop`
+- [x] E2E smoke: `HUB_E2E_SMOKE_CI` + placeholders quando secrets ausentes (run 70204452091)
 - [ ] Validar run verde no GitHub após push
 
 ### Fase 2 — Opcional (backlog)

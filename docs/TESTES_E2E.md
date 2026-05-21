@@ -34,15 +34,17 @@ Sem essas variáveis, os testes de API + UI de login rodam; o teste de login aut
 
 Workflow: `.github/workflows/e2e-smoke.yml`
 
-Secrets necessários no repositório:
+Com `HUB_E2E_SMOKE_CI=true`, o job **sempre** sobe o app. Sem secrets do Supabase, usa placeholders (API health, login UI, mobile); o teste de login autenticado continua **skip** até configurar credenciais.
 
-| Secret | Obrigatório |
-|--------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Sim |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sim |
-| `SUPABASE_SERVICE_ROLE_KEY` | Sim |
-| `E2E_TEST_EMAIL` | Não (habilita login → dashboard) |
-| `E2E_TEST_PASSWORD` | Não |
+| Secret | Obrigatório | Efeito |
+|--------|-------------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Não* | Projeto real no middleware; sem ele → placeholder CI |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Não* | idem |
+| `SUPABASE_SERVICE_ROLE_KEY` | Não | Rotas admin em smoke não dependem disso |
+| `E2E_TEST_EMAIL` | Não | Habilita login → `/dashboard` |
+| `E2E_TEST_PASSWORD` | Não | idem |
+
+\*Recomendado para validar auth contra HBCONTROL de verdade.
 
 ## Mobile (375px)
 
