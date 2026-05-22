@@ -17,16 +17,16 @@ export async function GET() {
       .eq('is_active', true);
 
     if (error) {
-      logger.error('Erro ao buscar configurações bpix:', error instanceof Error ? error : new Error(String(error)));
+      logger.error('Erro ao buscar configuraÃ§Ãµes bpix:', error instanceof Error ? error : new Error(String(error)));
       return NextResponse.json(
-        { success: false, message: 'Erro ao buscar configurações bpix', error: 'DATABASE_ERROR' },
+        { success: false, message: 'Erro ao buscar configuraÃ§Ãµes bpix', error: 'DATABASE_ERROR' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ success: true, data: configs });
   } catch (error) {
-    logger.error('Erro na API de configurações bpix:', error instanceof Error ? error : new Error(String(error)));
+    logger.error('Erro na API de configuraÃ§Ãµes bpix:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, message: 'Erro interno do servidor', error: 'INTERNAL_SERVER_ERROR' },
       { status: 500 }
@@ -43,14 +43,14 @@ export async function POST(request: NextRequest) {
 
     if (!body.baseUrl || typeof body.baseUrl !== 'string') {
       return NextResponse.json(
-        { success: false, message: 'URL base da API bpix é obrigatória', error: 'MISSING_BASE_URL' },
+        { success: false, message: 'URL base da API bpix Ã© obrigatÃ³ria', error: 'MISSING_BASE_URL' },
         { status: 400 }
       );
     }
 
     if (!body.token || typeof body.token !== 'string') {
       return NextResponse.json(
-        { success: false, message: 'Token de autenticação bpix é obrigatório', error: 'MISSING_TOKEN' },
+        { success: false, message: 'Token de autenticaÃ§Ã£o bpix Ã© obrigatÃ³rio', error: 'MISSING_TOKEN' },
         { status: 400 }
       );
     }
@@ -78,20 +78,20 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      logger.error('Erro ao salvar configuração bpix:', error instanceof Error ? error : new Error(String(error)));
+      logger.error('Erro ao salvar configuraÃ§Ã£o bpix:', error instanceof Error ? error : new Error(String(error)));
       return NextResponse.json(
-        { success: false, message: 'Erro ao salvar configuração bpix', error: 'DATABASE_ERROR' },
+        { success: false, message: 'Erro ao salvar configuraÃ§Ã£o bpix', error: 'DATABASE_ERROR' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Configuração bpix salva com sucesso',
+      message: 'ConfiguraÃ§Ã£o bpix salva com sucesso',
       data,
     });
   } catch (error) {
-    logger.error('Erro na API de configuração bpix:', error instanceof Error ? error : new Error(String(error)));
+    logger.error('Erro na API de configuraÃ§Ã£o bpix:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, message: 'Erro interno do servidor', error: 'INTERNAL_SERVER_ERROR' },
       { status: 500 }
@@ -112,16 +112,16 @@ export async function DELETE() {
       .eq('provider', 'bpix');
 
     if (error) {
-      logger.error('Erro ao remover configuração bpix:', error instanceof Error ? error : new Error(String(error)));
+      logger.error('Erro ao remover configuraÃ§Ã£o bpix:', error instanceof Error ? error : new Error(String(error)));
       return NextResponse.json(
-        { success: false, message: 'Erro ao remover configuração bpix', error: 'DATABASE_ERROR' },
+        { success: false, message: 'Erro ao remover configuraÃ§Ã£o bpix', error: 'DATABASE_ERROR' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true, message: 'Configuração bpix removida com sucesso' });
+    return NextResponse.json({ success: true, message: 'ConfiguraÃ§Ã£o bpix removida com sucesso' });
   } catch (error) {
-    logger.error('Erro na API de remoção bpix:', error instanceof Error ? error : new Error(String(error)));
+    logger.error('Erro na API de remoÃ§Ã£o bpix:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, message: 'Erro interno do servidor', error: 'INTERNAL_SERVER_ERROR' },
       { status: 500 }
